@@ -1,0 +1,35 @@
+- generic [active] [ref=e1]:
+  - main [ref=e3]:
+    - generic [ref=e4]:
+      - heading "Starlinkee v2" [level=1] [ref=e5]
+      - paragraph [ref=e6]: Panel deweloperski
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - heading "Test Runner" [level=2] [ref=e10]
+        - paragraph [ref=e11]: Uruchamia testy Vitest na serwerze i wyświetla wynik poniżej.
+      - generic [ref=e12]:
+        - paragraph [ref=e13]: Ogólne
+        - generic [ref=e14]:
+          - button "▶ Wszystkie testy" [ref=e15]
+          - button "▶ Unit (wszystkie)" [ref=e16]
+          - button "▶ Integracyjne (wszystkie)" [ref=e17]
+      - generic [ref=e18]:
+        - paragraph [ref=e19]: Integracyjne
+        - generic [ref=e20]:
+          - button "▶ Plate Rating API" [ref=e21]
+          - button "▶ Review Feedback API" [ref=e22]
+          - button "▶ Plate Setup API" [ref=e23]
+          - button "▶ Loyalty OTP" [ref=e24]
+          - button "▶ Loyalty Collect" [ref=e25]
+          - button "▶ Loyalty Claim" [ref=e26]
+          - button "▶ Promo Send" [ref=e27]
+          - button "▶ Promo Activate" [ref=e28]
+          - button "▶ Stripe Webhook" [ref=e29]
+      - generic [ref=e30]:
+        - paragraph [ref=e31]: Unit DB
+        - generic [ref=e32]:
+          - button "▶ DB Subscriptions" [ref=e33]
+          - button "▶ DB Plates" [ref=e34]
+          - button "▶ DB Loyalty" [ref=e35]
+  - button "Open Next.js Dev Tools" [ref=e41] [cursor=pointer]:
+    - img [ref=e42]

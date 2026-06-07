@@ -31,9 +31,13 @@ jobs:
 
       - name: Export Supabase local keys
         run: |
+          supabase status -o env > /tmp/supabase.env
+          ANON=$(grep '^ANON_KEY=' /tmp/supabase.env | cut -d= -f2-)
+          SRK=$(grep '^SERVICE_ROLE_KEY=' /tmp/supabase.env | cut -d= -f2-)
           echo "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(supabase status | grep 'anon key' | awk '{print $NF}')" >> $GITHUB_ENV
-          echo "SUPABASE_SERVICE_ROLE_KEY=$(supabase status | grep 'service_role key' | awk '{print $NF}')" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON" >> $GITHUB_ENV
+          echo "SUPABASE_SERVICE_ROLE_KEY=$SRK" >> $GITHUB_ENV
+          echo "anon key length: ${#ANON}, service_role key length: ${#SRK}"
 
       - name: Install dependencies
         run: npm ci
