@@ -21,7 +21,7 @@ const SUITES: Record<string, string> = {
 export async function POST(request: Request) {
   const { suite } = await request.json().catch(() => ({ suite: "all" }));
   const filter = SUITES[suite as string] ?? "";
-  const cmd = `npx vitest run ${filter} --reporter=verbose`;
+  const cmd = `node node_modules/.bin/vitest run ${filter} --reporter=verbose`;
 
   return new Promise<Response>((resolve) => {
     exec(
