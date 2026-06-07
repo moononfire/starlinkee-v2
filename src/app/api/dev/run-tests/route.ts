@@ -19,6 +19,13 @@ const SUITES: Record<string, string> = {
 };
 
 export async function POST(request: Request) {
+  if (process.env.NODE_ENV !== "development") {
+    return Response.json(
+      { passed: false, output: "Test runner działa tylko lokalnie (NODE_ENV=development).\nUruchom testy przez: npm test" },
+      { status: 403 }
+    );
+  }
+
   const { suite } = await request.json().catch(() => ({ suite: "all" }));
   const filter = SUITES[suite as string] ?? "";
   const cmd = `node node_modules/.bin/vitest run ${filter} --reporter=verbose`;
