@@ -1,0 +1,128 @@
+export interface Plate {
+  plate_id: number;
+  subscription_id: number | null;
+  plate_number: string;
+  plate_language: string;
+  number_of_visits: number;
+  secret_key: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Subscription {
+  subscription_id: number;
+  customer_id: number;
+  subscription_name: string;
+  duration_in_days: number;
+  is_free: boolean;
+  activation_datetime: string | null;
+  expiration_datetime: string | null;
+  status: "pending" | "active" | "inactive";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerLocation {
+  location_id: number;
+  subscription_id: number;
+  location_name: string;
+  google_business_name: string | null;
+  google_business_address: string | null;
+  city: string | null;
+  postal_code: string | null;
+  country: string | null;
+  google_review_link: string | null;
+  google_places_id: string | null;
+  support_email: string | null;
+  logo_path: string | null;
+  logo_link: string | null;
+  linktree_slug: string | null;
+  linktree_visits: number;
+  has_linktree_access: boolean;
+  has_promo_enabled: boolean;
+  has_loyalty_enabled: boolean;
+  promo_banner_text: string | null;
+  promo_sms_text: string | null;
+  owner_email: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Review {
+  review_id: number;
+  plate_id: number;
+  scan_id: string;
+  scan_time: string;
+  rating: number | null;
+  rating_time: string | null;
+  feedback_message: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  user_name: string | null;
+  feedback_time: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LoyaltyCard {
+  id: number;
+  location_id: number;
+  phone: string;
+  stamps_count: number;
+  last_stamp_at: string | null;
+}
+
+export interface CustomerLocationLink {
+  id: number;
+  customer_location_id: number;
+  title: string;
+  url: string;
+  sort_order: number;
+}
+
+export interface LoyaltyOtp {
+  location_id: number;
+  phone: string;
+  otp_code: string;
+  expires_at: string;
+}
+
+export interface Customer {
+  customer_id: number;
+  customer_type: "business" | "individual";
+  source: string;
+  company_name: string | null;
+  tax_id: string | null;
+  customer_name: string;
+  email: string;
+  phone: string | null;
+  billing_address: string | null;
+  preferred_language: "en" | "de" | "pl";
+  country: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Order {
+  order_id: number;
+  customer_id: number;
+  status: "pending" | "paid" | "cancelled";
+  payment_method: "stripe" | "bank_transfer" | "cash" | null;
+  stripe_payment_id: string | null;
+  stripe_payment_intent_id: string | null;
+  internal_payment_reference: string | null;
+  created_at: string;
+  fulfilled_at: string | null;
+}
+
+export interface LocationLead {
+  id: number;
+  location_id: number;
+  phone: string;
+  email: string | null;
+  agreed_to_terms: boolean;
+  claim_token: string;
+  is_used: boolean;
+  used_at: string | null;
+  created_at: string;
+}
