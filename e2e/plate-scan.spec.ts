@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { cleanupTestReviews } from './fixtures/seed';
+import { seedTestData, cleanupTestReviews } from './fixtures/seed';
+
+test.beforeAll(async () => {
+  await seedTestData();
+});
 
 test.afterEach(async () => {
   await cleanupTestReviews();
