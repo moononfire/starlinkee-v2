@@ -50,6 +50,7 @@ export default async function PlatesPage({
             <tr>
               <th className="text-left px-4 py-3 font-medium text-gray-600">ID</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Numer</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600">Secret Key</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Język</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Wizyty</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Subskrypcja</th>
@@ -60,7 +61,7 @@ export default async function PlatesPage({
           <tbody className="divide-y divide-gray-100">
             {plates.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
                   Brak płytek
                 </td>
               </tr>
@@ -71,6 +72,7 @@ export default async function PlatesPage({
                 <td className="px-4 py-3 font-mono font-medium text-gray-900">
                   {p.plate_number}
                 </td>
+                <td className="px-4 py-3 font-mono text-gray-500 text-xs">{p.secret_key}</td>
                 <td className="px-4 py-3 text-gray-600 uppercase">{p.plate_language}</td>
                 <td className="px-4 py-3 text-gray-600">{p.number_of_visits}</td>
                 <td className="px-4 py-3 text-gray-600">{p.subscription_name ?? "—"}</td>

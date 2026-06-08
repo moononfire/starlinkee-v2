@@ -28,7 +28,11 @@ export async function POST(request: Request) {
 
   const { suite } = await request.json().catch(() => ({ suite: "all" }));
   const filter = SUITES[suite as string] ?? "";
-  const cmd = `node node_modules/.bin/vitest run ${filter} --reporter=verbose`;
+  const isWindows = process.platform === "win32";
+  const vitestBin = isWindows
+    ? "node_modules\\.bin\\vitest.cmd"
+    : "node node_modules/.bin/vitest";
+  const cmd = `${vitestBin} run ${filter} --reporter=verbose`;
 
   return new Promise<Response>((resolve) => {
     exec(
