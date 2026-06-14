@@ -1,6 +1,26 @@
 import { createAdminClient } from "../supabase/admin";
 import type { Review } from "../types";
 
+export interface ReviewWithLocation extends Review {
+  plate_number: string;
+  location_name: string | null;
+}
+
+export async function listReviews(): Promise<ReviewWithLocation[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("reviews")
+    .select("*, plates(plate_number, subscriptions(customer_locations(location_name)))")
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (error) throw new Error(`Failed to list reviews: ${error.message}`);
+  return (data ?? []).map((row: any) => ({
+    ...row,
+    plate_number: row.plates?.plate_number ?? "?",
+    location_name: row.plates?.subscriptions?.customer_locations?.location_name ?? null,
+  }));
+}
+
 export async function createScanRecord(plateId: number): Promise<string> {
   const supabase = createAdminClient();
   const scanId = crypto.randomUUID();

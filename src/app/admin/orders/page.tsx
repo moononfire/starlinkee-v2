@@ -1,19 +1,25 @@
 import Link from "next/link";
 import { listOrders } from "@/lib/db/orders";
 
+const statusLabel = {
+  pending: "Oczekuje",
+  paid: "Opłacone",
+  cancelled: "Anulowane",
+};
+const statusClass = {
+  pending: "bg-yellow-100 text-yellow-700",
+  paid: "bg-green-100 text-green-700",
+  cancelled: "bg-red-100 text-red-700",
+};
+
+const paymentLabel: Record<string, string> = {
+  stripe: "Stripe",
+  bank_transfer: "Przelew",
+  cash: "Gotówka",
+};
+
 export default async function OrdersPage() {
   const orders = await listOrders();
-
-  const statusLabel = {
-    pending: "Oczekuje",
-    paid: "Opłacone",
-    cancelled: "Anulowane",
-  };
-  const statusClass = {
-    pending: "bg-yellow-100 text-yellow-700",
-    paid: "bg-green-100 text-green-700",
-    cancelled: "bg-red-100 text-red-700",
-  };
 
   return (
     <div>
@@ -33,16 +39,18 @@ export default async function OrdersPage() {
             <tr>
               <th className="text-left px-4 py-3 font-medium text-gray-600">ID</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Klient</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600">Produkty</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Płatność</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Ref. wewnętrzna</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600">Ref.</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Data</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600">Wykonano</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {orders.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
                   Brak zamówień
                 </td>
               </tr>
@@ -54,19 +62,31 @@ export default async function OrdersPage() {
                   <div className="font-medium text-gray-900">{o.customer_name}</div>
                   <div className="text-gray-500 text-xs">{o.customer_email}</div>
                 </td>
+                <td className="px-4 py-3 text-gray-600">
+                  {o.items.length === 0
+                    ? "—"
+                    : o.items.map((item) => `${item.quantity}× ${item.product_name}`).join(", ")}
+                </td>
                 <td className="px-4 py-3">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusClass[o.status]}`}
-                  >
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusClass[o.status]}`}>
                     {statusLabel[o.status]}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-gray-600">{o.payment_method ?? "—"}</td>
-                <td className="px-4 py-3 text-gray-500 text-xs">
-                  {o.internal_payment_reference ?? "—"}
+                <td className="px-4 py-3 text-gray-600">
+                  {o.payment_method ? paymentLabel[o.payment_method] ?? o.payment_method : "—"}
+                </td>
+                <td className="px-4 py-3 text-gray-400 text-xs font-mono">
+                  {o.stripe_payment_id
+                    ? o.stripe_payment_id.slice(0, 20) + "…"
+                    : o.internal_payment_reference ?? "—"}
                 </td>
                 <td className="px-4 py-3 text-gray-500">
                   {new Date(o.created_at).toLocaleDateString("pl-PL")}
+                </td>
+                <td className="px-4 py-3 text-gray-500">
+                  {o.fulfilled_at
+                    ? new Date(o.fulfilled_at).toLocaleDateString("pl-PL")
+                    : "—"}
                 </td>
               </tr>
             ))}
