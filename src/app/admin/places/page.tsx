@@ -34,13 +34,14 @@ export default async function PlacesPage() {
               <th className="text-left px-4 py-3 font-medium text-gray-600">Skany płytek</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Wizyty Linktree</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Slug</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600">Śr. ocena</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Google Review</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {locations.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={10} className="px-4 py-8 text-center text-gray-400">
                   Brak lokalizacji
                 </td>
               </tr>
@@ -77,6 +78,9 @@ export default async function PlacesPage() {
                 <td className="px-4 py-3 text-gray-600">{loc.linktree_visits}</td>
                 <td className="px-4 py-3 text-gray-600 font-mono text-xs">
                   {loc.linktree_slug ?? "—"}
+                </td>
+                <td className="px-4 py-3 text-gray-700 font-medium">
+                  {loc.avg_rating !== null ? loc.avg_rating : "—"}
                 </td>
                 <td className="px-4 py-3">
                   {loc.google_review_link ? (

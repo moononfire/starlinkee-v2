@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { listShipments } from "@/lib/db/shipments";
 
 const statusLabel = {
@@ -20,6 +21,12 @@ export default async function ShipmentsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Wysyłki</h1>
+        <Link
+          href="/admin/shipments/new"
+          className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700 transition-colors"
+        >
+          + Nowa wysyłka
+        </Link>
       </div>
 
       <div className="bg-white shadow rounded-lg overflow-hidden">

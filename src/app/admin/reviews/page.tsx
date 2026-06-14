@@ -1,7 +1,5 @@
 import { listReviews } from "@/lib/db/reviews";
 
-const stars = (n: number | null) =>
-  n === null ? "—" : "★".repeat(n) + "☆".repeat(5 - n);
 
 export default async function ReviewsPage() {
   const reviews = await listReviews();
@@ -43,8 +41,8 @@ export default async function ReviewsPage() {
                 <td className="px-4 py-3 text-gray-500">{r.review_id}</td>
                 <td className="px-4 py-3 text-gray-700">{r.location_name ?? "—"}</td>
                 <td className="px-4 py-3 font-mono text-gray-600">{r.plate_number}</td>
-                <td className="px-4 py-3 text-yellow-500 tracking-tighter">
-                  {stars(r.rating)}
+                <td className="px-4 py-3 text-gray-700 font-medium">
+                  {r.rating ?? "—"}
                 </td>
                 <td className="px-4 py-3 text-gray-600 max-w-xs truncate">
                   {r.feedback_message ?? "—"}
