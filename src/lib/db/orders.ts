@@ -74,6 +74,25 @@ export async function listOrders(): Promise<OrderWithCustomer[]> {
   }));
 }
 
+export async function listOrdersReadyToShip(): Promise<OrderWithCustomer[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*, customers(customer_name, email), order_items(quantity, products(name))")
+    .eq("status", "paid")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(`Failed to list orders: ${error.message}`);
+  return (data ?? []).map((row: any) => ({
+    ...row,
+    customer_name: row.customers?.customer_name ?? "",
+    customer_email: row.customers?.email ?? "",
+    items: (row.order_items ?? []).map((item: any) => ({
+      quantity: item.quantity,
+      product_name: item.products?.name ?? "?",
+    })),
+  }));
+}
+
 export async function createOrderManual(data: {
   customer_id: number;
   payment_method: "bank_transfer" | "cash";

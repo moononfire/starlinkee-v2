@@ -65,24 +65,35 @@ export interface LocationWithCustomer extends CustomerLocation {
   customer_name: string;
   subscription_status: string;
   total_plate_visits: number;
+  avg_rating: number | null;
 }
 
 export async function listLocations(): Promise<LocationWithCustomer[]> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("customer_locations")
-    .select("*, subscriptions(status, customers(customer_name), plates(number_of_visits))")
+    .select("*, subscriptions(status, customers(customer_name), plates(number_of_visits, reviews(rating)))")
     .order("created_at", { ascending: false });
   if (error) throw new Error(`Failed to list locations: ${error.message}`);
-  return (data ?? []).map((row: any) => ({
-    ...row,
-    customer_name: row.subscriptions?.customers?.customer_name ?? "",
-    subscription_status: row.subscriptions?.status ?? "",
-    total_plate_visits: (row.subscriptions?.plates ?? []).reduce(
-      (sum: number, p: any) => sum + (p.number_of_visits ?? 0),
-      0
-    ),
-  }));
+  return (data ?? []).map((row: any) => {
+    const plates: any[] = row.subscriptions?.plates ?? [];
+    const ratings = plates
+      .flatMap((p: any) => p.reviews ?? [])
+      .map((r: any) => r.rating)
+      .filter((r: any) => r !== null && r !== undefined) as number[];
+    return {
+      ...row,
+      customer_name: row.subscriptions?.customers?.customer_name ?? "",
+      subscription_status: row.subscriptions?.status ?? "",
+      total_plate_visits: plates.reduce(
+        (sum: number, p: any) => sum + (p.number_of_visits ?? 0),
+        0
+      ),
+      avg_rating: ratings.length > 0
+        ? Math.round((ratings.reduce((s, r) => s + r, 0) / ratings.length) * 100) / 100
+        : null,
+    };
+  });
 }
 
 export async function incrementLinktreeVisits(locationId: number): Promise<void> {

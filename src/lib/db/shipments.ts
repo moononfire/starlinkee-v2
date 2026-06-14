@@ -18,6 +18,29 @@ export async function listShipments(): Promise<ShipmentWithCustomer[]> {
   }));
 }
 
+export async function createShipmentFull(data: {
+  order_id: number;
+  tracking_number?: string;
+  carrier?: string;
+  shipped_at?: string;
+  recipient_name?: string;
+  recipient_email?: string;
+  recipient_phone?: string;
+  address_line1?: string;
+  address_line2?: string;
+  city?: string;
+  postal_code?: string;
+  country?: string;
+  number_of_plates?: number;
+  batch_label?: string;
+  shipping_cost?: number;
+}): Promise<void> {
+  const supabase = createAdminClient();
+  const shipping_status = data.shipped_at ? "shipped" : "pending";
+  const { error } = await supabase.from("shipments").insert({ ...data, shipping_status });
+  if (error) throw new Error(`Failed to create shipment: ${error.message}`);
+}
+
 export async function updateShipmentStatus(
   id: number,
   status: Shipment["shipping_status"],
