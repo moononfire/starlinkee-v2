@@ -45,22 +45,32 @@ export async function createShipment(data: {
   if (error) throw new Error(`Failed to create shipment: ${error.message}`);
 }
 
+export interface OrderItem {
+  quantity: number;
+  product_name: string;
+}
+
 export interface OrderWithCustomer extends Order {
   customer_name: string;
   customer_email: string;
+  items: OrderItem[];
 }
 
 export async function listOrders(): Promise<OrderWithCustomer[]> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("orders")
-    .select("*, customers(customer_name, email)")
+    .select("*, customers(customer_name, email), order_items(quantity, products(name))")
     .order("created_at", { ascending: false });
   if (error) throw new Error(`Failed to list orders: ${error.message}`);
   return (data ?? []).map((row: any) => ({
     ...row,
     customer_name: row.customers?.customer_name ?? "",
     customer_email: row.customers?.email ?? "",
+    items: (row.order_items ?? []).map((item: any) => ({
+      quantity: item.quantity,
+      product_name: item.products?.name ?? "?",
+    })),
   }));
 }
 

@@ -61,6 +61,30 @@ export async function getLocationLinksByLocationId(
   return data ?? [];
 }
 
+export interface LocationWithCustomer extends CustomerLocation {
+  customer_name: string;
+  subscription_status: string;
+  total_plate_visits: number;
+}
+
+export async function listLocations(): Promise<LocationWithCustomer[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("customer_locations")
+    .select("*, subscriptions(status, customers(customer_name), plates(number_of_visits))")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(`Failed to list locations: ${error.message}`);
+  return (data ?? []).map((row: any) => ({
+    ...row,
+    customer_name: row.subscriptions?.customers?.customer_name ?? "",
+    subscription_status: row.subscriptions?.status ?? "",
+    total_plate_visits: (row.subscriptions?.plates ?? []).reduce(
+      (sum: number, p: any) => sum + (p.number_of_visits ?? 0),
+      0
+    ),
+  }));
+}
+
 export async function incrementLinktreeVisits(locationId: number): Promise<void> {
   const supabase = createAdminClient();
   await supabase.rpc("increment_linktree_visits", { p_location_id: locationId });

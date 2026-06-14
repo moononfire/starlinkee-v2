@@ -126,3 +126,45 @@ export interface LocationLead {
   used_at: string | null;
   created_at: string;
 }
+
+export interface Product {
+  product_id: number;
+  category: "subscription" | "plate" | "shipping";
+  name: string;
+  description: string | null;
+  is_free: boolean;
+  price: number;
+  stripe_product_id: string | null;
+  stripe_price_id: string | null;
+  created_at: string;
+}
+
+export interface OrderItem {
+  order_item_id: number;
+  order_id: number;
+  product_id: number;
+  quantity: number;
+}
+
+export interface Shipment {
+  id: number;
+  order_id: number;
+  number_of_plates: number | null;
+  tracking_number: string | null;
+  carrier: string | null;
+  shipping_status: "pending" | "shipped" | "delivered" | "cancelled";
+  batch_label: string | null;
+  recipient_name: string | null;
+  recipient_email: string | null;
+  recipient_phone: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  postal_code: string | null;
+  country: string | null;
+  shipping_cost: number | null;
+  shipped_at: string | null;
+  delivered_at: string | null;
+  created_at: string;
+  updated_at: string;
+}

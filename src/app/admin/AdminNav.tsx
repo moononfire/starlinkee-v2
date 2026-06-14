@@ -7,9 +7,12 @@ import { logoutAction } from "../login/actions";
 const links = [
   { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/customers", label: "Klienci" },
+  { href: "/admin/places", label: "Places" },
   { href: "/admin/orders", label: "Zamówienia" },
-  { href: "/admin/plates", label: "Płytki" },
   { href: "/admin/subscriptions", label: "Subskrypcje" },
+  { href: "/admin/plates", label: "Płytki" },
+  { href: "/admin/shipments", label: "Wysyłki" },
+  { href: "/admin/reviews", label: "Recenzje" },
 ];
 
 export default function AdminNav({ userEmail }: { userEmail: string }) {
@@ -18,7 +21,9 @@ export default function AdminNav({ userEmail }: { userEmail: string }) {
   return (
     <aside className="w-56 bg-gray-900 text-white flex flex-col">
       <div className="p-4 border-b border-gray-700">
-        <span className="font-bold text-lg">Starlinkee</span>
+        <Link href="/admin/dashboard" className="font-bold text-lg hover:text-blue-400 transition-colors">
+          Starlinkee
+        </Link>
       </div>
       <nav className="flex-1 p-2 space-y-1">
         {links.map(({ href, label }) => {
