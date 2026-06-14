@@ -5,6 +5,7 @@ export interface Plate {
   plate_language: string;
   number_of_visits: number;
   secret_key: string;
+  nfc_uid: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -36,6 +36,18 @@ export async function assignPlateToSubscription(
     .eq("plate_id", plateId);
 }
 
+export async function assignNfcToPlate(
+  plateNumber: string,
+  nfcUid: string
+): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("plates")
+    .update({ nfc_uid: nfcUid })
+    .eq("plate_number", plateNumber.toUpperCase());
+  if (error) throw new Error(`Failed to assign NFC: ${error.message}`);
+}
+
 export async function insertPlatesBatch(
   plates: { plate_number: string; plate_language: string; secret_key: string }[]
 ): Promise<void> {
