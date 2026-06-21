@@ -12,28 +12,7 @@ export async function GET() {
   const targetEmail = "vikbobinski@gmail.com";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-  // 1. Run migration — add columns if they don't exist
-  await supabase.rpc("exec_sql", {
-    query: `
-      DO $$ BEGIN
-        ALTER TABLE customers ADD COLUMN activation_token TEXT UNIQUE;
-      EXCEPTION WHEN duplicate_column THEN NULL;
-      END $$;
-      DO $$ BEGIN
-        ALTER TABLE customers ADD COLUMN is_activated BOOLEAN NOT NULL DEFAULT false;
-      EXCEPTION WHEN duplicate_column THEN NULL;
-      END $$;
-    `,
-  }).then(() => console.log("Migration applied"))
-    .catch(() => console.log("Migration skipped or rpc not available, trying direct approach"));
-
-  // Fallback: try direct column add via individual queries (ignore errors)
-  await supabase.from("customers").select("activation_token").limit(1)
-    .then(({ error }) => {
-      if (error?.message?.includes("activation_token")) {
-        console.log("Column doesn't exist yet — will need manual migration");
-      }
-    });
+  // Migration already applied via supabase db push
 
   // 2. List all customers
   const { data: customers } = await supabase
