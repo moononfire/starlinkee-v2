@@ -3,6 +3,7 @@ import { getPlateByNumber, incrementPlateVisits } from "@/lib/db/plates";
 import { getSubscriptionById } from "@/lib/db/subscriptions";
 import { getLocationBySubscriptionId } from "@/lib/db/locations";
 import { createScanRecord } from "@/lib/db/reviews";
+import { createScanToken } from "@/lib/db/scan-tokens";
 import { t } from "@/lib/translations";
 import PlateSetupForm from "@/components/plate/PlateSetupForm";
 
@@ -53,7 +54,8 @@ export default async function PlatePage({ params }: Props) {
     location.has_linktree_access &&
     location.linktree_slug
   ) {
-    redirect(`/l/${location.linktree_slug}`);
+    const scanToken = await createScanToken(location.location_id);
+    redirect(`/l/${location.linktree_slug}?scan=${scanToken}`);
   }
 
   const scanId = await createScanRecord(plate.plate_id);

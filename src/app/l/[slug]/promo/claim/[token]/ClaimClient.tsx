@@ -1,38 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import QRCode from "react-qr-code";
 
 interface Props {
-  token: string;
   isUsed: boolean;
   bannerText: string;
+  couponCode: string;
 }
 
-export default function ClaimClient({ token, isUsed: initialIsUsed, bannerText }: Props) {
-  const [isUsed, setIsUsed] = useState(initialIsUsed);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleActivate() {
-    setLoading(true);
-    setError(null);
-    const res = await fetch("/api/promo/activate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
-    });
-    setLoading(false);
-
-    if (res.status === 409) {
-      setIsUsed(true);
-      return;
-    }
-    if (!res.ok) {
-      setError("Coś poszło nie tak. Spróbuj ponownie.");
-      return;
-    }
-    setIsUsed(true);
-  }
+export default function ClaimClient({ isUsed, bannerText, couponCode }: Props) {
+  const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify?code=${couponCode}`;
 
   if (isUsed) {
     return (
@@ -46,18 +23,20 @@ export default function ClaimClient({ token, isUsed: initialIsUsed, bannerText }
     <div className="flex flex-col gap-6">
       <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-6 text-center">
         <p className="text-amber-900 font-semibold text-lg">{bannerText || "Twoja promocja"}</p>
-        <p className="text-amber-700 text-sm mt-2">Pokaż ten ekran obsłudze, żeby aktywować kupon.</p>
       </div>
 
-      {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+      <div className="flex flex-col items-center gap-4">
+        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Kod kuponu</p>
+        <p className="text-3xl font-mono font-bold tracking-widest text-gray-900">{couponCode}</p>
 
-      <button
-        onClick={handleActivate}
-        disabled={loading}
-        className="bg-black text-white rounded-lg px-4 py-3 font-medium disabled:opacity-50"
-      >
-        {loading ? "Aktywuję..." : "Aktywuj kupon"}
-      </button>
+        <div className="bg-white p-3 rounded-xl border border-gray-100">
+          <QRCode value={verifyUrl} size={180} />
+        </div>
+      </div>
+
+      <p className="text-sm text-gray-600 text-center">
+        Pokaż ten kod obsłudze restauracji.
+      </p>
     </div>
   );
 }

@@ -1,6 +1,15 @@
 import { createAdminClient } from "../supabase/admin";
 import type { LocationLead } from "../types";
 
+const COUPON_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+export function generateCouponCode(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  return Array.from(bytes)
+    .map((b) => COUPON_CHARS[b % COUPON_CHARS.length])
+    .join("");
+}
+
 export async function checkLeadExists(locationId: number, phone: string): Promise<boolean> {
   const supabase = createAdminClient();
   const { data } = await supabase
@@ -17,12 +26,21 @@ export async function createLead(
   phone: string,
   email: string | null,
   agreedToTerms: boolean,
-  claimToken: string
+  claimToken: string,
+  couponCode: string
 ): Promise<LocationLead> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("location_leads")
-    .insert({ location_id: locationId, phone, email, agreed_to_terms: agreedToTerms, claim_token: claimToken, is_used: false })
+    .insert({
+      location_id: locationId,
+      phone,
+      email,
+      agreed_to_terms: agreedToTerms,
+      claim_token: claimToken,
+      coupon_code: couponCode,
+      is_used: false,
+    })
     .select()
     .single();
   if (error) throw new Error(`Failed to create lead: ${error.message}`);
@@ -35,6 +53,16 @@ export async function getLeadByToken(token: string): Promise<LocationLead | null
     .from("location_leads")
     .select("*")
     .eq("claim_token", token)
+    .single();
+  return data ?? null;
+}
+
+export async function getLeadByCouponCode(code: string): Promise<LocationLead | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("location_leads")
+    .select("*")
+    .eq("coupon_code", code)
     .single();
   return data ?? null;
 }

@@ -5,11 +5,12 @@ import { useState } from "react";
 interface Props {
   slug: string;
   bannerText: string;
+  scanToken?: string;
 }
 
 type Screen = "form" | "success";
 
-export default function PromoForm({ slug, bannerText }: Props) {
+export default function PromoForm({ slug, bannerText, scanToken }: Props) {
   const [screen, setScreen] = useState<Screen>("form");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -17,6 +18,16 @@ export default function PromoForm({ slug, bannerText }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConsentError, setShowConsentError] = useState(false);
+
+  if (!scanToken) {
+    return (
+      <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
+        <p className="text-gray-600 text-sm font-medium">
+          Zeskanuj tabliczkę NFC, aby odebrać promocję.
+        </p>
+      </div>
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -32,13 +43,17 @@ export default function PromoForm({ slug, bannerText }: Props) {
     const res = await fetch("/api/promo/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, email: email || null, agreed, slug }),
+      body: JSON.stringify({ phone, email: email || null, agreed, slug, scanToken }),
     });
 
     setLoading(false);
 
     if (res.status === 409) {
       setError("Ten numer telefonu już odebrał tę promocję.");
+      return;
+    }
+    if (res.status === 403) {
+      setError("Link wygasł. Zeskanuj tabliczkę ponownie.");
       return;
     }
     if (!res.ok) {
