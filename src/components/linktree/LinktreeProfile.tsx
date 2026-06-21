@@ -5,9 +5,10 @@ interface Props {
   location: CustomerLocation;
   links: CustomerLocationLink[];
   slug: string;
+  scanToken?: string;
 }
 
-export default function LinktreeProfile({ location, links, slug }: Props) {
+export default function LinktreeProfile({ location, links, slug, scanToken }: Props) {
   return (
     <main className="min-h-screen flex flex-col items-center p-6 bg-white">
       <div className="max-w-sm w-full flex flex-col items-center gap-6 pt-10">
@@ -47,7 +48,7 @@ export default function LinktreeProfile({ location, links, slug }: Props) {
         {location.has_promo_enabled && (
           <div className="w-full mt-2">
             <Link
-              href={`/l/${slug}/promo`}
+              href={`/l/${slug}/promo${scanToken ? `?scan=${scanToken}` : ""}`}
               className="block w-full text-center py-3 px-6 rounded-full bg-amber-400 hover:bg-amber-500 font-semibold text-gray-900 transition-colors"
             >
               {location.promo_banner_text ?? "Odbierz promocję"}

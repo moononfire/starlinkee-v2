@@ -46,6 +46,10 @@ export default async function PlacesPage({
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Skany płytek</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Wizyty Linktree</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Slug</th>
+              <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Linktree</th>
+              <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Promo</th>
+              <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Loyalty</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Tryb skanu</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Śr. ocena</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Google Review</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300"></th>
@@ -54,7 +58,7 @@ export default async function PlacesPage({
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {locations.length === 0 && (
               <tr>
-                <td colSpan={12} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={16} className="px-4 py-8 text-center text-gray-400">
                   Brak lokalizacji
                 </td>
               </tr>
@@ -91,6 +95,20 @@ export default async function PlacesPage({
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{loc.linktree_visits}</td>
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300 font-mono text-xs">
                   {loc.linktree_slug ?? "—"}
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <span className={`inline-block w-2.5 h-2.5 rounded-full ${loc.has_linktree_access ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"}`} title={loc.has_linktree_access ? "Aktywny" : "Nieaktywny"} />
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <span className={`inline-block w-2.5 h-2.5 rounded-full ${loc.has_promo_enabled ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"}`} title={loc.has_promo_enabled ? "Aktywny" : "Nieaktywny"} />
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <span className={`inline-block w-2.5 h-2.5 rounded-full ${loc.has_loyalty_enabled ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"}`} title={loc.has_loyalty_enabled ? "Aktywny" : "Nieaktywny"} />
+                </td>
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${loc.scan_redirect_mode === "linktree" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" : "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300"}`}>
+                    {loc.scan_redirect_mode === "linktree" ? "Linktree" : "Review"}
+                  </span>
                 </td>
                 <td className="px-4 py-3 text-gray-700 dark:text-gray-300 font-medium">
                   {loc.avg_rating !== null ? loc.avg_rating : "—"}

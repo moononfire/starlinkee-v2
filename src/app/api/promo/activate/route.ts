@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getLeadByToken, markLeadAsUsed } from "@/lib/db/leads";
+import { getLeadByToken, getLeadByCouponCode, markLeadAsUsed } from "@/lib/db/leads";
 
 export async function POST(request: NextRequest) {
-  const { token } = await request.json();
+  const { token, code } = await request.json();
 
-  if (!token) {
-    return NextResponse.json({ error: "Missing token" }, { status: 400 });
+  if (!token && !code) {
+    return NextResponse.json({ error: "Missing token or code" }, { status: 400 });
   }
 
-  const lead = await getLeadByToken(token);
+  const lead = code
+    ? await getLeadByCouponCode(code.toUpperCase())
+    : await getLeadByToken(token);
+
   if (!lead) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 404 });
+    return NextResponse.json({ error: "Invalid" }, { status: 404 });
   }
 
   if (lead.is_used) {

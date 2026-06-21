@@ -5,6 +5,7 @@ import { getLocationBySubscriptionId } from "@/lib/db/locations";
 import { getSubscriptionById } from "@/lib/db/subscriptions";
 import { t } from "@/lib/translations";
 import RatingStars from "@/components/plate/RatingStars";
+import PageTracker from "@/components/tracking/PageTracker";
 
 interface Props {
   params: Promise<{ number: string; scanId: string }>;
@@ -29,27 +30,30 @@ export default async function ScanPage({ params }: Props) {
   const lang = plate.plate_language;
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
-      <div className="max-w-sm w-full flex flex-col items-center gap-6">
-        {location.logo_link && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={location.logo_link}
-            alt={location.location_name}
-            className="h-24 w-auto object-contain"
+    <>
+      <PageTracker locationId={location.location_id} pagePath={`/plate/${number}/scan`} pageType="plate_scan" />
+      <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
+        <div className="max-w-sm w-full flex flex-col items-center gap-6">
+          {location.logo_link && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={location.logo_link}
+              alt={location.location_name}
+              className="h-24 w-auto object-contain"
+            />
+          )}
+
+          <h1 className="text-xl font-semibold text-gray-800 text-center">
+            {t("proxy_page_title", lang)}
+          </h1>
+
+          <RatingStars
+            scanId={scanId}
+            googleReviewLink={location.google_review_link ?? ""}
+            lang={lang}
           />
-        )}
-
-        <h1 className="text-xl font-semibold text-gray-800 text-center">
-          {t("proxy_page_title", lang)}
-        </h1>
-
-        <RatingStars
-          scanId={scanId}
-          googleReviewLink={location.google_review_link ?? ""}
-          lang={lang}
-        />
-      </div>
-    </main>
+        </div>
+      </main>
+    </>
   );
 }

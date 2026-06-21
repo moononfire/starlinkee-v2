@@ -126,8 +126,17 @@ export interface LocationLead {
   email: string | null;
   agreed_to_terms: boolean;
   claim_token: string;
+  coupon_code: string | null;
   is_used: boolean;
   used_at: string | null;
+  created_at: string;
+}
+
+export interface ScanToken {
+  id: number;
+  location_id: number;
+  token: string;
+  expires_at: string;
   created_at: string;
 }
 

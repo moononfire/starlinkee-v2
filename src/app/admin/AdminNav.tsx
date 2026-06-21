@@ -14,6 +14,7 @@ const groups = [
       { href: "/admin/subscriptions", label: "Subskrypcje" },
       { href: "/admin/plates", label: "Płytki" },
       { href: "/admin/reviews", label: "Recenzje" },
+      { href: "/admin/analytics", label: "Analityka" },
     ],
   },
   {
