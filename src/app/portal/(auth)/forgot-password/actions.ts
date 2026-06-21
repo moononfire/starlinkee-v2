@@ -2,7 +2,6 @@
 
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { headers } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
 export async function forgotPasswordAction(formData: FormData) {
@@ -31,12 +30,10 @@ export async function forgotPasswordAction(formData: FormData) {
     }
   );
 
-  const headersList = await headers();
-  const origin =
-    headersList.get("origin") ?? headersList.get("x-forwarded-host") ?? "";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/portal/reset-password`,
+    redirectTo: `${appUrl}/portal/reset-password`,
   });
 
   redirect("/portal/forgot-password?sent=1");
