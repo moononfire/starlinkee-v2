@@ -33,7 +33,7 @@ export async function forgotPasswordAction(formData: FormData) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${appUrl}/portal/reset-password`,
+    redirectTo: `${appUrl}/portal/auth/callback?next=/portal/reset-password`,
   });
 
   redirect("/portal/forgot-password?sent=1");

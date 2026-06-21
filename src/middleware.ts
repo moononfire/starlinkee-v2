@@ -36,7 +36,8 @@ export async function middleware(request: NextRequest) {
     pathname === "/portal/login" ||
     pathname === "/portal/activate" ||
     pathname === "/portal/forgot-password" ||
-    pathname === "/portal/reset-password";
+    pathname === "/portal/reset-password" ||
+    pathname.startsWith("/portal/auth");
   const isPortalRoute = pathname.startsWith("/portal") && !isPortalPublic;
 
   if (isAdminRoute && !user) {
