@@ -39,9 +39,13 @@ export default async function ScanPage({ params }: Props) {
             <img
               src={location.logo_link}
               alt={location.location_name}
-              className="h-24 w-auto object-contain"
+              className="h-24 w-24 object-cover rounded-full"
             />
           )}
+
+          <h2 className="text-lg font-bold text-gray-900 text-center">
+            {location.location_name}
+          </h2>
 
           <h1 className="text-xl font-semibold text-gray-800 text-center">
             {t("proxy_page_title", lang)}

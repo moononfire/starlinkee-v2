@@ -25,7 +25,7 @@ export async function listReviews(search?: string): Promise<ReviewWithLocation[]
   return (data ?? []).map((row: any) => ({
     ...row,
     plate_number: row.plates?.plate_number ?? "?",
-    location_name: row.plates?.subscriptions?.customer_locations?.location_name ?? null,
+    location_name: row.plates?.subscriptions?.customer_locations?.[0]?.location_name ?? null,
   }));
 }
 
