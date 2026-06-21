@@ -16,10 +16,16 @@ export default function PromoForm({ slug, bannerText }: Props) {
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showConsentError, setShowConsentError] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!phone || !agreed) return;
+    if (!agreed) {
+      setShowConsentError(true);
+      return;
+    }
+    setShowConsentError(false);
+    if (!phone) return;
     setLoading(true);
     setError(null);
 
@@ -64,29 +70,36 @@ export default function PromoForm({ slug, bannerText }: Props) {
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           required
-          className="border rounded-lg px-4 py-2 text-sm w-full"
+          className="border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-800 bg-white placeholder-gray-400 w-full"
         />
         <input
           type="email"
           placeholder="Email (opcjonalnie)"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="border rounded-lg px-4 py-2 text-sm w-full"
+          className="border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-800 bg-white placeholder-gray-400 w-full"
         />
-        <label className="flex items-start gap-2 text-sm text-gray-600 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={agreed}
-            onChange={(e) => setAgreed(e.target.checked)}
-            required
-            className="mt-0.5 shrink-0"
-          />
-          Zgadzam się na przetwarzanie danych osobowych w celach marketingowych.
-        </label>
+        <div>
+          <label className={`flex items-start gap-2 text-sm cursor-pointer ${showConsentError ? "text-red-500" : "text-gray-600"}`}>
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => {
+                setAgreed(e.target.checked);
+                if (e.target.checked) setShowConsentError(false);
+              }}
+              className="mt-0.5 shrink-0 accent-gray-800"
+            />
+            Zgadzam się na przetwarzanie danych osobowych w celach marketingowych.
+          </label>
+          {showConsentError && (
+            <p className="text-red-500 text-xs mt-1">To pole jest wymagane.</p>
+          )}
+        </div>
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <button
           type="submit"
-          disabled={loading || !phone || !agreed}
+          disabled={loading || !phone}
           className="bg-black text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
           {loading ? "Wysyłam..." : "Odbierz promocję"}

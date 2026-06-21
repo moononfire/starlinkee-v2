@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
-import { getPlateByNumber } from "@/lib/db/plates";
+import { getPlateByNumber, incrementPlateVisits } from "@/lib/db/plates";
 import { getSubscriptionById } from "@/lib/db/subscriptions";
+import { getLocationBySubscriptionId } from "@/lib/db/locations";
 import { createScanRecord } from "@/lib/db/reviews";
 import { t } from "@/lib/translations";
 import PlateSetupForm from "@/components/plate/PlateSetupForm";
@@ -41,7 +42,20 @@ export default async function PlatePage({ params }: Props) {
     );
   }
 
-  // status === "active" — register scan and redirect
+  // Physical scan — always increment plate visits
+  incrementPlateVisits(plate.plate_id).catch(() => {});
+
+  const location = await getLocationBySubscriptionId(plate.subscription_id);
+
+  if (
+    location &&
+    location.scan_redirect_mode === "linktree" &&
+    location.has_linktree_access &&
+    location.linktree_slug
+  ) {
+    redirect(`/l/${location.linktree_slug}`);
+  }
+
   const scanId = await createScanRecord(plate.plate_id);
   redirect(`/plate/${plate.plate_number}/scan/${scanId}`);
 }

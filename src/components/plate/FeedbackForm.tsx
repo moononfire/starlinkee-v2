@@ -52,28 +52,28 @@ export default function FeedbackForm({ scanId, lang }: Props) {
         required
         rows={4}
         placeholder="Your message..."
-        className="w-full border border-gray-300 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-gray-400"
+        className="w-full border border-gray-300 rounded-lg p-3 text-sm text-gray-800 bg-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-gray-400"
       />
 
       <input
         name="user_name"
         type="text"
         placeholder="Your name (optional)"
-        className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+        className="w-full border border-gray-300 rounded-lg p-3 text-sm text-gray-800 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
       />
 
       <input
         name="contact_email"
         type="email"
         placeholder="Email (optional)"
-        className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+        className="w-full border border-gray-300 rounded-lg p-3 text-sm text-gray-800 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
       />
 
       <input
         name="contact_phone"
         type="tel"
         placeholder="Phone (optional)"
-        className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+        className="w-full border border-gray-300 rounded-lg p-3 text-sm text-gray-800 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
       />
 
       <button

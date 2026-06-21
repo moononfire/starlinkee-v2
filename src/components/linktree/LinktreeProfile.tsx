@@ -24,21 +24,25 @@ export default function LinktreeProfile({ location, links, slug }: Props) {
           {location.location_name}
         </h1>
 
-        {links.length > 0 && (
-          <div className="w-full flex flex-col gap-3">
-            {links.map((link) => (
-              <a
-                key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full text-center py-3 px-6 rounded-full border border-gray-200 font-medium text-gray-800 hover:bg-gray-50 transition-colors"
-              >
-                {link.title}
-              </a>
-            ))}
-          </div>
-        )}
+        <div className="w-full flex flex-col gap-3">
+          <Link
+            href={`/l/${slug}/review`}
+            className="w-full text-center py-3 px-6 rounded-full bg-blue-600 hover:bg-blue-700 font-semibold text-white transition-colors"
+          >
+            ⭐ Zostaw opinię
+          </Link>
+          {links.map((link) => (
+            <a
+              key={link.id}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full text-center py-3 px-6 rounded-full border border-gray-200 font-medium text-gray-800 hover:bg-gray-50 transition-colors"
+            >
+              {link.title}
+            </a>
+          ))}
+        </div>
 
         {location.has_promo_enabled && (
           <div className="w-full mt-2">

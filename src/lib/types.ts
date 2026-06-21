@@ -44,6 +44,7 @@ export interface CustomerLocation {
   has_loyalty_enabled: boolean;
   promo_banner_text: string | null;
   promo_sms_text: string | null;
+  scan_redirect_mode: "review" | "linktree";
   owner_email: string | null;
   created_at: string;
   updated_at: string;

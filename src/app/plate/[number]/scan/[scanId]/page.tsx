@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getReviewByScanId } from "@/lib/db/reviews";
-import { getPlateByNumber, incrementPlateVisits } from "@/lib/db/plates";
+import { getPlateByNumber } from "@/lib/db/plates";
 import { getLocationBySubscriptionId } from "@/lib/db/locations";
 import { getSubscriptionById } from "@/lib/db/subscriptions";
 import { t } from "@/lib/translations";
@@ -25,9 +25,6 @@ export default async function ScanPage({ params }: Props) {
 
   const location = await getLocationBySubscriptionId(plate.subscription_id);
   if (!location) notFound();
-
-  // Increment visit count (fire and forget — non-blocking)
-  incrementPlateVisits(plate.plate_id).catch(() => {});
 
   const lang = plate.plate_language;
 
