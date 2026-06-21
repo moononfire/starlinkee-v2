@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { redirect } from "next/navigation";
 import { getCustomerByEmail, getCustomerSubscriptions } from "@/lib/db/portal";
 import { updateScanRedirectMode } from "./actions";
+import LogoUpload from "./LogoUpload";
 
 export default async function PortalSettingsPage() {
   const cookieStore = await cookies();
@@ -32,15 +33,38 @@ export default async function PortalSettingsPage() {
   if (!customer) redirect("/portal/login");
 
   const subscriptions = await getCustomerSubscriptions(customer.customer_id);
-  const locationsWithLinktree = subscriptions
-    .filter((s) => s.location?.has_linktree_access && s.location?.linktree_slug)
+  const allLocations = subscriptions
+    .filter((s) => s.location)
     .map((s) => s.location!);
+  const locationsWithLinktree = allLocations
+    .filter((l) => l.has_linktree_access && l.linktree_slug);
 
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
         Ustawienia
       </h1>
+
+      {allLocations.length > 0 && (
+        <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            Logo firmy
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            Logo wyświetlane na stronie po zeskanowaniu płytki i na Twoim profilu Linktree.
+          </p>
+          <div className="space-y-6">
+            {allLocations.map((location) => (
+              <LogoUpload
+                key={location.location_id}
+                locationId={location.location_id}
+                locationName={location.location_name}
+                currentLogoLink={location.logo_link}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-6">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">

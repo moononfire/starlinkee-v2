@@ -26,7 +26,7 @@ export default async function ClaimPage({ params }: Props) {
             <img
               src={location.logo_link}
               alt={location.location_name}
-              className="w-16 h-16 object-contain rounded-xl mx-auto mb-4"
+              className="w-16 h-16 object-cover rounded-full mx-auto mb-4"
             />
           )}
           <h1 className="text-xl font-semibold text-gray-800 text-center mb-1">{location.location_name}</h1>

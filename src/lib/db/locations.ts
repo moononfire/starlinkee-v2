@@ -131,6 +131,7 @@ export async function updateLocation(
     google_review_link?: string | null;
     google_places_id?: string | null;
     support_email?: string | null;
+    logo_path?: string | null;
     logo_link?: string | null;
     owner_email?: string | null;
     scan_redirect_mode?: "review" | "linktree";

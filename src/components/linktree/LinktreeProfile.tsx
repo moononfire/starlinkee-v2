@@ -17,7 +17,7 @@ export default function LinktreeProfile({ location, links, slug, scanToken }: Pr
           <img
             src={location.logo_link}
             alt={location.location_name}
-            className="h-24 w-auto object-contain"
+            className="h-24 w-24 object-cover rounded-full"
           />
         )}
 

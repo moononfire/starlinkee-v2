@@ -219,6 +219,17 @@ export default function PlateSetupForm({ plateNumber, plateSecret, lang }: Props
                 <p className="text-sm mt-1" style={{ color: "#4b5563" }}>
                   {selectedPlace.address}
                 </p>
+                <div className="mt-3 rounded-lg overflow-hidden" style={{ border: "1px solid #e5e7eb" }}>
+                  <iframe
+                    title="Map"
+                    width="100%"
+                    height="200"
+                    style={{ border: 0 }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    src={`https://maps.google.com/maps?q=${encodeURIComponent(selectedPlace.name + ", " + selectedPlace.address)}&output=embed&z=15`}
+                  />
+                </div>
               </div>
             )}
 

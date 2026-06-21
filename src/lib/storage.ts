@@ -27,3 +27,9 @@ export async function uploadLogo(
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(filename);
   return { path: filename, publicUrl: data.publicUrl };
 }
+
+export async function deleteLogo(path: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase.storage.from(BUCKET).remove([path]);
+  if (error) throw new Error(`Storage delete failed: ${error.message}`);
+}

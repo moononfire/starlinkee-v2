@@ -32,7 +32,7 @@ export default async function LinktreeReviewPage({ params }: Props) {
             <img
               src={location.logo_link}
               alt={location.location_name}
-              className="h-24 w-auto object-contain"
+              className="h-24 w-24 object-cover rounded-full"
             />
           )}
 
