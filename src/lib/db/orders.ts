@@ -56,12 +56,20 @@ export interface OrderWithCustomer extends Order {
   items: OrderItem[];
 }
 
-export async function listOrders(): Promise<OrderWithCustomer[]> {
+export async function listOrders(search?: string): Promise<OrderWithCustomer[]> {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("orders")
     .select("*, customers(customer_name, email), order_items(quantity, products(name))")
     .order("created_at", { ascending: false });
+
+  if (search) {
+    query = query.or(
+      `customers.customer_name.ilike.%${search}%,customers.email.ilike.%${search}%,stripe_payment_id.ilike.%${search}%,internal_payment_reference.ilike.%${search}%`
+    );
+  }
+
+  const { data, error } = await query;
   if (error) throw new Error(`Failed to list orders: ${error.message}`);
   return (data ?? []).map((row: any) => ({
     ...row,

@@ -11,10 +11,11 @@ export async function POST(request: NextRequest) {
   const plateNumber = form.get("plateNumber") as string;
   const plateSecret = form.get("plateSecret") as string;
   const locationName = form.get("location_name") as string;
-  const googleReviewLink = form.get("google_review_link") as string;
+  const googleReviewLink = (form.get("google_review_link") as string) || undefined;
+  const googlePlacesId = (form.get("google_places_id") as string) || undefined;
   const supportEmail = form.get("support_email") as string;
 
-  if (!plateNumber || !plateSecret || !locationName || !googleReviewLink || !supportEmail) {
+  if (!plateNumber || !plateSecret || !locationName || !supportEmail) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
     google_business_name: (form.get("google_business_name") as string) || undefined,
     google_business_address: (form.get("google_business_address") as string) || undefined,
     google_review_link: googleReviewLink,
+    google_places_id: googlePlacesId,
     support_email: supportEmail,
     logo_path: logoPath,
     logo_link: logoLink,

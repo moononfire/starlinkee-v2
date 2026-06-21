@@ -6,6 +6,8 @@ import { createSubscription } from "@/lib/db/subscriptions";
 import { assignPlateToSubscription } from "@/lib/db/plates";
 import { sendOrderConfirmationToAdmin } from "@/lib/email";
 import { createAdminClient } from "@/lib/supabase/admin";
+import PlatesPicker from "@/components/admin/PlatesPicker";
+import ShipmentSection from "@/components/admin/ShipmentSection";
 
 const PRODUCTS = [
   { product_id: 0, name: "1 tydzień (free trial)", duration: 7, is_free: true },
@@ -24,6 +26,7 @@ async function createOrderAction(formData: FormData) {
   );
   const paymentMethod = formData.get("payment_method") as "bank_transfer" | "cash";
   const reference = formData.get("reference") as string | null;
+  const withShipment = formData.get("with_shipment") === "on";
   const recipientName = formData.get("recipient_name") as string | null;
   const addressLine1 = formData.get("address_line1") as string | null;
   const city = formData.get("city") as string | null;
@@ -53,14 +56,16 @@ async function createOrderAction(formData: FormData) {
     await assignPlateToSubscription(plateId, sub.subscription_id);
   }
 
-  await createShipment({
-    order_id: orderId,
-    recipient_name: recipientName || undefined,
-    address_line1: addressLine1 || undefined,
-    city: city || undefined,
-    postal_code: postalCode || undefined,
-    country: country || undefined,
-  });
+  if (withShipment) {
+    await createShipment({
+      order_id: orderId,
+      recipient_name: recipientName || undefined,
+      address_line1: addressLine1 || undefined,
+      city: city || undefined,
+      postal_code: postalCode || undefined,
+      country: country || undefined,
+    });
+  }
 
   void sendOrderConfirmationToAdmin({
     orderId,
@@ -80,14 +85,14 @@ export default async function NewOrderPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Nowe zamówienie</h1>
-      <form action={createOrderAction} className="bg-white shadow rounded-lg p-6 max-w-2xl space-y-5">
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Nowe zamówienie</h1>
+      <form action={createOrderAction} className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-6 max-w-2xl space-y-5">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Klient *</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Klient *</label>
           <select
             name="customer_id"
             required
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">— wybierz klienta —</option>
             {customers.map((c) => (
@@ -99,11 +104,11 @@ export default async function NewOrderPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Subskrypcja *</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subskrypcja *</label>
           <select
             name="product_id"
             required
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {PRODUCTS.map((p) => (
               <option key={p.product_id} value={p.product_id}>
@@ -114,91 +119,40 @@ export default async function NewOrderPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Płytki (Ctrl+click wielokrotny wybór) *
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Płytki *
           </label>
           {plates.length === 0 ? (
             <p className="text-sm text-gray-400">Brak dostępnych płytek (wszystkie przypisane)</p>
           ) : (
-            <select
-              name="plate_ids"
-              multiple
-              required
-              size={Math.min(plates.length, 8)}
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-            >
-              {plates.map((p) => (
-                <option key={p.plate_id} value={p.plate_id}>
-                  {p.plate_number} ({p.plate_language})
-                </option>
-              ))}
-            </select>
+            <PlatesPicker plates={plates} />
           )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Metoda płatności *</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Metoda płatności *</label>
             <select
               name="payment_method"
               required
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="bank_transfer">Przelew</option>
               <option value="cash">Gotówka</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Ref. wewnętrzna
             </label>
             <input
               name="reference"
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
 
-        <fieldset className="border border-gray-200 rounded p-4 space-y-3">
-          <legend className="text-sm font-medium text-gray-600 px-1">Wysyłka</legend>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Odbiorca</label>
-              <input
-                name="recipient_name"
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Adres</label>
-              <input
-                name="address_line1"
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Miasto</label>
-              <input
-                name="city"
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Kod pocztowy</label>
-              <input
-                name="postal_code"
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Kraj</label>
-              <input
-                name="country"
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-        </fieldset>
+        <ShipmentSection />
 
         <div className="flex gap-3 pt-2">
           <button
@@ -209,7 +163,7 @@ export default async function NewOrderPage() {
           </button>
           <a
             href="/admin/orders"
-            className="px-5 py-2 rounded text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+            className="px-5 py-2 rounded text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
             Anuluj
           </a>

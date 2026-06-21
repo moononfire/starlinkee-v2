@@ -48,12 +48,13 @@ export default async function PlatePage({ params }: Props) {
 
 function InactivePage({ lang }: { lang: string }) {
   return (
-    <main className="min-h-screen flex items-center justify-center p-6 bg-gray-50">
+    <main className="min-h-screen flex items-center justify-center p-6"
+      style={{ backgroundColor: "#f9fafb", color: "#111827" }}>
       <div className="max-w-sm w-full text-center">
-        <p className="text-lg font-medium text-gray-700">
+        <p className="text-lg font-medium" style={{ color: "#1f2937" }}>
           {t("plate_inactive_title", lang)}
         </p>
-        <p className="mt-2 text-gray-500">{t("plate_inactive_exception", lang)}</p>
+        <p className="mt-2" style={{ color: "#374151" }}>{t("plate_inactive_exception", lang)}</p>
       </div>
     </main>
   );

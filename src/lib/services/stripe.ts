@@ -2,7 +2,8 @@ import Stripe from "stripe";
 import { upsertCustomerByEmail } from "../db/customers";
 import { createOrder, createOrderItem, createShipment } from "../db/orders";
 import { createSubscription } from "../db/subscriptions";
-import { sendOrderConfirmationToAdmin } from "../email";
+import { sendOrderConfirmationToAdmin, sendPortalActivation } from "../email";
+import { setActivationToken } from "../db/portal";
 
 // Product IDs match the seeded products table
 const SUBSCRIPTION_PRODUCT_ID = 1; // 1_YEAR_SUB
@@ -100,7 +101,24 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
     country: shipping?.address?.country ?? undefined,
   });
 
-  // 6. Notify admin (non-blocking — failure must not abort the webhook)
+  // 6. Generate activation token and send portal activation email
+  const activationToken = crypto.randomUUID();
+  await setActivationToken(customerId, activationToken);
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://starlinkee.com";
+  const activationUrl = `${appUrl}/portal/activate?token=${activationToken}`;
+  const language = invoice.customer_address?.country === "DE"
+    ? "de"
+    : invoice.customer_address?.country === "PL"
+      ? "pl"
+      : "en";
+
+  sendPortalActivation(email, language, {
+    customerName: invoice.customer_name ?? email,
+    activationUrl,
+  }).catch((err) => console.error("[stripe] activation email failed:", err));
+
+  // 7. Notify admin (non-blocking — failure must not abort the webhook)
   sendOrderConfirmationToAdmin({
     orderId,
     customerName: invoice.customer_name ?? email,

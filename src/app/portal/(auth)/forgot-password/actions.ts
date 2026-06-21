@@ -1,0 +1,43 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { headers } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
+
+export async function forgotPasswordAction(formData: FormData) {
+  const email = formData.get("email") as string;
+
+  if (!email) {
+    redirect("/portal/forgot-password?error=missing_email");
+  }
+
+  const cookieStore = await cookies();
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+
+  const headersList = await headers();
+  const origin =
+    headersList.get("origin") ?? headersList.get("x-forwarded-host") ?? "";
+
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/portal/reset-password`,
+  });
+
+  redirect("/portal/forgot-password?sent=1");
+}

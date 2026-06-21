@@ -29,20 +29,35 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isAdminRoute = request.nextUrl.pathname.startsWith("/admin");
-  const isLoginPage = request.nextUrl.pathname === "/login";
+  const { pathname } = request.nextUrl;
+  const isAdminRoute = pathname.startsWith("/admin");
+  const isAdminLoginPage = pathname === "/login";
+  const isPortalPublic =
+    pathname === "/portal/login" ||
+    pathname === "/portal/activate" ||
+    pathname === "/portal/forgot-password" ||
+    pathname === "/portal/reset-password";
+  const isPortalRoute = pathname.startsWith("/portal") && !isPortalPublic;
 
   if (isAdminRoute && !user) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (isLoginPage && user) {
+  if (isAdminLoginPage && user) {
     return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+  }
+
+  if (isPortalRoute && !user) {
+    return NextResponse.redirect(new URL("/portal/login", request.url));
+  }
+
+  if (pathname === "/portal/login" && user) {
+    return NextResponse.redirect(new URL("/portal/dashboard", request.url));
   }
 
   return supabaseResponse;
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/login"],
+  matcher: ["/admin/:path*", "/login", "/portal/:path*"],
 };

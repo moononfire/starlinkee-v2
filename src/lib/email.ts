@@ -293,6 +293,63 @@ export async function sendPromoEmail(
   );
 }
 
+const activationStrings = {
+  en: {
+    subject: "Activate your Starlinkee account",
+    greeting: (name: string) => `Hello ${name},`,
+    body: () =>
+      "Your Starlinkee purchase is complete! Click the button below to set up your account password and access your customer portal.",
+    btnLabel: "Activate Account",
+    footer: "If you did not make this purchase, you can ignore this email.",
+  },
+  de: {
+    subject: "Aktivieren Sie Ihr Starlinkee-Konto",
+    greeting: (name: string) => `Hallo ${name},`,
+    body: () =>
+      "Ihr Starlinkee-Kauf ist abgeschlossen! Klicken Sie auf die Schaltfläche unten, um Ihr Kontopasswort festzulegen und auf Ihr Kundenportal zuzugreifen.",
+    btnLabel: "Konto aktivieren",
+    footer:
+      "Wenn Sie diesen Kauf nicht getätigt haben, können Sie diese E-Mail ignorieren.",
+  },
+  pl: {
+    subject: "Aktywuj swoje konto Starlinkee",
+    greeting: (name: string) => `Cześć ${name},`,
+    body: () =>
+      "Twój zakup Starlinkee został zrealizowany! Kliknij poniższy przycisk, aby ustawić hasło i uzyskać dostęp do panelu klienta.",
+    btnLabel: "Aktywuj konto",
+    footer:
+      "Jeśli nie dokonywałeś tego zakupu, możesz zignorować tę wiadomość.",
+  },
+} satisfies Record<Lang, object>;
+
+export async function sendPortalActivation(
+  to: string,
+  language: string,
+  data: { customerName: string; activationUrl: string }
+) {
+  const s = activationStrings[toLang(language)];
+  const html = layout(
+    h1(s.greeting(data.customerName)) +
+      para(s.body()) +
+      btn(data.activationUrl, s.btnLabel) +
+      divider() +
+      para(s.footer)
+  );
+  await sendMail(
+    to,
+    s.subject,
+    html,
+    [
+      s.greeting(data.customerName),
+      "",
+      s.body(),
+      `${s.btnLabel}: ${data.activationUrl}`,
+      "",
+      s.footer,
+    ].join("\n")
+  );
+}
+
 export async function sendPlateImportLinks(data: {
   fileContent: string;
   plateCount: number;

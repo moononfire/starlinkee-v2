@@ -68,12 +68,20 @@ export interface LocationWithCustomer extends CustomerLocation {
   avg_rating: number | null;
 }
 
-export async function listLocations(): Promise<LocationWithCustomer[]> {
+export async function listLocations(search?: string): Promise<LocationWithCustomer[]> {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("customer_locations")
     .select("*, subscriptions(status, customers(customer_name), plates(number_of_visits, reviews(rating)))")
     .order("created_at", { ascending: false });
+
+  if (search) {
+    query = query.or(
+      `location_name.ilike.%${search}%,google_business_name.ilike.%${search}%,city.ilike.%${search}%,linktree_slug.ilike.%${search}%`
+    );
+  }
+
+  const { data, error } = await query;
   if (error) throw new Error(`Failed to list locations: ${error.message}`);
   return (data ?? []).map((row: any) => {
     const plates: any[] = row.subscriptions?.plates ?? [];
@@ -99,4 +107,61 @@ export async function listLocations(): Promise<LocationWithCustomer[]> {
 export async function incrementLinktreeVisits(locationId: number): Promise<void> {
   const supabase = createAdminClient();
   await supabase.rpc("increment_linktree_visits", { p_location_id: locationId });
+}
+
+export async function getLocationById(locationId: number): Promise<CustomerLocation | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("customer_locations")
+    .select("*")
+    .eq("location_id", locationId)
+    .single();
+  return data ?? null;
+}
+
+export async function updateLocation(
+  locationId: number,
+  updates: {
+    linktree_slug?: string | null;
+    has_linktree_access?: boolean;
+    has_promo_enabled?: boolean;
+    has_loyalty_enabled?: boolean;
+    promo_banner_text?: string | null;
+    promo_sms_text?: string | null;
+    google_review_link?: string | null;
+    google_places_id?: string | null;
+    support_email?: string | null;
+    logo_link?: string | null;
+    owner_email?: string | null;
+  }
+): Promise<CustomerLocation> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("customer_locations")
+    .update(updates)
+    .eq("location_id", locationId)
+    .select()
+    .single();
+  if (error) throw new Error(`Failed to update location: ${error.message}`);
+  return data;
+}
+
+export async function upsertLocationLinks(
+  locationId: number,
+  links: { title: string; url: string; sort_order: number }[]
+): Promise<void> {
+  const supabase = createAdminClient();
+
+  const { error: delError } = await supabase
+    .from("customer_location_links")
+    .delete()
+    .eq("customer_location_id", locationId);
+  if (delError) throw new Error(`Failed to delete links: ${delError.message}`);
+
+  if (links.length > 0) {
+    const { error: insError } = await supabase
+      .from("customer_location_links")
+      .insert(links.map((l) => ({ customer_location_id: locationId, ...l })));
+    if (insError) throw new Error(`Failed to insert links: ${insError.message}`);
+  }
 }

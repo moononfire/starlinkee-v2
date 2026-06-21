@@ -49,12 +49,20 @@ export interface SubscriptionWithCustomer extends Subscription {
   customer_email: string;
 }
 
-export async function listSubscriptions(): Promise<SubscriptionWithCustomer[]> {
+export async function listSubscriptions(search?: string): Promise<SubscriptionWithCustomer[]> {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("subscriptions")
     .select("*, customers(customer_name, email)")
     .order("created_at", { ascending: false });
+
+  if (search) {
+    query = query.or(
+      `subscription_name.ilike.%${search}%,customers.customer_name.ilike.%${search}%,customers.email.ilike.%${search}%`
+    );
+  }
+
+  const { data, error } = await query;
   if (error) throw new Error(`Failed to list subscriptions: ${error.message}`);
   return (data ?? []).map((row: any) => ({
     ...row,

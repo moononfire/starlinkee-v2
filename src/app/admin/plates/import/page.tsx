@@ -44,15 +44,15 @@ async function importPlatesAction(formData: FormData) {
 export default function ImportPlatesPage() {
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Import płytek z TXT</h1>
-      <div className="bg-white shadow rounded-lg p-6 max-w-lg">
-        <p className="text-sm text-gray-600 mb-4">
-          Format pliku: jedna linia = jedna płytka, format <code className="font-mono bg-gray-100 px-1 rounded">ABCDEF,pl</code> (numer, język).
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Import płytek z TXT</h1>
+      <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-6 max-w-lg">
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          Format pliku: jedna linia = jedna płytka, format <code className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded">ABCDEF,pl</code> (numer, język).
           Po imporcie linki zostaną wysłane emailem do admina.
         </p>
         <form action={importPlatesAction} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Plik TXT *
             </label>
             <input
@@ -60,7 +60,7 @@ export default function ImportPlatesPage() {
               type="file"
               accept=".txt,text/plain"
               required
-              className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:border file:border-gray-300 file:rounded file:text-sm file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100"
+              className="w-full text-sm text-gray-600 dark:text-gray-300 file:mr-3 file:py-1.5 file:px-3 file:border file:border-gray-300 dark:file:border-gray-600 file:rounded file:text-sm file:bg-gray-50 dark:file:bg-gray-700 file:text-gray-700 dark:file:text-gray-200 hover:file:bg-gray-100 dark:hover:file:bg-gray-600"
             />
           </div>
           <div className="flex gap-3 pt-1">
@@ -72,7 +72,7 @@ export default function ImportPlatesPage() {
             </button>
             <a
               href="/admin/plates"
-              className="px-5 py-2 rounded text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+              className="px-5 py-2 rounded text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               Anuluj
             </a>
