@@ -25,6 +25,16 @@ export async function plateExists(plateNumber: string): Promise<boolean> {
   return (count ?? 0) > 0;
 }
 
+export async function getPlatesBySubscriptionId(subscriptionId: number): Promise<Plate[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("plates")
+    .select("*")
+    .eq("subscription_id", subscriptionId)
+    .order("created_at", { ascending: true });
+  return data ?? [];
+}
+
 export async function assignPlateToSubscription(
   plateId: number,
   subscriptionId: number

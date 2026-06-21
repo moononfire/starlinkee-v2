@@ -22,7 +22,7 @@ export default async function PromoPage({ params }: Props) {
             className="w-16 h-16 object-contain rounded-xl mx-auto mb-4"
           />
         )}
-        <h1 className="text-xl font-semibold text-center mb-1">{location.location_name}</h1>
+        <h1 className="text-xl font-semibold text-gray-800 text-center mb-1">{location.location_name}</h1>
         <p className="text-sm text-gray-500 text-center mb-8">Odbierz swoją promocję</p>
 
         <PromoForm slug={slug} bannerText={location.promo_banner_text ?? ""} />

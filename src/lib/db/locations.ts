@@ -133,6 +133,7 @@ export async function updateLocation(
     support_email?: string | null;
     logo_link?: string | null;
     owner_email?: string | null;
+    scan_redirect_mode?: "review" | "linktree";
   }
 ): Promise<CustomerLocation> {
   const supabase = createAdminClient();
