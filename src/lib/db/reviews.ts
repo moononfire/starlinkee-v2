@@ -6,13 +6,21 @@ export interface ReviewWithLocation extends Review {
   location_name: string | null;
 }
 
-export async function listReviews(): Promise<ReviewWithLocation[]> {
+export async function listReviews(search?: string): Promise<ReviewWithLocation[]> {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("reviews")
     .select("*, plates(plate_number, subscriptions(customer_locations(location_name)))")
     .order("created_at", { ascending: false })
     .limit(500);
+
+  if (search) {
+    query = query.or(
+      `feedback_message.ilike.%${search}%,contact_email.ilike.%${search}%,contact_phone.ilike.%${search}%`
+    );
+  }
+
+  const { data, error } = await query;
   if (error) throw new Error(`Failed to list reviews: ${error.message}`);
   return (data ?? []).map((row: any) => ({
     ...row,

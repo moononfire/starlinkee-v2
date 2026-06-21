@@ -100,6 +100,8 @@ export interface Customer {
   billing_address: string | null;
   preferred_language: "en" | "de" | "pl";
   country: string | null;
+  activation_token: string | null;
+  is_activated: boolean;
   created_at: string;
   updated_at: string;
 }

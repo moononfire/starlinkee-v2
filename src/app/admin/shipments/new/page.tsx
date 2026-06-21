@@ -42,18 +42,18 @@ async function createShipmentAction(formData: FormData) {
 }
 
 const inputClass =
-  "w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
-const labelClass = "block text-sm font-medium text-gray-700 mb-1";
+  "w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
+const labelClass = "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1";
 
 export default async function NewShipmentPage() {
   const orders = await listOrdersReadyToShip();
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Nowa wysyłka</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Nowa wysyłka</h1>
       <form
         action={createShipmentAction}
-        className="bg-white shadow rounded-lg p-6 max-w-2xl space-y-5"
+        className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-6 max-w-2xl space-y-5"
       >
         <div>
           <label className={labelClass}>Zamówienie (opłacone) *</label>
@@ -76,8 +76,8 @@ export default async function NewShipmentPage() {
           )}
         </div>
 
-        <fieldset className="border border-gray-200 rounded p-4 space-y-4">
-          <legend className="text-sm font-medium text-gray-600 px-1">Tracking</legend>
+        <fieldset className="border border-gray-200 dark:border-gray-600 rounded p-4 space-y-4">
+          <legend className="text-sm font-medium text-gray-600 dark:text-gray-300 px-1">Tracking</legend>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Numer tracking</label>
@@ -114,8 +114,8 @@ export default async function NewShipmentPage() {
           </div>
         </fieldset>
 
-        <fieldset className="border border-gray-200 rounded p-4 space-y-4">
-          <legend className="text-sm font-medium text-gray-600 px-1">Odbiorca</legend>
+        <fieldset className="border border-gray-200 dark:border-gray-600 rounded p-4 space-y-4">
+          <legend className="text-sm font-medium text-gray-600 dark:text-gray-300 px-1">Odbiorca</legend>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Imię i nazwisko</label>
@@ -132,8 +132,8 @@ export default async function NewShipmentPage() {
           </div>
         </fieldset>
 
-        <fieldset className="border border-gray-200 rounded p-4 space-y-4">
-          <legend className="text-sm font-medium text-gray-600 px-1">Adres</legend>
+        <fieldset className="border border-gray-200 dark:border-gray-600 rounded p-4 space-y-4">
+          <legend className="text-sm font-medium text-gray-600 dark:text-gray-300 px-1">Adres</legend>
           <div>
             <label className={labelClass}>Ulica i numer</label>
             <input name="address_line1" className={inputClass} placeholder="np. ul. Kwiatowa 12" />
@@ -167,7 +167,7 @@ export default async function NewShipmentPage() {
           </button>
           <a
             href="/admin/shipments"
-            className="px-5 py-2 rounded text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+            className="px-5 py-2 rounded text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
             Anuluj
           </a>

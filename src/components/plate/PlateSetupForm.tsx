@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { t } from "@/lib/translations";
 
 interface Props {
   plateNumber: string;
@@ -9,20 +10,107 @@ interface Props {
   lang: string;
 }
 
+interface Prediction {
+  place_id: string;
+  description: string;
+}
+
+interface PlaceDetails {
+  name: string;
+  address: string;
+  google_review_link: string;
+  place_id: string;
+}
+
+const LANGUAGES = [
+  { code: "pl", label: "PL" },
+  { code: "de", label: "DE" },
+  { code: "en", label: "EN" },
+] as const;
+
 export default function PlateSetupForm({ plateNumber, plateSecret, lang }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentLang, setCurrentLang] = useState(lang);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState<PlaceDetails | null>(null);
+  const [loadingPlace, setLoadingPlace] = useState(false);
+  const [logoFileName, setLogoFileName] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  function handleSearchChange(value: string) {
+    setSearchQuery(value);
+    setSelectedPlace(null);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (value.length < 2) {
+      setPredictions([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      const res = await fetch(`/api/google/autocomplete?input=${encodeURIComponent(value)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setPredictions(data.predictions ?? []);
+      setShowDropdown(true);
+    }, 300);
+  }
+
+  async function handleSelectPlace(prediction: Prediction) {
+    setShowDropdown(false);
+    setSearchQuery(prediction.description);
+    setLoadingPlace(true);
+
+    const res = await fetch(`/api/google/place-details?place_id=${encodeURIComponent(prediction.place_id)}`);
+    setLoadingPlace(false);
+
+    if (!res.ok) {
+      setError("Failed to load business details");
+      return;
+    }
+
+    const details: PlaceDetails = await res.json();
+    setSelectedPlace(details);
+    setSearchQuery(details.name);
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    if (!selectedPlace) {
+      setError(t("setup_form_google_search", currentLang));
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     const form = new FormData(e.currentTarget);
-    // Pass plateNumber and plateSecret so the server can re-verify
     form.append("plateNumber", plateNumber);
     form.append("plateSecret", plateSecret);
+    form.append("google_business_name", selectedPlace.name);
+    form.append("google_business_address", selectedPlace.address);
+    form.append("google_review_link", selectedPlace.google_review_link);
+    form.append("google_places_id", selectedPlace.place_id);
 
     const res = await fetch("/api/plate/setup", {
       method: "POST",
@@ -41,95 +129,155 @@ export default function PlateSetupForm({ plateNumber, plateSecret, lang }: Props
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-gray-50">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-sm p-8">
-        <h1 className="text-xl font-semibold text-gray-800 mb-6">
-          Set up your plate
-        </h1>
+    <main className="min-h-screen flex flex-col items-center justify-center p-6"
+      style={{ backgroundColor: "#f9fafb", color: "#111827" }}>
+      <div className="max-w-md w-full">
+        <div className="flex justify-center gap-2 mb-4">
+          {LANGUAGES.map((l) => (
+            <button
+              key={l.code}
+              type="button"
+              onClick={() => setCurrentLang(l.code)}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              style={
+                currentLang === l.code
+                  ? { backgroundColor: "#1f2937", color: "#ffffff" }
+                  : { backgroundColor: "#ffffff", color: "#374151", border: "1px solid #d1d5db" }
+              }
+            >
+              {l.label}
+            </button>
+          ))}
+        </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Business name *
-            </label>
-            <input
-              name="location_name"
-              required
-              type="text"
-              className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
-            />
-          </div>
+        <div className="rounded-2xl shadow-sm p-8" style={{ backgroundColor: "#ffffff" }}>
+          <h1 className="text-xl font-semibold mb-6" style={{ color: "#1f2937" }}>
+            {t("setup_form_title", currentLang)}
+          </h1>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Google Business name
-            </label>
-            <input
-              name="google_business_name"
-              type="text"
-              className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: "#374151" }}>
+                {t("setup_form_business_name", currentLang)} *
+              </label>
+              <input
+                name="location_name"
+                required
+                type="text"
+                className="w-full rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                style={{ border: "1px solid #d1d5db", color: "#111827", backgroundColor: "#ffffff" }}
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Google Business address
-            </label>
-            <input
-              name="google_business_address"
-              type="text"
-              className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
-            />
-          </div>
+            <div ref={dropdownRef} className="relative">
+              <label className="block text-sm font-medium mb-1" style={{ color: "#374151" }}>
+                {t("setup_form_google_search", currentLang)} *
+              </label>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onFocus={() => predictions.length > 0 && setShowDropdown(true)}
+                className="w-full rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                style={{ border: "1px solid #d1d5db", color: "#111827", backgroundColor: "#ffffff" }}
+                autoComplete="off"
+              />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Google review link *
-            </label>
-            <input
-              name="google_review_link"
-              required
-              type="url"
-              className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
-            />
-          </div>
+              {showDropdown && predictions.length > 0 && (
+                <ul
+                  className="absolute z-10 w-full mt-1 rounded-lg shadow-lg overflow-hidden"
+                  style={{ backgroundColor: "#ffffff", border: "1px solid #d1d5db" }}
+                >
+                  {predictions.map((p) => (
+                    <li key={p.place_id}>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectPlace(p)}
+                        className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors"
+                        style={{ color: "#374151" }}
+                      >
+                        {p.description}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Support email *
-            </label>
-            <input
-              name="support_email"
-              required
-              type="email"
-              className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
-            />
-          </div>
+            {loadingPlace && (
+              <p className="text-sm" style={{ color: "#6b7280" }}>Loading business details...</p>
+            )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Logo (PNG or JPG, max 5MB)
-            </label>
-            <input
-              name="logo"
-              type="file"
-              accept="image/png,image/jpeg"
-              className="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
-            />
-          </div>
+            {selectedPlace && (
+              <div className="rounded-lg p-4" style={{ backgroundColor: "#f3f4f6", border: "1px solid #e5e7eb" }}>
+                <p className="text-xs font-medium mb-2" style={{ color: "#6b7280" }}>
+                  {t("setup_form_google_selected", currentLang)}
+                </p>
+                <p className="text-sm font-semibold" style={{ color: "#1f2937" }}>
+                  {selectedPlace.name}
+                </p>
+                <p className="text-sm mt-1" style={{ color: "#4b5563" }}>
+                  {selectedPlace.address}
+                </p>
+              </div>
+            )}
 
-          {error && (
-            <p className="text-sm text-red-600">{error}</p>
-          )}
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: "#374151" }}>
+                {t("setup_form_support_email", currentLang)} *
+              </label>
+              <input
+                name="support_email"
+                required
+                type="email"
+                className="w-full rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                style={{ border: "1px solid #d1d5db", color: "#111827", backgroundColor: "#ffffff" }}
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gray-800 text-white py-3 rounded-lg font-medium hover:bg-gray-700 disabled:opacity-50 transition-colors mt-2"
-          >
-            {loading ? "Setting up..." : "Activate plate"}
-          </button>
-        </form>
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: "#374151" }}>
+                {t("setup_form_logo", currentLang)}
+              </label>
+              <input
+                ref={fileInputRef}
+                name="logo"
+                type="file"
+                accept="image/png,image/jpeg"
+                className="hidden"
+                onChange={(e) => setLogoFileName(e.target.files?.[0]?.name ?? null)}
+              />
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  style={{ backgroundColor: "#f3f4f6", color: "#374151", border: "1px solid #d1d5db" }}
+                >
+                  {t("setup_form_choose_file", currentLang)}
+                </button>
+                {logoFileName ? (
+                  <span className="text-sm truncate" style={{ color: "#374151" }}>{logoFileName}</span>
+                ) : (
+                  <span className="text-sm" style={{ color: "#9ca3af" }}>{t("setup_form_no_file", currentLang)}</span>
+                )}
+              </div>
+            </div>
+
+            {error && (
+              <p className="text-sm" style={{ color: "#dc2626" }}>{error}</p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || !selectedPlace}
+              className="w-full py-3 rounded-lg font-medium disabled:opacity-50 transition-colors mt-2"
+              style={{ backgroundColor: "#1f2937", color: "#ffffff" }}
+            >
+              {loading ? t("setup_form_submitting", currentLang) : t("setup_form_submit", currentLang)}
+            </button>
+          </form>
+        </div>
       </div>
     </main>
   );

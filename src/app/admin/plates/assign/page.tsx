@@ -22,8 +22,8 @@ export default async function AssignPlatePage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Przypisz płytkę do subskrypcji</h1>
-      <div className="bg-white shadow rounded-lg p-6 max-w-lg">
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Przypisz płytkę do subskrypcji</h1>
+      <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-6 max-w-lg">
         {plates.length === 0 && (
           <p className="text-sm text-gray-400 mb-4">Brak dostępnych płytek (wszystkie przypisane)</p>
         )}
@@ -32,11 +32,11 @@ export default async function AssignPlatePage() {
         )}
         <form action={assignPlateAction} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Płytka *</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Płytka *</label>
             <select
               name="plate_id"
               required
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+              className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
             >
               <option value="">— wybierz płytkę —</option>
               {plates.map((p) => (
@@ -47,13 +47,13 @@ export default async function AssignPlatePage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Subskrypcja (pending) *
             </label>
             <select
               name="subscription_id"
               required
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">— wybierz subskrypcję —</option>
               {pendingSubs.map((s) => (
@@ -73,7 +73,7 @@ export default async function AssignPlatePage() {
             </button>
             <a
               href="/admin/plates"
-              className="px-5 py-2 rounded text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+              className="px-5 py-2 rounded text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               Anuluj
             </a>

@@ -43,12 +43,12 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-8">Dashboard</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-8">Dashboard</h1>
       <div className="grid grid-cols-3 gap-6">
         {cards.map(({ label, value }) => (
-          <div key={label} className="bg-white rounded-lg shadow p-6">
-            <p className="text-sm text-gray-500 mb-1">{label}</p>
-            <p className="text-3xl font-bold text-gray-900">{value}</p>
+          <div key={label} className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-6">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
           </div>
         ))}
       </div>

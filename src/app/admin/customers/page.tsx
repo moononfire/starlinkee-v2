@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { listCustomers } from "@/lib/db/customers";
+import SearchInput from "@/components/admin/SearchInput";
 
 const typeLabel = { business: "Firma", individual: "Osoba" };
 const typeClass = {
-  business: "bg-purple-100 text-purple-700",
-  individual: "bg-blue-100 text-blue-700",
+  business: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
+  individual: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
 };
 
 export default async function CustomersPage({
@@ -18,7 +19,7 @@ export default async function CustomersPage({
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Klienci</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Klienci</h1>
         <Link
           href="/admin/customers/new"
           className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700 transition-colors"
@@ -27,31 +28,27 @@ export default async function CustomersPage({
         </Link>
       </div>
 
-      <form method="GET" className="mb-6">
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder="Szukaj po nazwie, email, firmie..."
-          className="w-full max-w-md border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </form>
+      <div className="mb-6">
+        <SearchInput placeholder="Szukaj po nazwie, email, firmie..." />
+      </div>
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
             <tr>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">ID</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Typ</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Nazwa</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Email</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Telefon</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Firma</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Kraj</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Język</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Data</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">ID</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Typ</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Nazwa</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Email</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Telefon</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Firma</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Kraj</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Język</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Data</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {customers.length === 0 && (
               <tr>
                 <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
@@ -60,19 +57,19 @@ export default async function CustomersPage({
               </tr>
             )}
             {customers.map((c) => (
-              <tr key={c.customer_id} className="hover:bg-gray-50">
+              <tr key={c.customer_id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                 <td className="px-4 py-3 text-gray-500">{c.customer_id}</td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${typeClass[c.customer_type]}`}>
                     {typeLabel[c.customer_type]}
                   </span>
                 </td>
-                <td className="px-4 py-3 font-medium text-gray-900">{c.customer_name}</td>
-                <td className="px-4 py-3 text-gray-600">{c.email}</td>
-                <td className="px-4 py-3 text-gray-600">{c.phone ?? "—"}</td>
-                <td className="px-4 py-3 text-gray-600">{c.company_name ?? "—"}</td>
-                <td className="px-4 py-3 text-gray-600">{c.country ?? "—"}</td>
-                <td className="px-4 py-3 text-gray-600 uppercase">{c.preferred_language}</td>
+                <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{c.customer_name}</td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{c.email}</td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{c.phone ?? "—"}</td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{c.company_name ?? "—"}</td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{c.country ?? "—"}</td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-300 uppercase">{c.preferred_language}</td>
                 <td className="px-4 py-3 text-gray-500">
                   {new Date(c.created_at).toLocaleDateString("pl-PL")}
                 </td>
@@ -80,6 +77,7 @@ export default async function CustomersPage({
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

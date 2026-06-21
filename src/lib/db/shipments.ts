@@ -5,12 +5,20 @@ export interface ShipmentWithCustomer extends Shipment {
   customer_name: string;
 }
 
-export async function listShipments(): Promise<ShipmentWithCustomer[]> {
+export async function listShipments(search?: string): Promise<ShipmentWithCustomer[]> {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("shipments")
     .select("*, orders(customers(customer_name))")
     .order("created_at", { ascending: false });
+
+  if (search) {
+    query = query.or(
+      `tracking_number.ilike.%${search}%,recipient_name.ilike.%${search}%,batch_label.ilike.%${search}%,city.ilike.%${search}%`
+    );
+  }
+
+  const { data, error } = await query;
   if (error) throw new Error(`Failed to list shipments: ${error.message}`);
   return (data ?? []).map((row: any) => ({
     ...row,
