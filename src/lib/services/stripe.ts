@@ -11,6 +11,10 @@ const PLATE_PRODUCT_ID = 2;        // PLATE
 const SUBSCRIPTION_NAME = "1_YEAR_SUB";
 const SUBSCRIPTION_DURATION_DAYS = 365;
 
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!);
+}
+
 function getPriceId(price: string | Stripe.Price | null | undefined): string | undefined {
   if (!price) return undefined;
   return typeof price === "string" ? price : price.id;
@@ -23,7 +27,7 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
     return;
   }
 
-  // 1. Create or find customer
+  // 1. Create or update customer
   const hasTaxId = (invoice.customer_tax_ids?.length ?? 0) > 0;
   const billingAddress = [
     invoice.customer_address?.line1,
@@ -34,12 +38,25 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
     .filter(Boolean)
     .join(", ");
 
+  let companyName: string | undefined;
+  if (hasTaxId) {
+    const stripeCustomerId = typeof invoice.customer === "string"
+      ? invoice.customer
+      : invoice.customer?.id;
+    if (stripeCustomerId) {
+      const stripeCustomer = await getStripe().customers.retrieve(stripeCustomerId);
+      if (!stripeCustomer.deleted) {
+        companyName = stripeCustomer.business_name ?? undefined;
+      }
+    }
+  }
+
   const customerId = await upsertCustomerByEmail({
     email,
     customer_name: invoice.customer_name ?? email,
     customer_type: hasTaxId ? "business" : "individual",
     source: "Stripe",
-    company_name: hasTaxId ? (invoice.customer_name ?? undefined) : undefined,
+    company_name: companyName,
     tax_id: hasTaxId ? (invoice.customer_tax_ids?.[0]?.value ?? undefined) : undefined,
     billing_address: billingAddress || undefined,
     country: invoice.customer_address?.country ?? undefined,
