@@ -23,7 +23,15 @@ export async function upsertCustomerByEmail(data: CustomerInsert): Promise<numbe
     .eq("email", data.email)
     .single();
 
-  if (existing) return existing.customer_id;
+  if (existing) {
+    const { email: _email, ...updateFields } = data;
+    const { error } = await supabase
+      .from("customers")
+      .update(updateFields)
+      .eq("customer_id", existing.customer_id);
+    if (error) throw new Error(`Failed to update customer: ${error.message}`);
+    return existing.customer_id;
+  }
 
   const { data: customer, error } = await supabase
     .from("customers")
