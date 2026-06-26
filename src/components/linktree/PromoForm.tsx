@@ -1,16 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { t } from "@/lib/translations";
 
 interface Props {
   slug: string;
   bannerText: string;
   scanToken?: string;
+  lang: string;
 }
 
 type Screen = "form" | "success";
 
-export default function PromoForm({ slug, bannerText, scanToken }: Props) {
+export default function PromoForm({ slug, bannerText, scanToken, lang }: Props) {
   const [screen, setScreen] = useState<Screen>("form");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -23,7 +25,7 @@ export default function PromoForm({ slug, bannerText, scanToken }: Props) {
     return (
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
         <p className="text-gray-600 text-sm font-medium">
-          Zeskanuj tabliczkę NFC, aby odebrać promocję.
+          {t("scan_nfc_for_promo", lang)}
         </p>
       </div>
     );
@@ -49,15 +51,15 @@ export default function PromoForm({ slug, bannerText, scanToken }: Props) {
     setLoading(false);
 
     if (res.status === 409) {
-      setError("Ten numer telefonu już odebrał tę promocję.");
+      setError(t("phone_already_claimed", lang));
       return;
     }
     if (res.status === 403) {
-      setError("Link wygasł. Zeskanuj tabliczkę ponownie.");
+      setError(t("link_expired", lang));
       return;
     }
     if (!res.ok) {
-      setError("Coś poszło nie tak. Spróbuj ponownie.");
+      setError(t("something_went_wrong", lang));
       return;
     }
 
@@ -67,8 +69,8 @@ export default function PromoForm({ slug, bannerText, scanToken }: Props) {
   if (screen === "success") {
     return (
       <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
-        <p className="text-green-800 font-medium">Link do promocji został wysłany SMS-em!</p>
-        <p className="text-green-700 text-sm mt-1">Sprawdź swoją skrzynkę wiadomości.</p>
+        <p className="text-green-800 font-medium">{t("promo_sent_sms", lang)}</p>
+        <p className="text-green-700 text-sm mt-1">{t("check_messages", lang)}</p>
       </div>
     );
   }
@@ -89,7 +91,7 @@ export default function PromoForm({ slug, bannerText, scanToken }: Props) {
         />
         <input
           type="email"
-          placeholder="Email (opcjonalnie)"
+          placeholder={t("email_optional_placeholder", lang)}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-800 bg-white placeholder-gray-400 w-full"
@@ -105,10 +107,10 @@ export default function PromoForm({ slug, bannerText, scanToken }: Props) {
               }}
               className="mt-0.5 shrink-0 accent-gray-800"
             />
-            Zgadzam się na przetwarzanie danych osobowych w celach marketingowych.
+            {t("consent_text", lang)}
           </label>
           {showConsentError && (
-            <p className="text-red-500 text-xs mt-1">To pole jest wymagane.</p>
+            <p className="text-red-500 text-xs mt-1">{t("consent_required", lang)}</p>
           )}
         </div>
         {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -117,7 +119,7 @@ export default function PromoForm({ slug, bannerText, scanToken }: Props) {
           disabled={loading || !phone}
           className="bg-black text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
-          {loading ? "Wysyłam..." : "Odbierz promocję"}
+          {loading ? t("sending", lang) : t("collect_promo_btn", lang)}
         </button>
       </form>
     </div>

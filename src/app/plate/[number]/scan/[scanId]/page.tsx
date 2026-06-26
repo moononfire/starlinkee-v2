@@ -6,6 +6,8 @@ import { getSubscriptionById } from "@/lib/db/subscriptions";
 import { t } from "@/lib/translations";
 import RatingStars from "@/components/plate/RatingStars";
 import PageTracker from "@/components/tracking/PageTracker";
+import { getLanguage } from "@/lib/language";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 interface Props {
   params: Promise<{ number: string; scanId: string }>;
@@ -27,13 +29,15 @@ export default async function ScanPage({ params }: Props) {
   const location = await getLocationBySubscriptionId(plate.subscription_id);
   if (!location) notFound();
 
-  const lang = plate.plate_language;
+  const lang = await getLanguage(plate.plate_language);
 
   return (
     <>
       <PageTracker locationId={location.location_id} pagePath={`/plate/${number}/scan`} pageType="plate_scan" />
       <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
         <div className="max-w-sm w-full flex flex-col items-center gap-6">
+          <LanguageSwitcher currentLang={lang} />
+
           {location.logo_link && (
             // eslint-disable-next-line @next/next/no-img-element
             <img

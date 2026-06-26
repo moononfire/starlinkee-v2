@@ -4,6 +4,9 @@ import { getLoyaltyCard } from "@/lib/db/loyalty";
 import { getLoyaltySession } from "@/lib/session";
 import LoyaltyCard from "@/components/linktree/LoyaltyCard";
 import PageTracker from "@/components/tracking/PageTracker";
+import { getLanguage } from "@/lib/language";
+import { t } from "@/lib/translations";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -25,11 +28,16 @@ export default async function LoyaltyPage({ params }: Props) {
     initialStamps = card?.stamps_count ?? 0;
   }
 
+  const lang = await getLanguage();
+
   return (
     <>
       <PageTracker locationId={location.location_id} pagePath={`/l/${slug}/loyalty`} pageType="loyalty" />
       <main className="min-h-screen bg-gray-50 flex items-start justify-center pt-16 px-4">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-full max-w-sm">
+          <div className="flex justify-center mb-4">
+            <LanguageSwitcher currentLang={lang} />
+          </div>
           {location.logo_link && (
             <img
               src={location.logo_link}
@@ -38,12 +46,13 @@ export default async function LoyaltyPage({ params }: Props) {
             />
           )}
           <h1 className="text-xl font-semibold text-center mb-1">{location.location_name}</h1>
-          <p className="text-sm text-gray-500 text-center mb-8">Program lojalnościowy</p>
+          <p className="text-sm text-gray-500 text-center mb-8">{t("loyalty_program", lang)}</p>
 
           <LoyaltyCard
             slug={slug}
             initialStamps={initialStamps}
             isAuthenticated={isAuthenticated}
+            lang={lang}
           />
         </div>
       </main>

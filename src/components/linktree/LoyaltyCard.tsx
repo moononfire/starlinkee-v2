@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { t } from "@/lib/translations";
 
 interface Props {
   slug: string;
   initialStamps: number | null;
   isAuthenticated: boolean;
+  lang: string;
 }
 
 type Screen = "phone" | "otp" | "card";
@@ -17,7 +19,7 @@ function formatRemaining(seconds: number): string {
   return `${m}m`;
 }
 
-export default function LoyaltyCard({ slug, initialStamps, isAuthenticated }: Props) {
+export default function LoyaltyCard({ slug, initialStamps, isAuthenticated, lang }: Props) {
   const [screen, setScreen] = useState<Screen>(isAuthenticated ? "card" : "phone");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
@@ -39,7 +41,7 @@ export default function LoyaltyCard({ slug, initialStamps, isAuthenticated }: Pr
     });
     setLoading(false);
     if (!res.ok) {
-      setError("Nie udało się wysłać kodu. Spróbuj ponownie.");
+      setError(t("otp_failed", lang));
       return;
     }
     setScreen("otp");
@@ -56,7 +58,7 @@ export default function LoyaltyCard({ slug, initialStamps, isAuthenticated }: Pr
     });
     setLoading(false);
     if (!res.ok) {
-      setError("Nieprawidłowy kod. Spróbuj ponownie.");
+      setError(t("invalid_code", lang));
       return;
     }
     setScreen("card");
@@ -75,7 +77,7 @@ export default function LoyaltyCard({ slug, initialStamps, isAuthenticated }: Pr
       return;
     }
     if (!res.ok) {
-      setError(data.error ?? "Błąd. Spróbuj ponownie.");
+      setError(data.error ?? t("error_try_again", lang));
       return;
     }
     setStamps(data.stamps);
@@ -98,7 +100,7 @@ export default function LoyaltyCard({ slug, initialStamps, isAuthenticated }: Pr
   if (screen === "phone") {
     return (
       <div className="flex flex-col gap-4">
-        <p className="text-sm text-gray-600">Podaj numer telefonu, żeby dołączyć do programu lojalnościowego.</p>
+        <p className="text-sm text-gray-600">{t("loyalty_phone_prompt", lang)}</p>
         <input
           type="tel"
           placeholder="+48 600 000 000"
@@ -112,7 +114,7 @@ export default function LoyaltyCard({ slug, initialStamps, isAuthenticated }: Pr
           disabled={loading || !phone}
           className="bg-black text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
-          {loading ? "Wysyłam..." : "Wyślij kod SMS"}
+          {loading ? t("sending", lang) : t("send_sms_code", lang)}
         </button>
       </div>
     );
@@ -121,7 +123,7 @@ export default function LoyaltyCard({ slug, initialStamps, isAuthenticated }: Pr
   if (screen === "otp") {
     return (
       <div className="flex flex-col gap-4">
-        <p className="text-sm text-gray-600">Wpisz 4-cyfrowy kod wysłany na {phone}.</p>
+        <p className="text-sm text-gray-600">{t("otp_prompt", lang).replace("{phone}", phone)}</p>
         <input
           type="text"
           inputMode="numeric"
@@ -137,13 +139,13 @@ export default function LoyaltyCard({ slug, initialStamps, isAuthenticated }: Pr
           disabled={loading || code.length < 4}
           className="bg-black text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
-          {loading ? "Weryfikuję..." : "Potwierdź"}
+          {loading ? t("verifying", lang) : t("confirm", lang)}
         </button>
         <button
           onClick={() => setScreen("phone")}
           className="text-sm text-gray-500 underline"
         >
-          Zmień numer
+          {t("change_number", lang)}
         </button>
       </div>
     );
@@ -153,7 +155,7 @@ export default function LoyaltyCard({ slug, initialStamps, isAuthenticated }: Pr
     <div className="flex flex-col gap-6">
       {claimed && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-800">
-          Nagroda odebrana! Karta została zresetowana.
+          {t("reward_claimed", lang)}
         </div>
       )}
 
@@ -173,7 +175,7 @@ export default function LoyaltyCard({ slug, initialStamps, isAuthenticated }: Pr
       </div>
 
       <p className="text-sm text-gray-600 text-center">
-        {stamps} / {MAX} pieczątek
+        {stamps} / {MAX} {t("stamps_label", lang)}
       </p>
 
       {rewardReady ? (
@@ -182,7 +184,7 @@ export default function LoyaltyCard({ slug, initialStamps, isAuthenticated }: Pr
           disabled={loading}
           className="bg-green-600 text-white rounded-lg px-4 py-3 font-medium disabled:opacity-50"
         >
-          {loading ? "Przetwarzam..." : "Odbierz nagrodę 🎁"}
+          {loading ? t("processing", lang) : `${t("claim_reward", lang)} 🎁`}
         </button>
       ) : (
         <button
@@ -190,13 +192,13 @@ export default function LoyaltyCard({ slug, initialStamps, isAuthenticated }: Pr
           disabled={loading || !!cooldownSeconds}
           className="bg-black text-white rounded-lg px-4 py-3 font-medium disabled:opacity-50"
         >
-          {loading ? "Zbieram..." : "Zbierz pieczątkę"}
+          {loading ? t("collecting", lang) : t("collect_stamp", lang)}
         </button>
       )}
 
       {cooldownSeconds && (
         <p className="text-sm text-amber-600 text-center">
-          Następna pieczątka dostępna za {formatRemaining(cooldownSeconds)}
+          {t("next_stamp_available", lang).replace("{time}", formatRemaining(cooldownSeconds))}
         </p>
       )}
 
