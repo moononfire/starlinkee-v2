@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { t } from "@/lib/translations";
 
 interface Props {
   scanId: string;
@@ -35,8 +36,8 @@ export default function FeedbackForm({ scanId, lang }: Props) {
   if (submitted) {
     return (
       <div className="text-center">
-        <p className="text-lg font-semibold text-gray-800">Thank you!</p>
-        <p className="text-gray-500 mt-1">We appreciate your feedback.</p>
+        <p className="text-lg font-semibold text-gray-800">{t("thank_you_short", lang)}</p>
+        <p className="text-gray-500 mt-1">{t("appreciate_feedback", lang)}</p>
       </div>
     );
   }
@@ -44,35 +45,35 @@ export default function FeedbackForm({ scanId, lang }: Props) {
   return (
     <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
       <p className="text-gray-600 text-sm text-center">
-        We&apos;re sorry to hear that. Please share your feedback.
+        {t("sorry_share_feedback", lang)}
       </p>
 
       <textarea
         name="feedback_message"
         required
         rows={4}
-        placeholder="Your message..."
+        placeholder={t("message_placeholder", lang)}
         className="w-full border border-gray-300 rounded-lg p-3 text-sm text-gray-800 bg-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-gray-400"
       />
 
       <input
         name="user_name"
         type="text"
-        placeholder="Your name (optional)"
+        placeholder={t("name_optional", lang)}
         className="w-full border border-gray-300 rounded-lg p-3 text-sm text-gray-800 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
       />
 
       <input
         name="contact_email"
         type="email"
-        placeholder="Email (optional)"
+        placeholder={t("email_optional_input", lang)}
         className="w-full border border-gray-300 rounded-lg p-3 text-sm text-gray-800 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
       />
 
       <input
         name="contact_phone"
         type="tel"
-        placeholder="Phone (optional)"
+        placeholder={t("phone_optional", lang)}
         className="w-full border border-gray-300 rounded-lg p-3 text-sm text-gray-800 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
       />
 
@@ -81,7 +82,7 @@ export default function FeedbackForm({ scanId, lang }: Props) {
         disabled={loading}
         className="w-full bg-gray-800 text-white py-3 rounded-lg font-medium hover:bg-gray-700 disabled:opacity-50 transition-colors"
       >
-        {loading ? "Sending..." : "Send feedback"}
+        {loading ? t("sending_feedback", lang) : t("send_feedback_btn", lang)}
       </button>
     </form>
   );

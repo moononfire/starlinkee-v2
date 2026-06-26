@@ -4,6 +4,8 @@ import { getPlatesBySubscriptionId } from "@/lib/db/plates";
 import { createScanRecord } from "@/lib/db/reviews";
 import RatingStars from "@/components/plate/RatingStars";
 import PageTracker from "@/components/tracking/PageTracker";
+import { getLanguage } from "@/lib/language";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -20,13 +22,15 @@ export default async function LinktreeReviewPage({ params }: Props) {
 
   const plate = plates[0];
   const scanId = await createScanRecord(plate.plate_id);
-  const lang = plate.plate_language;
+  const lang = await getLanguage(plate.plate_language);
 
   return (
     <>
       <PageTracker locationId={location.location_id} pagePath={`/l/${slug}/review`} pageType="review" />
       <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
         <div className="max-w-sm w-full flex flex-col items-center gap-6">
+          <LanguageSwitcher currentLang={lang} />
+
           {location.logo_link && (
             // eslint-disable-next-line @next/next/no-img-element
             <img

@@ -1,17 +1,22 @@
 import Link from "next/link";
 import type { CustomerLocation, CustomerLocationLink } from "@/lib/types";
+import { t } from "@/lib/translations";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 interface Props {
   location: CustomerLocation;
   links: CustomerLocationLink[];
   slug: string;
   scanToken?: string;
+  lang: string;
 }
 
-export default function LinktreeProfile({ location, links, slug, scanToken }: Props) {
+export default function LinktreeProfile({ location, links, slug, scanToken, lang }: Props) {
   return (
     <main className="min-h-screen flex flex-col items-center p-6 bg-white">
       <div className="max-w-sm w-full flex flex-col items-center gap-6 pt-10">
+        <LanguageSwitcher currentLang={lang} />
+
         {location.logo_link && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -30,7 +35,7 @@ export default function LinktreeProfile({ location, links, slug, scanToken }: Pr
             href={`/l/${slug}/review`}
             className="w-full text-center py-3 px-6 rounded-full bg-blue-600 hover:bg-blue-700 font-semibold text-white transition-colors"
           >
-            ⭐ Zostaw opinię
+            ⭐ {t("leave_review", lang)}
           </Link>
           {links.map((link) => (
             <a
@@ -51,7 +56,7 @@ export default function LinktreeProfile({ location, links, slug, scanToken }: Pr
               href={`/l/${slug}/promo${scanToken ? `?scan=${scanToken}` : ""}`}
               className="block w-full text-center py-3 px-6 rounded-full bg-amber-400 hover:bg-amber-500 font-semibold text-gray-900 transition-colors"
             >
-              {location.promo_banner_text ?? "Odbierz promocję"}
+              {location.promo_banner_text ?? t("collect_promo_default", lang)}
             </Link>
           </div>
         )}
@@ -62,7 +67,7 @@ export default function LinktreeProfile({ location, links, slug, scanToken }: Pr
               href={`/l/${slug}/loyalty`}
               className="block w-full text-center py-3 px-6 rounded-full bg-gray-900 hover:bg-gray-700 font-semibold text-white transition-colors"
             >
-              Karta lojalnościowa
+              {t("loyalty_card_link", lang)}
             </Link>
           </div>
         )}

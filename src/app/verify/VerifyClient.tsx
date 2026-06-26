@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { t } from "@/lib/translations";
 
 interface VerifyResult {
   valid: boolean;
@@ -12,9 +13,10 @@ interface VerifyResult {
 
 interface Props {
   initialCode: string;
+  lang: string;
 }
 
-export default function VerifyClient({ initialCode }: Props) {
+export default function VerifyClient({ initialCode, lang }: Props) {
   const [code, setCode] = useState(initialCode.toUpperCase());
   const [loading, setLoading] = useState(false);
   const [activating, setActivating] = useState(false);
@@ -50,7 +52,7 @@ export default function VerifyClient({ initialCode }: Props) {
       return;
     }
     if (!res.ok) {
-      setError("Coś poszło nie tak. Spróbuj ponownie.");
+      setError(t("something_went_wrong", lang));
       return;
     }
 
@@ -75,7 +77,7 @@ export default function VerifyClient({ initialCode }: Props) {
       return;
     }
     if (!res.ok) {
-      setError("Nie udało się zużyć kuponu. Spróbuj ponownie.");
+      setError(t("activate_failed", lang));
       return;
     }
 
@@ -87,7 +89,7 @@ export default function VerifyClient({ initialCode }: Props) {
       <div className="flex gap-2">
         <input
           type="text"
-          placeholder="Np. A3K9X2B7"
+          placeholder={t("code_placeholder", lang)}
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 8))}
           maxLength={8}
@@ -98,7 +100,7 @@ export default function VerifyClient({ initialCode }: Props) {
           disabled={loading || code.length < 8}
           className="bg-black text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50 shrink-0"
         >
-          {loading ? "..." : "Sprawdź"}
+          {loading ? "..." : t("check_btn", lang)}
         </button>
       </div>
 
@@ -106,16 +108,16 @@ export default function VerifyClient({ initialCode }: Props) {
 
       {notFound && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-          <p className="text-red-700 text-sm font-medium">Nieprawidłowy kod kuponu.</p>
+          <p className="text-red-700 text-sm font-medium">{t("invalid_coupon", lang)}</p>
         </div>
       )}
 
       {result && result.isUsed && (
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
-          <p className="text-gray-600 text-sm font-medium">Ten kupon został już wykorzystany.</p>
+          <p className="text-gray-600 text-sm font-medium">{t("coupon_used", lang)}</p>
           {result.usedAt && (
             <p className="text-gray-400 text-xs mt-1">
-              {new Date(result.usedAt).toLocaleString("pl-PL")}
+              {new Date(result.usedAt).toLocaleString(lang === "pl" ? "pl-PL" : lang === "de" ? "de-DE" : "en-GB")}
             </p>
           )}
         </div>
@@ -128,7 +130,7 @@ export default function VerifyClient({ initialCode }: Props) {
             {result.promoText && (
               <p className="text-green-700 text-sm mt-2">{result.promoText}</p>
             )}
-            <p className="text-green-600 text-xs mt-3 font-medium">Kupon jest ważny</p>
+            <p className="text-green-600 text-xs mt-3 font-medium">{t("coupon_valid", lang)}</p>
           </div>
 
           <button
@@ -136,7 +138,7 @@ export default function VerifyClient({ initialCode }: Props) {
             disabled={activating}
             className="bg-black text-white rounded-lg px-4 py-3 font-medium disabled:opacity-50"
           >
-            {activating ? "Przetwarzam..." : "Oznacz jako wykorzystany"}
+            {activating ? t("processing", lang) : t("mark_as_used", lang)}
           </button>
         </div>
       )}
