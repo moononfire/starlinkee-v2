@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
 
   if (event.type === "invoice.payment_succeeded") {
     const invoice = event.data.object as Stripe.Invoice;
-    const isRenewal = Boolean(invoice.parent?.subscription_details?.metadata?.renewal_subscription_id);
+    const renewalMetadata = invoice.parent?.subscription_details?.metadata;
+    const isRenewal = Boolean(renewalMetadata?.renewal_subscription_id || renewalMetadata?.renewal_plate_id);
     // Process after response is sent — Stripe only needs a 200 ACK
     after(async () => {
       try {
