@@ -2,7 +2,12 @@ import Stripe from "stripe";
 import { upsertCustomerByEmail } from "../db/customers";
 import { createOrder, createOrderItem, createShipment } from "../db/orders";
 import { createSubscription, setSubscriptionActive } from "../db/subscriptions";
-import { sendOrderConfirmationToAdmin, sendPortalActivation } from "../email";
+import {
+  sendOrderConfirmationToAdmin,
+  sendPortalActivation,
+  sendRenewalConfirmation,
+  sendRenewalConfirmationToAdmin,
+} from "../email";
 import { setActivationToken } from "../db/portal";
 import { assignPlateToSubscription } from "../db/plates";
 
@@ -57,6 +62,8 @@ export async function createRenewalCheckoutSession(params: {
           : { renewal_plate_id: String(plateId) }),
         plate_number: plateNumber,
         renewal_duration_days: String(RENEWAL_DURATION_DAYS[interval]),
+        renewal_interval: interval,
+        plate_language: lang,
       },
     },
   });
@@ -76,16 +83,31 @@ export async function processRenewalInvoicePaid(invoice: Stripe.Invoice): Promis
   const expiration = new Date(now);
   expiration.setDate(expiration.getDate() + durationDays);
 
+  const plateNumber = metadata.plate_number ?? "";
+  const lang = metadata.plate_language ?? "en";
+  const interval = metadata.renewal_interval === "year" ? "year" : "month";
+  const email = invoice.customer_email;
+
   const existingSubscriptionId = Number(metadata.renewal_subscription_id);
   if (existingSubscriptionId) {
     await setSubscriptionActive(existingSubscriptionId, now.toISOString(), expiration.toISOString());
+
+    if (email) {
+      sendRenewalConfirmation(email, lang, { plateNumber }).catch((err) =>
+        console.error("[stripe] renewal confirmation email failed:", err)
+      );
+    }
+    sendRenewalConfirmationToAdmin({
+      plateNumber,
+      customerEmail: email ?? "unknown",
+      interval,
+    }).catch((err) => console.error("[stripe] renewal admin email failed:", err));
     return;
   }
 
   const plateId = Number(metadata.renewal_plate_id);
   if (!plateId) return;
 
-  const email = invoice.customer_email;
   if (!email) {
     console.error(`[stripe] renewal invoice ${invoice.id} has no customer_email — skipping`);
     return;
@@ -110,6 +132,10 @@ export async function processRenewalInvoicePaid(invoice: Stripe.Invoice): Promis
   });
 
   await assignPlateToSubscription(plateId, subscription.subscription_id);
+
+  sendRenewalConfirmationToAdmin({ plateNumber, customerEmail: email, interval }).catch((err) =>
+    console.error("[stripe] renewal admin email failed:", err)
+  );
 }
 
 export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {

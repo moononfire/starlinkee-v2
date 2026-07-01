@@ -81,6 +81,12 @@ const strings = {
       `Your Starlinkee plate for <strong>${name}</strong> has been successfully set up and is now active.`,
     setupBody2: "Guests can now scan your plate and leave reviews directly.",
     setupFooter: "Thank you for using Starlinkee.",
+
+    renewalSubject: "Your Starlinkee subscription has been renewed",
+    renewalGreeting: "Hello,",
+    renewalBody: (plateNumber: string) =>
+      `Your subscription for plate <strong>${plateNumber}</strong> has been successfully renewed. Thank you for your payment.`,
+    renewalFooter: "Thank you for using Starlinkee.",
   },
   de: {
     orderSubject: (id: number) => `Bestellung bestätigt — #${id}`,
@@ -97,6 +103,12 @@ const strings = {
     setupBody2:
       "Gäste können jetzt Ihre Platte scannen und direkt Bewertungen hinterlassen.",
     setupFooter: "Vielen Dank, dass Sie Starlinkee nutzen.",
+
+    renewalSubject: "Ihr Starlinkee-Abonnement wurde verlängert",
+    renewalGreeting: "Hallo,",
+    renewalBody: (plateNumber: string) =>
+      `Ihr Abonnement für Platte <strong>${plateNumber}</strong> wurde erfolgreich verlängert. Vielen Dank für Ihre Zahlung.`,
+    renewalFooter: "Vielen Dank, dass Sie Starlinkee nutzen.",
   },
   pl: {
     orderSubject: (id: number) => `Zamówienie potwierdzone — #${id}`,
@@ -112,6 +124,12 @@ const strings = {
       `Twoja płytka Starlinkee dla <strong>${name}</strong> została pomyślnie skonfigurowana i jest już aktywna.`,
     setupBody2: "Goście mogą teraz skanować Twoją płytkę i zostawiać opinie.",
     setupFooter: "Dziękujemy za korzystanie z Starlinkee.",
+
+    renewalSubject: "Twoja subskrypcja Starlinkee została odnowiona",
+    renewalGreeting: "Cześć,",
+    renewalBody: (plateNumber: string) =>
+      `Twoja subskrypcja dla płytki <strong>${plateNumber}</strong> została pomyślnie odnowiona. Dziękujemy za płatność.`,
+    renewalFooter: "Dziękujemy za korzystanie z Starlinkee.",
   },
 } satisfies Record<Lang, object>;
 
@@ -221,6 +239,54 @@ export async function sendPlateSetupConfirmation(
       "",
       s.setupFooter,
     ].join("\n")
+  );
+}
+
+export async function sendRenewalConfirmation(
+  to: string,
+  language: string,
+  data: { plateNumber: string }
+) {
+  const s = strings[toLang(language)];
+  const html = layout(
+    h1(s.renewalGreeting) +
+      para(s.renewalBody(data.plateNumber)) +
+      divider() +
+      para(s.renewalFooter)
+  );
+  await sendMail(
+    to,
+    s.renewalSubject,
+    html,
+    [
+      s.renewalGreeting,
+      "",
+      s.renewalBody(data.plateNumber).replace(/<[^>]+>/g, ""),
+      "",
+      s.renewalFooter,
+    ].join("\n")
+  );
+}
+
+export async function sendRenewalConfirmationToAdmin(data: {
+  plateNumber: string;
+  customerEmail: string;
+  interval: "month" | "year";
+}) {
+  const html = layout(
+    h1("Subscription Renewed") +
+      para("A plate subscription was renewed and payment was confirmed via Stripe.") +
+      dataTable(
+        ["Plate", data.plateNumber],
+        ["Customer email", data.customerEmail],
+        ["Interval", data.interval === "year" ? "1 year" : "1 month"]
+      )
+  );
+  await sendMail(
+    process.env.EMAIL_ADMIN!,
+    `Subscription renewed — ${data.plateNumber}`,
+    html,
+    `Plate ${data.plateNumber} renewed (${data.interval})\nCustomer: ${data.customerEmail}`
   );
 }
 
