@@ -7,6 +7,7 @@ export async function POST(request: NextRequest) {
 
   const plateNumber = form.get("plateNumber") as string;
   const plateSecret = form.get("plateSecret") as string;
+  const interval = form.get("interval") === "year" ? "year" : "month";
 
   if (!plateNumber || !plateSecret) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -25,6 +26,7 @@ export async function POST(request: NextRequest) {
       plateNumber: plate.plate_number,
       plateSecret: plate.secret_key,
       lang: plate.plate_language,
+      interval,
     });
     return NextResponse.redirect(checkoutUrl, 303);
   } catch (err) {
