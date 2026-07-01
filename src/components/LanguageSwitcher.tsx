@@ -1,7 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-
 const languages = [
   { code: "en", label: "EN" },
   { code: "de", label: "DE" },
@@ -50,11 +48,9 @@ interface Props {
 }
 
 export default function LanguageSwitcher({ currentLang }: Props) {
-  const router = useRouter();
-
   function switchLang(lang: string) {
     document.cookie = `lang=${lang};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
-    router.refresh();
+    window.location.reload();
   }
 
   return (

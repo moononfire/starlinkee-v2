@@ -33,7 +33,7 @@ export default async function SubscriptionsPage({
             <tr>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">ID</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Klient</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Plan</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Płytka</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Dni</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Status</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Aktywacja</th>
@@ -56,11 +56,16 @@ export default async function SubscriptionsPage({
                   <div className="text-gray-500 dark:text-gray-400 text-xs">{s.customer_email}</div>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="text-gray-700 dark:text-gray-300">{s.subscription_name}</div>
-                  {s.is_free && (
-                    <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded">
-                      bezpłatna
-                    </span>
+                  {s.plate_numbers.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {s.plate_numbers.map((p) => (
+                        <span key={p} className="font-mono text-sm font-medium text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+                          {p}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-sm text-gray-400 dark:text-gray-500">Nieprzypisana</span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{s.duration_in_days}</td>

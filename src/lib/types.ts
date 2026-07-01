@@ -42,6 +42,7 @@ export interface CustomerLocation {
   has_linktree_access: boolean;
   has_promo_enabled: boolean;
   has_loyalty_enabled: boolean;
+  promo_description: string | null;
   promo_banner_text: string | null;
   promo_sms_text: string | null;
   scan_redirect_mode: "review" | "linktree";
@@ -62,6 +63,9 @@ export interface Review {
   contact_phone: string | null;
   user_name: string | null;
   feedback_time: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  device_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -78,6 +82,9 @@ export interface CustomerLocationLink {
   id: number;
   customer_location_id: number;
   title: string;
+  title_pl: string | null;
+  title_en: string | null;
+  title_de: string | null;
   url: string;
   sort_order: number;
 }

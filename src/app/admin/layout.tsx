@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import AdminNav from "./AdminNav";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default async function AdminLayout({
   children,
@@ -39,6 +40,7 @@ export default async function AdminLayout({
     <div className="min-h-screen flex bg-gray-100 dark:bg-gray-900">
       <AdminNav userEmail={user.email ?? ""} />
       <main className="flex-1 p-8 overflow-auto">{children}</main>
+      <ThemeToggle />
     </div>
   );
 }

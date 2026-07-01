@@ -69,6 +69,68 @@ export async function getCustomerSubscriptions(
   }));
 }
 
+export async function getReviewsBySubscription(
+  subscriptionId: number,
+  limit = 10
+): Promise<(Review & { plate_number: string })[]> {
+  const supabase = createAdminClient();
+
+  const { data: plates } = await supabase
+    .from("plates")
+    .select("plate_id, plate_number")
+    .eq("subscription_id", subscriptionId);
+
+  if (!plates || plates.length === 0) return [];
+
+  const plateIds = plates.map((p: any) => p.plate_id);
+  const plateMap = new Map(plates.map((p: any) => [p.plate_id, p.plate_number]));
+
+  const { data: reviews, error } = await supabase
+    .from("reviews")
+    .select("*")
+    .in("plate_id", plateIds)
+    .not("rating", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(`Failed to load reviews: ${error.message}`);
+
+  return (reviews ?? []).map((r: any) => ({
+    ...r,
+    plate_number: plateMap.get(r.plate_id) ?? "?",
+  }));
+}
+
+export async function getAllReviewsBySubscription(
+  subscriptionId: number
+): Promise<(Review & { plate_number: string })[]> {
+  const supabase = createAdminClient();
+
+  const { data: plates } = await supabase
+    .from("plates")
+    .select("plate_id, plate_number")
+    .eq("subscription_id", subscriptionId);
+
+  if (!plates || plates.length === 0) return [];
+
+  const plateIds = plates.map((p: any) => p.plate_id);
+  const plateMap = new Map(plates.map((p: any) => [p.plate_id, p.plate_number]));
+
+  const { data: reviews, error } = await supabase
+    .from("reviews")
+    .select("*")
+    .in("plate_id", plateIds)
+    .not("rating", "is", null)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(`Failed to load reviews: ${error.message}`);
+
+  return (reviews ?? []).map((r: any) => ({
+    ...r,
+    plate_number: plateMap.get(r.plate_id) ?? "?",
+  }));
+}
+
 export async function getCustomerReviews(
   customerId: number,
   limit = 20

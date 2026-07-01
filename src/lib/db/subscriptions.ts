@@ -47,18 +47,19 @@ export async function createSubscription(data: {
 export interface SubscriptionWithCustomer extends Subscription {
   customer_name: string;
   customer_email: string;
+  plate_numbers: string[];
 }
 
 export async function listSubscriptions(search?: string): Promise<SubscriptionWithCustomer[]> {
   const supabase = createAdminClient();
   let query = supabase
     .from("subscriptions")
-    .select("*, customers(customer_name, email)")
+    .select("*, customers(customer_name, email), plates(plate_number)")
     .order("created_at", { ascending: false });
 
   if (search) {
     query = query.or(
-      `subscription_name.ilike.%${search}%,customers.customer_name.ilike.%${search}%,customers.email.ilike.%${search}%`
+      `customers.customer_name.ilike.%${search}%,customers.email.ilike.%${search}%,plates.plate_number.ilike.%${search}%`
     );
   }
 
@@ -68,5 +69,6 @@ export async function listSubscriptions(search?: string): Promise<SubscriptionWi
     ...row,
     customer_name: row.customers?.customer_name ?? "",
     customer_email: row.customers?.email ?? "",
+    plate_numbers: (row.plates ?? []).map((p: any) => p.plate_number),
   }));
 }

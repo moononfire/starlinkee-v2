@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getLocationBySlug, getLocationLinksByLocationId, incrementLinktreeVisits } from "@/lib/db/locations";
+import { getPlatesBySubscriptionId } from "@/lib/db/plates";
 import LinktreeProfile from "@/components/linktree/LinktreeProfile";
 import PageTracker from "@/components/tracking/PageTracker";
 import { getLanguage } from "@/lib/language";
@@ -16,8 +17,12 @@ export default async function LinktreePage({ params, searchParams }: Props) {
   const location = await getLocationBySlug(slug);
   if (!location) notFound();
 
-  const links = await getLocationLinksByLocationId(location.location_id);
-  const lang = await getLanguage();
+  const [links, plates] = await Promise.all([
+    getLocationLinksByLocationId(location.location_id),
+    getPlatesBySubscriptionId(location.subscription_id),
+  ]);
+  const plateLanguage = plates[0]?.plate_language ?? "pl";
+  const lang = await getLanguage(plateLanguage);
 
   incrementLinktreeVisits(location.location_id).catch(() => {});
 

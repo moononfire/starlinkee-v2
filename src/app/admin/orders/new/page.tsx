@@ -47,7 +47,7 @@ async function createOrderAction(formData: FormData) {
 
   const sub = await createSubscription({
     customer_id: customerId,
-    subscription_name: product.name,
+    subscription_name: "Subskrypcja",
     duration_in_days: product.duration,
     is_free: product.is_free,
   });

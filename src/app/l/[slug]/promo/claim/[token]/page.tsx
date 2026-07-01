@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getLeadByToken } from "@/lib/db/leads";
 import { getLocationBySlug } from "@/lib/db/locations";
+import { getPlatesBySubscriptionId } from "@/lib/db/plates";
 import ClaimClient from "./ClaimClient";
 import PageTracker from "@/components/tracking/PageTracker";
 import { getLanguage } from "@/lib/language";
@@ -20,16 +21,18 @@ export default async function ClaimPage({ params }: Props) {
   const location = await getLocationBySlug(slug);
   if (!location) notFound();
 
-  const lang = await getLanguage();
+  const plates = await getPlatesBySubscriptionId(location.subscription_id);
+  const plateLanguage = plates[0]?.plate_language ?? "pl";
+  const lang = await getLanguage(plateLanguage);
 
   return (
     <>
       <PageTracker locationId={location.location_id} pagePath={`/l/${slug}/promo/claim`} pageType="promo_claim" />
-      <main className="min-h-screen bg-gray-50 flex items-start justify-center pt-16 px-4">
+      <main className="min-h-screen bg-gray-50 flex flex-col items-center pt-4 px-4">
+        <div className="flex justify-end w-full max-w-sm mb-3">
+          <LanguageSwitcher currentLang={lang} />
+        </div>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-full max-w-sm">
-          <div className="flex justify-center mb-4">
-            <LanguageSwitcher currentLang={lang} />
-          </div>
           {location.logo_link && (
             <img
               src={location.logo_link}

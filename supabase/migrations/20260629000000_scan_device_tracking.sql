@@ -1,0 +1,4 @@
+ALTER TABLE reviews
+  ADD COLUMN IF NOT EXISTS ip_address TEXT,
+  ADD COLUMN IF NOT EXISTS user_agent TEXT,
+  ADD COLUMN IF NOT EXISTS device_id  TEXT;

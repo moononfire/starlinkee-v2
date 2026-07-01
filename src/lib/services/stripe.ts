@@ -1,14 +1,14 @@
 import Stripe from "stripe";
 import { upsertCustomerByEmail } from "../db/customers";
 import { createOrder, createOrderItem, createShipment } from "../db/orders";
-import { createSubscription } from "../db/subscriptions";
+import { createSubscription, setSubscriptionActive } from "../db/subscriptions";
 import { sendOrderConfirmationToAdmin, sendPortalActivation } from "../email";
 import { setActivationToken } from "../db/portal";
+import { assignPlateToSubscription } from "../db/plates";
 
 // Product IDs match the seeded products table
 const SUBSCRIPTION_PRODUCT_ID = 1; // 1_YEAR_SUB
 const PLATE_PRODUCT_ID = 2;        // PLATE
-const SUBSCRIPTION_NAME = "1_YEAR_SUB";
 const SUBSCRIPTION_DURATION_DAYS = 365;
 
 function getStripe() {
@@ -18,6 +18,86 @@ function getStripe() {
 function getPriceId(price: string | Stripe.Price | null | undefined): string | undefined {
   if (!price) return undefined;
   return typeof price === "string" ? price : price.id;
+}
+
+const RENEWAL_DURATION_DAYS = 30;
+
+export async function createRenewalCheckoutSession(params: {
+  plateId: number;
+  subscriptionId: number | null;
+  plateNumber: string;
+  plateSecret: string;
+  lang: string;
+}): Promise<string> {
+  const { plateId, subscriptionId, plateNumber, plateSecret, lang } = params;
+  const priceId = process.env.STRIPE_PRICE_ID_RENEWAL_MONTHLY;
+  if (!priceId) {
+    throw new Error("STRIPE_PRICE_ID_RENEWAL_MONTHLY is not configured");
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://starlinkee.com";
+  const plateUrl = `${appUrl}/plate/${plateNumber}/${plateSecret}`;
+
+  const session = await getStripe().checkout.sessions.create({
+    mode: "subscription",
+    line_items: [{ price: priceId, quantity: 1 }],
+    locale: ["en", "de", "pl"].includes(lang) ? (lang as Stripe.Checkout.SessionCreateParams.Locale) : "auto",
+    success_url: plateUrl,
+    cancel_url: plateUrl,
+    subscription_data: {
+      metadata: subscriptionId
+        ? { renewal_subscription_id: String(subscriptionId), plate_number: plateNumber }
+        : { renewal_plate_id: String(plateId), plate_number: plateNumber },
+    },
+  });
+
+  if (!session.url) {
+    throw new Error("Stripe did not return a checkout URL");
+  }
+  return session.url;
+}
+
+export async function processRenewalInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
+  const metadata = invoice.parent?.subscription_details?.metadata;
+  if (!metadata) return;
+
+  const now = new Date();
+  const expiration = new Date(now);
+  expiration.setDate(expiration.getDate() + RENEWAL_DURATION_DAYS);
+
+  const existingSubscriptionId = Number(metadata.renewal_subscription_id);
+  if (existingSubscriptionId) {
+    await setSubscriptionActive(existingSubscriptionId, now.toISOString(), expiration.toISOString());
+    return;
+  }
+
+  const plateId = Number(metadata.renewal_plate_id);
+  if (!plateId) return;
+
+  const email = invoice.customer_email;
+  if (!email) {
+    console.error(`[stripe] renewal invoice ${invoice.id} has no customer_email — skipping`);
+    return;
+  }
+
+  const customerId = await upsertCustomerByEmail({
+    email,
+    customer_name: invoice.customer_name ?? email,
+    customer_type: "individual",
+    source: "Stripe",
+    country: invoice.customer_address?.country ?? undefined,
+    phone: invoice.customer_phone ?? undefined,
+  });
+
+  const subscription = await createSubscription({
+    customer_id: customerId,
+    subscription_name: "Subskrypcja",
+    duration_in_days: RENEWAL_DURATION_DAYS,
+    is_free: false,
+  });
+
+  await setSubscriptionActive(subscription.subscription_id, now.toISOString(), expiration.toISOString());
+  await assignPlateToSubscription(plateId, subscription.subscription_id);
 }
 
 export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
@@ -99,7 +179,7 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
     for (let i = 0; i < qty; i++) {
       await createSubscription({
         customer_id: customerId,
-        subscription_name: SUBSCRIPTION_NAME,
+        subscription_name: "Subskrypcja",
         duration_in_days: SUBSCRIPTION_DURATION_DAYS,
         is_free: false,
       });

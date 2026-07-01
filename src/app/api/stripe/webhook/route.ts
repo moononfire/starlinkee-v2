@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { after } from "next/server";
 import Stripe from "stripe";
-import { processInvoicePaymentSucceeded } from "@/lib/services/stripe";
+import { processInvoicePaymentSucceeded, processRenewalInvoicePaid } from "@/lib/services/stripe";
 
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -25,10 +25,15 @@ export async function POST(request: NextRequest) {
 
   if (event.type === "invoice.payment_succeeded") {
     const invoice = event.data.object as Stripe.Invoice;
+    const isRenewal = Boolean(invoice.parent?.subscription_details?.metadata?.renewal_subscription_id);
     // Process after response is sent — Stripe only needs a 200 ACK
     after(async () => {
       try {
-        await processInvoicePaymentSucceeded(invoice);
+        if (isRenewal) {
+          await processRenewalInvoicePaid(invoice);
+        } else {
+          await processInvoicePaymentSucceeded(invoice);
+        }
       } catch (err) {
         console.error("[stripe webhook] processing failed:", err);
       }

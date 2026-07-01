@@ -67,6 +67,17 @@ export async function getLeadByCouponCode(code: string): Promise<LocationLead | 
   return data ?? null;
 }
 
+export async function getLeadsByLocationId(locationId: number): Promise<LocationLead[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("location_leads")
+    .select("*")
+    .eq("location_id", locationId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(`Failed to load leads: ${error.message}`);
+  return data ?? [];
+}
+
 export async function markLeadAsUsed(leadId: number): Promise<void> {
   const supabase = createAdminClient();
   const { error } = await supabase
