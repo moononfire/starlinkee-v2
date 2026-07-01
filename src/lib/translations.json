@@ -131,6 +131,7 @@
     "plate_inactive_title": "Plate Inactive",
     "plate_renew_description": "Renew your subscription to reactivate this plate.",
     "plate_renew_button_monthly": "Renew — 1 month",
+    "plate_renew_button_yearly": "Renew — 1 year",
     "location_not_found_exception": "Location not found.",
     "subscription_not_found_exception": "No subscription found for this plate.",
 
@@ -327,6 +328,7 @@
     "plate_inactive_title": "Kennzeichen Inaktiv",
     "plate_renew_description": "Erneuern Sie Ihr Abonnement, um dieses Kennzeichen zu reaktivieren.",
     "plate_renew_button_monthly": "Verlängern — 1 Monat",
+    "plate_renew_button_yearly": "Verlängern — 1 Jahr",
     "location_not_found_exception": "Standort nicht gefunden.",
     "subscription_not_found_exception": "Keine Abonnement für dieses Kennzeichen gefunden.",
 
@@ -522,6 +524,7 @@
     "plate_inactive_title": "Tablica Nieaktywna",
     "plate_renew_description": "Odnów subskrypcję, aby ponownie aktywować tę tablicę.",
     "plate_renew_button_monthly": "Odnów — 1 miesiąc",
+    "plate_renew_button_yearly": "Odnów — 1 rok",
     "location_not_found_exception": "Nie znaleziono lokalizacji.",
     "subscription_not_found_exception": "Nie znaleziono subskrypcji dla tej tablicy.",
 
@@ -699,6 +702,7 @@
     "plate_inactive_title": "平台未激活",
     "plate_renew_description": "续订订阅以重新激活此平台。",
     "plate_renew_button_monthly": "续订 — 1个月",
+    "plate_renew_button_yearly": "续订 — 1年",
     "location_not_found_exception": "未找到位置。",
     "subscription_not_found_exception": "未找到此平台的订阅。",
     "plate_setup_success_message": "平台已设置成功。您将通过电子邮件收到确认。",

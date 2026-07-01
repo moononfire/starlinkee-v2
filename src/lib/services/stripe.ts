@@ -20,7 +20,10 @@ function getPriceId(price: string | Stripe.Price | null | undefined): string | u
   return typeof price === "string" ? price : price.id;
 }
 
-const RENEWAL_DURATION_DAYS = 30;
+const RENEWAL_DURATION_DAYS: Record<"month" | "year", number> = {
+  month: 30,
+  year: 365,
+};
 
 export async function createRenewalCheckoutSession(params: {
   plateId: number;
@@ -28,11 +31,14 @@ export async function createRenewalCheckoutSession(params: {
   plateNumber: string;
   plateSecret: string;
   lang: string;
+  interval: "month" | "year";
 }): Promise<string> {
-  const { plateId, subscriptionId, plateNumber, plateSecret, lang } = params;
-  const priceId = process.env.STRIPE_PRICE_ID_RENEWAL_MONTHLY;
+  const { plateId, subscriptionId, plateNumber, plateSecret, lang, interval } = params;
+  const priceId = interval === "year"
+    ? process.env.STRIPE_PRICE_ID_RENEWAL_YEARLY
+    : process.env.STRIPE_PRICE_ID_RENEWAL_MONTHLY;
   if (!priceId) {
-    throw new Error("STRIPE_PRICE_ID_RENEWAL_MONTHLY is not configured");
+    throw new Error(`STRIPE_PRICE_ID_RENEWAL_${interval === "year" ? "YEARLY" : "MONTHLY"} is not configured`);
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://starlinkee.com";
@@ -45,9 +51,13 @@ export async function createRenewalCheckoutSession(params: {
     success_url: plateUrl,
     cancel_url: plateUrl,
     subscription_data: {
-      metadata: subscriptionId
-        ? { renewal_subscription_id: String(subscriptionId), plate_number: plateNumber }
-        : { renewal_plate_id: String(plateId), plate_number: plateNumber },
+      metadata: {
+        ...(subscriptionId
+          ? { renewal_subscription_id: String(subscriptionId) }
+          : { renewal_plate_id: String(plateId) }),
+        plate_number: plateNumber,
+        renewal_duration_days: String(RENEWAL_DURATION_DAYS[interval]),
+      },
     },
   });
 
@@ -61,9 +71,10 @@ export async function processRenewalInvoicePaid(invoice: Stripe.Invoice): Promis
   const metadata = invoice.parent?.subscription_details?.metadata;
   if (!metadata) return;
 
+  const durationDays = Number(metadata.renewal_duration_days) || RENEWAL_DURATION_DAYS.month;
   const now = new Date();
   const expiration = new Date(now);
-  expiration.setDate(expiration.getDate() + RENEWAL_DURATION_DAYS);
+  expiration.setDate(expiration.getDate() + durationDays);
 
   const existingSubscriptionId = Number(metadata.renewal_subscription_id);
   if (existingSubscriptionId) {
@@ -92,7 +103,7 @@ export async function processRenewalInvoicePaid(invoice: Stripe.Invoice): Promis
   const subscription = await createSubscription({
     customer_id: customerId,
     subscription_name: "Subskrypcja",
-    duration_in_days: RENEWAL_DURATION_DAYS,
+    duration_in_days: durationDays,
     is_free: false,
   });
 
