@@ -100,6 +100,8 @@ export async function processRenewalInvoicePaid(invoice: Stripe.Invoice): Promis
     phone: invoice.customer_phone ?? undefined,
   });
 
+  // Left as "pending" — the plate page will show the setup form so the
+  // customer can fill in their location before the subscription goes active.
   const subscription = await createSubscription({
     customer_id: customerId,
     subscription_name: "Subskrypcja",
@@ -107,7 +109,6 @@ export async function processRenewalInvoicePaid(invoice: Stripe.Invoice): Promis
     is_free: false,
   });
 
-  await setSubscriptionActive(subscription.subscription_id, now.toISOString(), expiration.toISOString());
   await assignPlateToSubscription(plateId, subscription.subscription_id);
 }
 
