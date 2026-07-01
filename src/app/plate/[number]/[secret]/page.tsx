@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { headers, cookies } from "next/headers";
 import { getPlateByNumber, incrementPlateVisits } from "@/lib/db/plates";
 import { getSubscriptionById } from "@/lib/db/subscriptions";
 import { getLocationBySubscriptionId } from "@/lib/db/locations";
@@ -23,14 +24,14 @@ export default async function PlatePage({ params }: Props) {
   const lang = plate.plate_language;
 
   if (!plate.subscription_id) {
-    return <InactivePage lang={lang} />;
+    return <InactivePage lang={lang} plateNumber={plate.plate_number} plateSecret={plate.secret_key} />;
   }
 
   const subscription = await getSubscriptionById(plate.subscription_id);
   if (!subscription) notFound();
 
   if (subscription.status === "inactive") {
-    return <InactivePage lang={lang} />;
+    return <InactivePage lang={lang} plateNumber={plate.plate_number} plateSecret={plate.secret_key} />;
   }
 
   if (subscription.status === "pending") {
@@ -58,11 +59,24 @@ export default async function PlatePage({ params }: Props) {
     redirect(`/l/${location.linktree_slug}?scan=${scanToken}`);
   }
 
-  const scanId = await createScanRecord(plate.plate_id);
+  const [headersList, cookieStore] = await Promise.all([headers(), cookies()]);
+  const ip = headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? headersList.get("x-real-ip") ?? null;
+  const userAgent = headersList.get("user-agent") ?? null;
+  const deviceId = cookieStore.get("_did")?.value ?? null;
+
+  const scanId = await createScanRecord(plate.plate_id, { ip_address: ip, user_agent: userAgent, device_id: deviceId });
   redirect(`/plate/${plate.plate_number}/scan/${scanId}`);
 }
 
-function InactivePage({ lang }: { lang: string }) {
+function InactivePage({
+  lang,
+  plateNumber,
+  plateSecret,
+}: {
+  lang: string;
+  plateNumber?: string;
+  plateSecret?: string;
+}) {
   return (
     <main className="min-h-screen flex items-center justify-center p-6"
       style={{ backgroundColor: "#f9fafb", color: "#111827" }}>
@@ -71,6 +85,23 @@ function InactivePage({ lang }: { lang: string }) {
           {t("plate_inactive_title", lang)}
         </p>
         <p className="mt-2" style={{ color: "#374151" }}>{t("plate_inactive_exception", lang)}</p>
+
+        {plateNumber && plateSecret && (
+          <form action="/api/plate/renew" method="POST" className="mt-6">
+            <input type="hidden" name="plateNumber" value={plateNumber} />
+            <input type="hidden" name="plateSecret" value={plateSecret} />
+            <p className="mb-3 text-sm" style={{ color: "#374151" }}>
+              {t("plate_renew_description", lang)}
+            </p>
+            <button
+              type="submit"
+              className="w-full rounded-lg px-4 py-3 font-medium text-white"
+              style={{ backgroundColor: "#111827" }}
+            >
+              {t("plate_renew_button_monthly", lang)}
+            </button>
+          </form>
+        )}
       </div>
     </main>
   );

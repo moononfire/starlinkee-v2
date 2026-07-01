@@ -50,7 +50,7 @@ export default async function PlatesPage({
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Secret Key</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Język</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Wizyty</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Subskrypcja</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Sub. ID</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Klient</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Data</th>
             </tr>
@@ -72,7 +72,7 @@ export default async function PlatesPage({
                 <td className="px-4 py-3 font-mono text-gray-500 dark:text-gray-400 text-xs">{p.secret_key}</td>
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300 uppercase">{p.plate_language}</td>
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{p.number_of_visits}</td>
-                <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{p.subscription_name ?? "—"}</td>
+                <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{p.subscription_id ?? "—"}</td>
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{p.customer_name ?? "—"}</td>
                 <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
                   {new Date(p.created_at).toLocaleDateString("pl-PL")}

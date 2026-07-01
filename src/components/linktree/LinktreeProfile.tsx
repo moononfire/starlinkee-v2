@@ -11,11 +11,20 @@ interface Props {
   lang: string;
 }
 
+function getLinkTitle(link: CustomerLocationLink, lang: string): string {
+  if (lang === "pl") return link.title_pl || link.title_en || link.title_de || link.title;
+  if (lang === "en") return link.title_en || link.title_pl || link.title_de || link.title;
+  if (lang === "de") return link.title_de || link.title_pl || link.title_en || link.title;
+  return link.title;
+}
+
 export default function LinktreeProfile({ location, links, slug, scanToken, lang }: Props) {
   return (
     <main className="min-h-screen flex flex-col items-center p-6 bg-white">
-      <div className="max-w-sm w-full flex flex-col items-center gap-6 pt-10">
+      <div className="flex justify-end w-full max-w-sm mb-3">
         <LanguageSwitcher currentLang={lang} />
+      </div>
+      <div className="max-w-sm w-full flex flex-col items-center gap-6">
 
         {location.logo_link && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -45,7 +54,7 @@ export default function LinktreeProfile({ location, links, slug, scanToken, lang
               rel="noopener noreferrer"
               className="w-full text-center py-3 px-6 rounded-full border border-gray-200 font-medium text-gray-800 hover:bg-gray-50 transition-colors"
             >
-              {link.title}
+              {getLinkTitle(link, lang)}
             </a>
           ))}
         </div>

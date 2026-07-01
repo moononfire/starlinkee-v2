@@ -1,7 +1,29 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
+// Matches /plate/[number]/[secret] — exactly 2 path segments (scan initiation, not the review page)
+const PLATE_SCAN_PATTERN = /^\/plate\/[^/]+\/[^/]+$/;
+// Matches /l/[slug]/review
+const LINKTREE_REVIEW_PATTERN = /^\/l\/[^/]+\/review$/;
+
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Set a persistent device-identity cookie on scan initiation pages so
+  // the server component can read it when creating the scan record.
+  if (PLATE_SCAN_PATTERN.test(pathname) || LINKTREE_REVIEW_PATTERN.test(pathname)) {
+    const response = NextResponse.next({ request });
+    if (!request.cookies.has("_did")) {
+      response.cookies.set("_did", crypto.randomUUID(), {
+        httpOnly: true,
+        maxAge: 60 * 60 * 24 * 365,
+        path: "/",
+        sameSite: "lax",
+      });
+    }
+    return response;
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -29,7 +51,6 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
   const isAdminRoute = pathname.startsWith("/admin");
   const isAdminLoginPage = pathname === "/login";
   const isPortalPublic =
@@ -60,5 +81,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/login", "/portal/:path*"],
+  matcher: ["/admin/:path*", "/login", "/portal/:path*", "/plate/:path*", "/l/:path*"],
 };

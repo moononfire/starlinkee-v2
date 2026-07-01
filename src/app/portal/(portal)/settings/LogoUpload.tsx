@@ -19,22 +19,26 @@ async function cropImage(imageSrc: string, crop: Area): Promise<Blob> {
   });
 
   const canvas = document.createElement("canvas");
-  const size = Math.min(crop.width, crop.height);
-  canvas.width = size;
-  canvas.height = size;
+  const outputSize = Math.min(crop.width, crop.height, 400);
+  canvas.width = outputSize;
+  canvas.height = outputSize;
   const ctx = canvas.getContext("2d")!;
 
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, outputSize, outputSize);
+
   ctx.beginPath();
-  ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+  ctx.arc(outputSize / 2, outputSize / 2, outputSize / 2, 0, Math.PI * 2);
   ctx.closePath();
   ctx.clip();
 
-  ctx.drawImage(image, crop.x, crop.y, crop.width, crop.height, 0, 0, size, size);
+  ctx.drawImage(image, crop.x, crop.y, crop.width, crop.height, 0, 0, outputSize, outputSize);
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => (blob ? resolve(blob) : reject(new Error("Canvas toBlob failed"))),
-      "image/png"
+      "image/jpeg",
+      0.85
     );
   });
 }
@@ -83,7 +87,7 @@ export default function LogoUpload({ locationId, locationName, currentLogoLink }
 
     try {
       const blob = await cropImage(imageSrc, croppedAreaPixels);
-      const file = new File([blob], "logo.png", { type: "image/png" });
+      const file = new File([blob], "logo.jpg", { type: "image/jpeg" });
 
       const form = new FormData();
       form.append("location_id", String(locationId));

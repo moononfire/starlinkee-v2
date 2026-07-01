@@ -26,19 +26,24 @@ export default function LocationEditForm({ location, initialLinks }: Props) {
   const [logoLink, setLogoLink] = useState(location.logo_link ?? "");
   const [ownerEmail, setOwnerEmail] = useState(location.owner_email ?? "");
 
-  const [links, setLinks] = useState<{ title: string; url: string }[]>(
-    initialLinks.map((l) => ({ title: l.title, url: l.url }))
+  const [links, setLinks] = useState<{ title_pl: string; title_en: string; title_de: string; url: string }[]>(
+    initialLinks.map((l) => ({
+      title_pl: l.title_pl ?? l.title,
+      title_en: l.title_en ?? "",
+      title_de: l.title_de ?? "",
+      url: l.url,
+    }))
   );
 
   function addLink() {
-    setLinks([...links, { title: "", url: "" }]);
+    setLinks([...links, { title_pl: "", title_en: "", title_de: "", url: "" }]);
   }
 
   function removeLink(idx: number) {
     setLinks(links.filter((_, i) => i !== idx));
   }
 
-  function updateLink(idx: number, field: "title" | "url", value: string) {
+  function updateLink(idx: number, field: "title_pl" | "title_en" | "title_de" | "url", value: string) {
     setLinks(links.map((l, i) => (i === idx ? { ...l, [field]: value } : l)));
   }
 
@@ -61,8 +66,15 @@ export default function LocationEditForm({ location, initialLinks }: Props) {
       logo_link: logoLink.trim() || null,
       owner_email: ownerEmail.trim() || null,
       links: links
-        .filter((l) => l.title.trim() && l.url.trim())
-        .map((l, i) => ({ title: l.title.trim(), url: l.url.trim(), sort_order: i })),
+        .filter((l) => (l.title_pl || l.title_en || l.title_de) && l.url.trim())
+        .map((l, i) => ({
+          title: l.title_pl.trim() || l.title_en.trim() || l.title_de.trim(),
+          title_pl: l.title_pl.trim() || null,
+          title_en: l.title_en.trim() || null,
+          title_de: l.title_de.trim() || null,
+          url: l.url.trim(),
+          sort_order: i,
+        })),
     };
 
     const res = await fetch("/api/admin/locations", {
@@ -185,30 +197,55 @@ export default function LocationEditForm({ location, initialLinks }: Props) {
         )}
 
         {links.map((link, idx) => (
-          <div key={idx} className="flex gap-2 items-start">
-            <div className="flex-1 space-y-1">
-              <input
-                type="text"
-                value={link.title}
-                onChange={(e) => updateLink(idx, "title", e.target.value)}
-                placeholder="Tytuł"
-                className={inputClass}
-              />
+          <div key={idx} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">PL</label>
+                <input
+                  type="text"
+                  value={link.title_pl}
+                  onChange={(e) => updateLink(idx, "title_pl", e.target.value)}
+                  placeholder="Tytuł po polsku"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">EN</label>
+                <input
+                  type="text"
+                  value={link.title_en}
+                  onChange={(e) => updateLink(idx, "title_en", e.target.value)}
+                  placeholder="Title in English"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">DE</label>
+                <input
+                  type="text"
+                  value={link.title_de}
+                  onChange={(e) => updateLink(idx, "title_de", e.target.value)}
+                  placeholder="Titel auf Deutsch"
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 items-center">
               <input
                 type="url"
                 value={link.url}
                 onChange={(e) => updateLink(idx, "url", e.target.value)}
                 placeholder="https://..."
-                className={inputClass}
+                className={`${inputClass} flex-1`}
               />
+              <button
+                type="button"
+                onClick={() => removeLink(idx)}
+                className="text-red-500 hover:text-red-700 text-sm shrink-0"
+              >
+                Usuń
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => removeLink(idx)}
-              className="mt-2 text-red-500 hover:text-red-700 text-sm"
-            >
-              Usuń
-            </button>
           </div>
         ))}
       </section>

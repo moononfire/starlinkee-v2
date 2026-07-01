@@ -122,10 +122,14 @@ export async function getLocationById(locationId: number): Promise<CustomerLocat
 export async function updateLocation(
   locationId: number,
   updates: {
+    location_name?: string;
+    google_business_name?: string | null;
+    google_business_address?: string | null;
     linktree_slug?: string | null;
     has_linktree_access?: boolean;
     has_promo_enabled?: boolean;
     has_loyalty_enabled?: boolean;
+    promo_description?: string | null;
     promo_banner_text?: string | null;
     promo_sms_text?: string | null;
     google_review_link?: string | null;
@@ -150,7 +154,7 @@ export async function updateLocation(
 
 export async function upsertLocationLinks(
   locationId: number,
-  links: { title: string; url: string; sort_order: number }[]
+  links: { title: string; title_pl?: string | null; title_en?: string | null; title_de?: string | null; url: string; sort_order: number }[]
 ): Promise<void> {
   const supabase = createAdminClient();
 

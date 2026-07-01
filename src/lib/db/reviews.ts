@@ -29,12 +29,19 @@ export async function listReviews(search?: string): Promise<ReviewWithLocation[]
   }));
 }
 
-export async function createScanRecord(plateId: number): Promise<string> {
+interface ScanDeviceInfo {
+  ip_address?: string | null;
+  user_agent?: string | null;
+  device_id?: string | null;
+}
+
+export async function createScanRecord(plateId: number, deviceInfo?: ScanDeviceInfo): Promise<string> {
   const supabase = createAdminClient();
   const scanId = crypto.randomUUID();
   const { error } = await supabase.from("reviews").insert({
     plate_id: plateId,
     scan_id: scanId,
+    ...deviceInfo,
   });
   if (error) throw new Error(`Failed to create scan record: ${error.message}`);
   return scanId;

@@ -6,9 +6,8 @@ import { redirect } from "next/navigation";
 import { getCustomerByEmail, getCustomerSubscriptions } from "@/lib/db/portal";
 import { updateLocation } from "@/lib/db/locations";
 
-export async function updateScanRedirectMode(formData: FormData) {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
+function makeSupabase(cookieStore: Awaited<ReturnType<typeof cookies>>) {
+  return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -24,6 +23,11 @@ export async function updateScanRedirectMode(formData: FormData) {
       },
     }
   );
+}
+
+export async function updateScanRedirectMode(formData: FormData) {
+  const cookieStore = await cookies();
+  const supabase = makeSupabase(cookieStore);
 
   const {
     data: { user },
@@ -41,11 +45,50 @@ export async function updateScanRedirectMode(formData: FormData) {
   }
 
   const subscriptions = await getCustomerSubscriptions(customer.customer_id);
-  const ownsLocation = subscriptions.some(
+  const matchingSub = subscriptions.find(
     (s) => s.location?.location_id === locationId
   );
-  if (!ownsLocation) redirect("/portal/settings");
+  if (!matchingSub) redirect("/portal/settings");
 
-  await updateLocation(locationId, { scan_redirect_mode: mode as "review" | "linktree" });
-  redirect("/portal/settings");
+  await updateLocation(locationId, {
+    scan_redirect_mode: mode as "review" | "linktree",
+  });
+  redirect(`/portal/${matchingSub.subscription_id}?saved=1`);
+}
+
+export async function updateGoogleLocation(formData: FormData) {
+  const cookieStore = await cookies();
+  const supabase = makeSupabase(cookieStore);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) redirect("/portal/login");
+
+  const customer = await getCustomerByEmail(user.email);
+  if (!customer) redirect("/portal/login");
+
+  const locationId = Number(formData.get("location_id"));
+  const googleBusinessName = formData.get("google_business_name") as string;
+  const googleBusinessAddress = formData.get("google_business_address") as string;
+  const googleReviewLink = formData.get("google_review_link") as string;
+  const googlePlacesId = formData.get("google_places_id") as string;
+
+  if (!locationId || !googlePlacesId || !googleReviewLink) {
+    redirect("/portal/settings");
+  }
+
+  const subscriptions = await getCustomerSubscriptions(customer.customer_id);
+  const matchingSub = subscriptions.find(
+    (s) => s.location?.location_id === locationId
+  );
+  if (!matchingSub) redirect("/portal/settings");
+
+  await updateLocation(locationId, {
+    google_business_name: googleBusinessName,
+    google_business_address: googleBusinessAddress,
+    google_review_link: googleReviewLink,
+    google_places_id: googlePlacesId,
+  });
+  redirect(`/portal/${matchingSub.subscription_id}?saved=1`);
 }
