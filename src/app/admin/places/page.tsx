@@ -40,6 +40,7 @@ export default async function PlacesPage({
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">ID</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Nazwa lokalizacji</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Klient</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Sub. ID</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Google Business</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Miasto / Kraj</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Sub.</th>
@@ -58,7 +59,7 @@ export default async function PlacesPage({
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {locations.length === 0 && (
               <tr>
-                <td colSpan={16} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={17} className="px-4 py-8 text-center text-gray-400">
                   Brak lokalizacji
                 </td>
               </tr>
@@ -73,6 +74,9 @@ export default async function PlacesPage({
                   )}
                 </td>
                 <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{loc.customer_name || "—"}</td>
+                <td className="px-4 py-3 text-gray-500 dark:text-gray-400 font-mono">
+                  {loc.subscription_id ?? "—"}
+                </td>
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300">
                   <div>{loc.google_business_name ?? "—"}</div>
                   {loc.google_places_id && (
