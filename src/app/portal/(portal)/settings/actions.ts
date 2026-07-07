@@ -56,6 +56,37 @@ export async function updateScanRedirectMode(formData: FormData) {
   redirect(`/portal/${matchingSub.subscription_id}?saved=1`);
 }
 
+export async function updateFourStarRedirect(formData: FormData) {
+  const cookieStore = await cookies();
+  const supabase = makeSupabase(cookieStore);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) redirect("/portal/login");
+
+  const customer = await getCustomerByEmail(user.email);
+  if (!customer) redirect("/portal/login");
+
+  const locationId = Number(formData.get("location_id"));
+  const redirectFourStar = formData.get("redirect_four_star_reviews") === "on";
+
+  if (!locationId) {
+    redirect("/portal/settings");
+  }
+
+  const subscriptions = await getCustomerSubscriptions(customer.customer_id);
+  const matchingSub = subscriptions.find(
+    (s) => s.location?.location_id === locationId
+  );
+  if (!matchingSub) redirect("/portal/settings");
+
+  await updateLocation(locationId, {
+    redirect_four_star_reviews: redirectFourStar,
+  });
+  redirect(`/portal/${matchingSub.subscription_id}?saved=1`);
+}
+
 export async function updateLinktreeSlug(formData: FormData) {
   const cookieStore = await cookies();
   const supabase = makeSupabase(cookieStore);

@@ -216,6 +216,7 @@ export async function updateLocation(
     logo_link?: string | null;
     owner_email?: string | null;
     scan_redirect_mode?: "review" | "linktree";
+    redirect_four_star_reviews?: boolean;
   }
 ): Promise<CustomerLocation> {
   const supabase = createAdminClient();

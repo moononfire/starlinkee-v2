@@ -47,7 +47,9 @@ export default async function ScanPage({ params }: Props) {
       );
     }
 
-    if (review.rating >= 4 && location.google_review_link) {
+    const shouldRedirect =
+      review.rating === 5 || (review.rating === 4 && location.redirect_four_star_reviews);
+    if (shouldRedirect && location.google_review_link) {
       redirect(location.google_review_link);
     }
   }

@@ -11,7 +11,7 @@ import PortalSetupForm from "../settings/PortalSetupForm";
 import LogoUpload from "../settings/LogoUpload";
 import GoogleLocationEditor from "../settings/GoogleLocationEditor";
 import LinktreeLinksEditor from "../settings/LinktreeLinksEditor";
-import { updateScanRedirectMode, updateLinktreeSlug } from "../settings/actions";
+import { updateScanRedirectMode, updateLinktreeSlug, updateFourStarRedirect } from "../settings/actions";
 import { updateLocationName, updateSupportEmail } from "../settings/[subscriptionId]/actions";
 import { getLocationLinksByLocationId, ensureLinktreeSlug } from "@/lib/db/locations";
 import SavedToast from "../SavedToast";
@@ -385,6 +385,7 @@ function LocationSettings({
       has_linktree_access: boolean;
       linktree_slug: string | null;
       scan_redirect_mode: "review" | "linktree";
+      redirect_four_star_reviews: boolean;
     } | null;
   };
   locationLinks: CustomerLocationLink[];
@@ -599,6 +600,44 @@ function LocationSettings({
           </form>
         </section>
       )}
+
+      {/* Przekierowanie dla oceny 4 gwiazdek */}
+      <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+          Przekierowanie do opinii Google
+        </h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          Ocena 5 gwiazdek zawsze przekierowuje do opinii Google. Ocena 3
+          gwiazdki i niżej nigdy nie przekierowuje. Tutaj decydujesz, czy
+          ocena 4 gwiazdki też ma przekierowywać.
+        </p>
+        <form action={updateFourStarRedirect} className="space-y-3">
+          <input type="hidden" name="location_id" value={location.location_id} />
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              name="redirect_four_star_reviews"
+              defaultChecked={location.redirect_four_star_reviews}
+              className="mt-0.5"
+            />
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                Ocena 4 gwiazdki też przekierowuje do opinii Google
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Jeśli odznaczone, ocena 4 gwiazdki pokaże formularz opinii
+                wewnętrznej zamiast przekierowania do Google.
+              </p>
+            </div>
+          </label>
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            Zapisz
+          </button>
+        </form>
+      </section>
     </div>
   );
 }

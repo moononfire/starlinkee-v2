@@ -101,6 +101,17 @@ export async function updateRating(scanId: string, rating: number): Promise<void
   if (error) throw new Error(`Failed to update rating: ${error.message}`);
 }
 
+export async function getRedirectFourStarReviews(scanId: string): Promise<boolean> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("reviews")
+    .select("plates(subscriptions(customer_locations(redirect_four_star_reviews)))")
+    .eq("scan_id", scanId)
+    .single();
+  const row = data as any;
+  return row?.plates?.subscriptions?.customer_locations?.redirect_four_star_reviews ?? true;
+}
+
 export async function updateFeedback(
   scanId: string,
   data: {
