@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
   try {
     await upsertOtp(location.location_id, phone, code, expiresAt);
     await sendSms(phone, `Twój kod weryfikacyjny: ${code}`);
-  } catch {
+  } catch (err) {
+    console.error("Failed to send OTP", err);
     return NextResponse.json({ error: "Failed to send OTP" }, { status: 500 });
   }
 
