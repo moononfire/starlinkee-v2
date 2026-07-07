@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { t } from "@/lib/translations";
 
 async function compressImage(file: File): Promise<File> {
   return new Promise((resolve, reject) => {
@@ -51,9 +52,10 @@ interface PlaceDetails {
 
 interface Props {
   subscriptionId: number;
+  lang: string;
 }
 
-export default function PortalSetupForm({ subscriptionId }: Props) {
+export default function PortalSetupForm({ subscriptionId, lang }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +108,7 @@ export default function PortalSetupForm({ subscriptionId }: Props) {
     );
     setLoadingPlace(false);
     if (!res.ok) {
-      setError("Nie udało się wczytać danych firmy");
+      setError(t("portal_setup_error_place", lang));
       return;
     }
     const details: PlaceDetails = await res.json();
@@ -118,7 +120,7 @@ export default function PortalSetupForm({ subscriptionId }: Props) {
     e.preventDefault();
 
     if (!selectedPlace) {
-      setError("Wybierz firmę z listy Google Maps");
+      setError(t("portal_setup_select_place", lang));
       return;
     }
 
@@ -147,7 +149,7 @@ export default function PortalSetupForm({ subscriptionId }: Props) {
 
     if (!res.ok) {
       const { error: msg } = await res.json();
-      setError(msg ?? "Coś poszło nie tak");
+      setError(msg ?? t("portal_setup_generic_error", lang));
       return;
     }
 
@@ -159,21 +161,21 @@ export default function PortalSetupForm({ subscriptionId }: Props) {
       <div className="mb-6">
         <div className="inline-flex items-center gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 mb-4">
           <span className="text-amber-600 dark:text-amber-400 text-sm font-medium">
-            Skonfiguruj lokal
+            {t("portal_setup_badge", lang)}
           </span>
         </div>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Uzupełnij dane lokalu, aby aktywować płytki Starlinkee przypisane do tej subskrypcji.
+          {t("portal_setup_intro", lang)}
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Nazwa lokalu *
+            {t("portal_setup_location_name_label", lang)}
           </label>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-            Jak się nazywa Twój lokal lub firma?
+            {t("portal_setup_location_name_desc", lang)}
           </p>
           <input
             name="location_name"
@@ -185,17 +187,17 @@ export default function PortalSetupForm({ subscriptionId }: Props) {
 
         <div ref={dropdownRef} className="relative">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Firma w Google Maps *
+            {t("portal_setup_google_maps_label", lang)}
           </label>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-            Wyszukaj swój lokal, aby połączyć płytkę z wizytówką Google.
+            {t("portal_setup_google_maps_desc", lang)}
           </p>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
             onFocus={() => predictions.length > 0 && setShowDropdown(true)}
-            placeholder="Wpisz nazwę firmy lub adres..."
+            placeholder={t("portal_setup_search_placeholder", lang)}
             className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             autoComplete="off"
           />
@@ -219,7 +221,7 @@ export default function PortalSetupForm({ subscriptionId }: Props) {
 
         {loadingPlace && (
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Wczytywanie danych firmy...
+            {t("portal_setup_loading_place", lang)}
           </p>
         )}
 
@@ -232,10 +234,10 @@ export default function PortalSetupForm({ subscriptionId }: Props) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Adres e-mail pomocniczy *
+            {t("portal_setup_support_email_label", lang)}
           </label>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-            Adres do kontaktu z klientami — widoczny na stronie z opinią.
+            {t("portal_setup_support_email_desc", lang)}
           </p>
           <input
             name="support_email"
@@ -247,10 +249,10 @@ export default function PortalSetupForm({ subscriptionId }: Props) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Logo firmy
+            {t("portal_setup_logo_label", lang)}
           </label>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-            Opcjonalne — PNG lub JPEG, wyświetlane na stronie po skanowaniu.
+            {t("portal_setup_logo_desc", lang)}
           </p>
           <input
             ref={fileInputRef}
@@ -266,14 +268,14 @@ export default function PortalSetupForm({ subscriptionId }: Props) {
               onClick={() => fileInputRef.current?.click()}
               className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
-              Wybierz plik
+              {t("portal_choose_file", lang)}
             </button>
             {logoFileName ? (
               <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
                 {logoFileName}
               </span>
             ) : (
-              <span className="text-sm text-gray-400 dark:text-gray-500">Brak pliku</span>
+              <span className="text-sm text-gray-400 dark:text-gray-500">{t("portal_no_file", lang)}</span>
             )}
           </div>
         </div>
@@ -287,7 +289,7 @@ export default function PortalSetupForm({ subscriptionId }: Props) {
           disabled={loading || !selectedPlace}
           className="w-full py-2.5 rounded-lg font-medium text-sm disabled:opacity-50 transition-colors bg-gray-900 hover:bg-gray-700 dark:bg-gray-100 dark:hover:bg-gray-300 text-white dark:text-gray-900"
         >
-          {loading ? "Aktywowanie..." : "Aktywuj subskrypcję"}
+          {loading ? t("portal_activating", lang) : t("portal_activate_subscription", lang)}
         </button>
       </form>
     </div>

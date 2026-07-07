@@ -4,6 +4,8 @@ import { createServerClient } from "@supabase/ssr";
 import Link from "next/link";
 import { getCustomerByEmail, getCustomerSubscriptions, getAllReviewsBySubscription } from "@/lib/db/portal";
 import ReviewsAnalytics from "./ReviewsAnalytics";
+import { getLanguage } from "@/lib/language";
+import { t } from "@/lib/translations";
 
 interface Props {
   params: Promise<{ subscriptionId: string }>;
@@ -36,6 +38,8 @@ export default async function ReviewsPage({ params, searchParams }: Props) {
   const customer = await getCustomerByEmail(user.email);
   if (!customer) redirect("/portal/login");
 
+  const lang = await getLanguage();
+
   const subscriptions = await getCustomerSubscriptions(customer.customer_id);
   const sub = subscriptions.find((s) => s.subscription_id === subscriptionId);
   if (!sub) notFound();
@@ -64,7 +68,7 @@ export default async function ReviewsPage({ params, searchParams }: Props) {
           ← {locationName}
         </Link>
         <span className="text-gray-300 dark:text-gray-600">/</span>
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Wszystkie opinie</h2>
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t("portal_all_reviews", lang)}</h2>
       </div>
 
       <ReviewsAnalytics
@@ -73,6 +77,7 @@ export default async function ReviewsPage({ params, searchParams }: Props) {
         avgRating={avgRating}
         byStars={byStars}
         initialStars={stars ? Number(stars) : undefined}
+        lang={lang}
       />
     </div>
   );

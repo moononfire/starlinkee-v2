@@ -8,6 +8,8 @@ import { updatePromoSettings } from "./actions";
 import PromoPreviewEditor from "./PromoPreviewEditor";
 import PromoContactsTable from "./PromoContactsTable";
 import SavedToast from "../../SavedToast";
+import { getLanguage } from "@/lib/language";
+import { t } from "@/lib/translations";
 
 interface Props {
   params: Promise<{ subscriptionId: string }>;
@@ -46,6 +48,8 @@ export default async function PromoPortalPage({ params, searchParams }: Props) {
   const customer = await getCustomerByEmail(user.email);
   if (!customer) redirect("/portal/login");
 
+  const lang = await getLanguage();
+
   const subscriptions = await getCustomerSubscriptions(customer.customer_id);
   const sub = subscriptions.find((s) => s.subscription_id === subscriptionId);
   if (!sub) notFound();
@@ -68,7 +72,7 @@ export default async function PromoPortalPage({ params, searchParams }: Props) {
           ← {locationName}
         </Link>
         <span className="text-gray-300 dark:text-gray-600">/</span>
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Promocja</h2>
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t("portal_promo_page_crumb", lang)}</h2>
       </div>
 
       <form action={updatePromoSettings}>
@@ -80,12 +84,13 @@ export default async function PromoPortalPage({ params, searchParams }: Props) {
           initialSmsText={location.promo_sms_text ?? ""}
           logoLink={location.logo_link}
           locationName={locationName}
+          lang={lang}
         />
       </form>
 
-      <PromoContactsTable leads={leads} />
+      <PromoContactsTable leads={leads} lang={lang} />
 
-      <SavedToast show={saved === "1"} />
+      <SavedToast show={saved === "1"} lang={lang} />
     </div>
   );
 }

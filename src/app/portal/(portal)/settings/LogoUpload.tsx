@@ -2,11 +2,13 @@
 
 import { useState, useRef, useCallback } from "react";
 import Cropper, { type Area } from "react-easy-crop";
+import { t } from "@/lib/translations";
 
 interface Props {
   locationId: number;
   locationName: string;
   currentLogoLink: string | null;
+  lang: string;
 }
 
 async function cropImage(imageSrc: string, crop: Area): Promise<Blob> {
@@ -43,7 +45,7 @@ async function cropImage(imageSrc: string, crop: Area): Promise<Blob> {
   });
 }
 
-export default function LogoUpload({ locationId, locationName, currentLogoLink }: Props) {
+export default function LogoUpload({ locationId, locationName, currentLogoLink, lang }: Props) {
   const [logoLink, setLogoLink] = useState(currentLogoLink);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -97,12 +99,12 @@ export default function LogoUpload({ locationId, locationName, currentLogoLink }
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error ?? "Nie udało się przesłać logo");
+        setError(data.error ?? t("portal_logo_upload_failed", lang));
       } else {
         setLogoLink(data.logo_link);
       }
     } catch {
-      setError("Nie udało się przyciąć obrazka");
+      setError(t("portal_logo_crop_failed", lang));
     } finally {
       setUploading(false);
       setImageSrc(null);
@@ -124,7 +126,7 @@ export default function LogoUpload({ locationId, locationName, currentLogoLink }
 
     if (!res.ok) {
       const data = await res.json();
-      setError(data.error ?? "Nie udało się usunąć logo");
+      setError(data.error ?? t("portal_logo_delete_failed", lang));
       return;
     }
 
@@ -154,7 +156,7 @@ export default function LogoUpload({ locationId, locationName, currentLogoLink }
           </div>
 
           <div className="mt-3 flex items-center gap-3">
-            <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">Zoom</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">{t("portal_zoom", lang)}</span>
             <input
               type="range"
               min={1}
@@ -173,7 +175,7 @@ export default function LogoUpload({ locationId, locationName, currentLogoLink }
               disabled={uploading}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
             >
-              {uploading ? "Przesyłanie..." : "Zapisz logo"}
+              {uploading ? t("portal_uploading", lang) : t("portal_save_logo", lang)}
             </button>
             <button
               type="button"
@@ -181,7 +183,7 @@ export default function LogoUpload({ locationId, locationName, currentLogoLink }
               disabled={uploading}
               className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
             >
-              Anuluj
+              {t("portal_cancel", lang)}
             </button>
           </div>
         </div>
@@ -203,12 +205,12 @@ export default function LogoUpload({ locationId, locationName, currentLogoLink }
                 disabled={deleting}
                 className="px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition-colors disabled:opacity-50"
               >
-                {deleting ? "Usuwanie..." : "Usuń logo"}
+                {deleting ? t("portal_deleting", lang) : t("portal_delete_logo", lang)}
               </button>
             </div>
           ) : (
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-              Brak logo
+              {t("portal_no_logo", lang)}
             </p>
           )}
 
@@ -226,10 +228,10 @@ export default function LogoUpload({ locationId, locationName, currentLogoLink }
               disabled={uploading}
               className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
             >
-              {logoLink ? "Zmień logo" : "Dodaj logo"}
+              {logoLink ? t("portal_change_logo", lang) : t("portal_add_logo", lang)}
             </button>
             <span className="text-xs text-gray-400 dark:text-gray-500">
-              PNG lub JPEG, max 5 MB
+              {t("portal_logo_hint", lang)}
             </span>
           </div>
         </>

@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { t } from "@/lib/translations";
 
-export default function SavedToast({ show }: { show: boolean }) {
+export default function SavedToast({ show, lang = "en" }: { show: boolean; lang?: string }) {
   const router = useRouter();
   const [visible, setVisible] = useState(show);
 
@@ -26,7 +27,7 @@ export default function SavedToast({ show }: { show: boolean }) {
       <svg className="w-4 h-4 text-green-400 dark:text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
       </svg>
-      Zapisano
+      {t("portal_saved_toast", lang)}
     </div>
   );
 }
