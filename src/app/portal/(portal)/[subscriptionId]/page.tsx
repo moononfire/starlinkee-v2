@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import {
   getCustomerByEmail,
   getCustomerSubscriptions,
+  getScanCountsBySubscription,
 } from "@/lib/db/portal";
 import type { CustomerLocationLink, Review } from "@/lib/types";
 import PortalSetupForm from "../settings/PortalSetupForm";
@@ -70,7 +71,7 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
   const sub = subscriptions.find((s) => s.subscription_id === subscriptionId);
   if (!sub) notFound();
 
-  const totalScans = sub.plates.reduce((sum, p) => sum + p.number_of_visits, 0);
+  const { total: totalScans, byPlate: scansByPlate } = await getScanCountsBySubscription(subscriptionId);
 
   const locationLinks: CustomerLocationLink[] = sub.location?.has_linktree_access
     ? await getLocationLinksByLocationId(sub.location.location_id)
@@ -87,7 +88,7 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
   if (sub.status === "pending") {
     return (
       <div className="space-y-6">
-        <SubHeader sub={sub} totalScans={totalScans} />
+        <SubHeader sub={sub} totalScans={totalScans} scansByPlate={scansByPlate} />
         <PortalSetupForm subscriptionId={sub.subscription_id} />
       </div>
     );
@@ -97,7 +98,7 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
   if (sub.status === "inactive") {
     return (
       <div className="space-y-6">
-        <SubHeader sub={sub} totalScans={totalScans} />
+        <SubHeader sub={sub} totalScans={totalScans} scansByPlate={scansByPlate} />
 
         <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-5">
           <div className="flex gap-3">
@@ -163,7 +164,7 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
 
   return (
     <div className="space-y-6">
-      <SubHeader sub={sub} totalScans={totalScans} />
+      <SubHeader sub={sub} totalScans={totalScans} scansByPlate={scansByPlate} />
       <ReviewStats total={reviewTotal} avg={reviewAvg} byStars={reviewByStars} subscriptionId={subscriptionId} />
       {sub.location?.has_promo_enabled && (
         <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
@@ -270,6 +271,7 @@ function ReviewStats({
 function SubHeader({
   sub,
   totalScans,
+  scansByPlate,
 }: {
   sub: {
     subscription_name: string;
@@ -280,6 +282,7 @@ function SubHeader({
     location?: { location_name: string } | null;
   };
   totalScans: number;
+  scansByPlate: Record<number, number>;
 }) {
   const statusColors: Record<string, string> = {
     active: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
@@ -352,7 +355,7 @@ function SubHeader({
                   {plate.plate_number}
                 </span>
                 <span className="text-gray-400 dark:text-gray-500 ml-2">
-                  {plate.number_of_visits} skan.
+                  {scansByPlate[plate.plate_id] ?? 0} skan.
                 </span>
               </div>
             ))}

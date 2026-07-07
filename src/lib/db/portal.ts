@@ -101,6 +101,35 @@ export async function getReviewsBySubscription(
   }));
 }
 
+export async function getScanCountsBySubscription(
+  subscriptionId: number
+): Promise<{ total: number; byPlate: Record<number, number> }> {
+  const supabase = createAdminClient();
+
+  const { data: plates } = await supabase
+    .from("plates")
+    .select("plate_id")
+    .eq("subscription_id", subscriptionId);
+
+  if (!plates || plates.length === 0) return { total: 0, byPlate: {} };
+
+  const plateIds = plates.map((p: any) => p.plate_id);
+  const byPlate: Record<number, number> = Object.fromEntries(plateIds.map((id) => [id, 0]));
+
+  const { data: reviews, error } = await supabase
+    .from("reviews")
+    .select("plate_id")
+    .in("plate_id", plateIds);
+
+  if (error) throw new Error(`Failed to count scans: ${error.message}`);
+
+  for (const r of reviews ?? []) {
+    byPlate[r.plate_id] = (byPlate[r.plate_id] ?? 0) + 1;
+  }
+
+  return { total: reviews?.length ?? 0, byPlate };
+}
+
 export async function getAllReviewsBySubscription(
   subscriptionId: number
 ): Promise<(Review & { plate_number: string })[]> {
