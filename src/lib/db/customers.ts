@@ -24,7 +24,7 @@ export async function upsertCustomerByEmail(data: CustomerInsert): Promise<numbe
     .single();
 
   if (existing) {
-    const { email: _email, ...updateFields } = data;
+    const { email: _email, preferred_language: _preferredLanguage, ...updateFields } = data;
     const { error } = await supabase
       .from("customers")
       .update(updateFields)

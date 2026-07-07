@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPlateByNumber } from "@/lib/db/plates";
 import { getSubscriptionById, setSubscriptionActive } from "@/lib/db/subscriptions";
+import { getCustomerById } from "@/lib/db/customers";
 import { createLocation } from "@/lib/db/locations";
 import { uploadLogo } from "@/lib/storage";
 import { sendPlateSetupConfirmation } from "@/lib/email";
@@ -74,8 +75,10 @@ export async function POST(request: NextRequest) {
     expiration.toISOString()
   );
 
-  // Send confirmation email (non-blocking)
-  sendPlateSetupConfirmation(supportEmail, plate.plate_language, {
+  // Send confirmation email (non-blocking) — language follows the customer's
+  // preference from the clients table, not the plate's own language
+  const customer = await getCustomerById(subscription.customer_id);
+  sendPlateSetupConfirmation(supportEmail, customer?.preferred_language ?? plate.plate_language, {
     locationName,
   }).catch(() => {});
 

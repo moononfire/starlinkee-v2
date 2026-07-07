@@ -10,7 +10,11 @@ export async function POST(request: NextRequest) {
 
   try {
     await updateRating(scanId, rating);
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.message === "Rating already submitted") {
+      const { existingRating } = err as Error & { existingRating: number };
+      return NextResponse.json({ error: "already_rated", rating: existingRating }, { status: 409 });
+    }
     return NextResponse.json({ error: "Failed to save rating" }, { status: 500 });
   }
 

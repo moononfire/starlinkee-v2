@@ -72,6 +72,17 @@ describe("POST /api/plate/rating", () => {
     expect(res.status).toBe(500);
   });
 
+  it("returns 409 with the existing rating when already rated", async () => {
+    const err = new Error("Rating already submitted") as Error & { existingRating: number };
+    err.existingRating = 5;
+    mockUpdateRating.mockRejectedValue(err);
+
+    const res = await POST(makeRequest({ scanId: "scan-1", rating: 3 }));
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body).toEqual({ error: "already_rated", rating: 5 });
+  });
+
   it("calls updateRating with correct arguments", async () => {
     await POST(makeRequest({ scanId: "scan-42", rating: 2 }));
     expect(mockUpdateRating).toHaveBeenCalledWith("scan-42", 2);

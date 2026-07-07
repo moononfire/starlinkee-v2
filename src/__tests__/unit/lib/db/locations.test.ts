@@ -76,23 +76,26 @@ describe("getLocationBySlug()", () => {
 });
 
 describe("createLocation()", () => {
-  it("inserts and returns the new location", async () => {
+  it("upserts on subscription_id and returns the location", async () => {
     const loc = { location_id: 5, location_name: "Restaurant" };
-    supabaseMock.from.mockReturnValue({
-      insert: vi.fn(() => ({
-        select: vi.fn(() => ({
-          single: vi.fn().mockResolvedValue({ data: loc, error: null }),
-        })),
+    const upsertMock = vi.fn(() => ({
+      select: vi.fn(() => ({
+        single: vi.fn().mockResolvedValue({ data: loc, error: null }),
       })),
-    });
+    }));
+    supabaseMock.from.mockReturnValue({ upsert: upsertMock });
 
     const result = await createLocation({ subscription_id: 10, location_name: "Restaurant" });
     expect(result).toEqual(loc);
+    expect(upsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ subscription_id: 10 }),
+      { onConflict: "subscription_id" }
+    );
   });
 
   it("throws when Supabase returns an error", async () => {
     supabaseMock.from.mockReturnValue({
-      insert: vi.fn(() => ({
+      upsert: vi.fn(() => ({
         select: vi.fn(() => ({
           single: vi.fn().mockResolvedValue({ data: null, error: { message: "insert failed" } }),
         })),

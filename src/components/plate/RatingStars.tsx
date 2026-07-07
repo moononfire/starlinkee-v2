@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import FeedbackForm from "./FeedbackForm";
+import { t } from "@/lib/translations";
 
 interface Props {
   scanId: string;
@@ -15,6 +16,20 @@ export default function RatingStars({ scanId, googleReviewLink, lang }: Props) {
   const [submitted, setSubmitted] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [alreadyRated, setAlreadyRated] = useState(false);
+
+  // A back/forward navigation can restore this exact DOM from the browser's
+  // bfcache instead of asking the server for the page again. Force a real
+  // reload so the server re-checks whether this scan already has a rating
+  // (otherwise a visitor could rate 1 star, hit "back", and re-roll 5 stars
+  // straight to Google without physically rescanning the plate).
+  useEffect(() => {
+    function handlePageShow(event: PageTransitionEvent) {
+      if (event.persisted) window.location.reload();
+    }
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, []);
 
   async function handleRate(rating: number) {
     if (submitted || loading) return;
@@ -29,6 +44,13 @@ export default function RatingStars({ scanId, googleReviewLink, lang }: Props) {
 
     setLoading(false);
     setSubmitted(true);
+
+    if (res.status === 409) {
+      const { rating: existingRating } = await res.json();
+      setSelected(existingRating);
+      setAlreadyRated(true);
+      return;
+    }
 
     if (!res.ok) return;
     const { redirectToGoogle } = await res.json();
@@ -71,6 +93,19 @@ export default function RatingStars({ scanId, googleReviewLink, lang }: Props) {
       </div>
       {loading && (
         <p className="text-sm text-gray-400">...</p>
+      )}
+      {alreadyRated && (
+        <>
+          <p className="text-sm text-gray-500 text-center">
+            {t("already_rated_message", lang).replace("{stars}", String(selected))}
+          </p>
+          <button
+            onClick={() => setShowFeedback(true)}
+            className="w-full bg-gray-800 text-white py-3 rounded-lg font-medium hover:bg-gray-700 transition-colors"
+          >
+            {t("continue_to_contact_btn", lang)}
+          </button>
+        </>
       )}
     </div>
   );

@@ -28,6 +28,14 @@ describe("updateRating()", () => {
     await expect(updateRating("scan-1", 3)).rejects.toThrow("Rating already submitted");
   });
 
+  it("attaches the existing rating to the already-submitted error", async () => {
+    const singleSelect = vi.fn().mockResolvedValue({ data: { rating: 5 } });
+    const eqSelect = vi.fn(() => ({ single: singleSelect }));
+    supabaseMock.from.mockReturnValue({ select: vi.fn(() => ({ eq: eqSelect })) });
+
+    await expect(updateRating("scan-1", 3)).rejects.toMatchObject({ existingRating: 5 });
+  });
+
   it("updates when rating is null", async () => {
     const singleSelect = vi.fn().mockResolvedValue({ data: { rating: null } });
     const eqUpdate = vi.fn().mockResolvedValue({ error: null });

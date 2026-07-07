@@ -70,7 +70,11 @@ export async function updateRating(scanId: string, rating: number): Promise<void
     .single();
 
   if (!existing) throw new Error("Scan not found");
-  if (existing.rating !== null) throw new Error("Rating already submitted");
+  if (existing.rating !== null) {
+    const error = new Error("Rating already submitted") as Error & { existingRating: number };
+    error.existingRating = existing.rating;
+    throw error;
+  }
 
   const { error } = await supabase
     .from("reviews")
