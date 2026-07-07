@@ -8,7 +8,8 @@ import {
   sendRenewalConfirmation,
   sendRenewalConfirmationToAdmin,
 } from "../email";
-import { setActivationToken } from "../db/portal";
+import { setActivationToken, getCustomerByEmail } from "../db/portal";
+import { getCustomerById } from "../db/customers";
 import { assignPlateToSubscription } from "../db/plates";
 
 // Product IDs match the seeded products table
@@ -23,6 +24,10 @@ function getStripe() {
 function getPriceId(price: string | Stripe.Price | null | undefined): string | undefined {
   if (!price) return undefined;
   return typeof price === "string" ? price : price.id;
+}
+
+function toCustomerLanguage(lang: string | undefined): "en" | "de" | "pl" {
+  return lang === "de" || lang === "pl" ? lang : "en";
 }
 
 const RENEWAL_DURATION_DAYS: Record<"month" | "year", number> = {
@@ -84,7 +89,6 @@ export async function processRenewalInvoicePaid(invoice: Stripe.Invoice): Promis
   expiration.setDate(expiration.getDate() + durationDays);
 
   const plateNumber = metadata.plate_number ?? "";
-  const lang = metadata.plate_language ?? "en";
   const interval = metadata.renewal_interval === "year" ? "year" : "month";
   const email = invoice.customer_email;
 
@@ -93,6 +97,8 @@ export async function processRenewalInvoicePaid(invoice: Stripe.Invoice): Promis
     await setSubscriptionActive(existingSubscriptionId, now.toISOString(), expiration.toISOString());
 
     if (email) {
+      const customer = await getCustomerByEmail(email);
+      const lang = customer?.preferred_language ?? metadata.plate_language ?? "en";
       sendRenewalConfirmation(email, lang, { plateNumber }).catch((err) =>
         console.error("[stripe] renewal confirmation email failed:", err)
       );
@@ -120,6 +126,7 @@ export async function processRenewalInvoicePaid(invoice: Stripe.Invoice): Promis
     source: "Stripe",
     country: invoice.customer_address?.country ?? undefined,
     phone: invoice.customer_phone ?? undefined,
+    preferred_language: toCustomerLanguage(metadata.plate_language),
   });
 
   // Left as "pending" — the plate page will show the setup form so the
@@ -169,6 +176,13 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
     }
   }
 
+  const countryLanguage =
+    invoice.customer_address?.country === "DE"
+      ? "de"
+      : invoice.customer_address?.country === "PL"
+        ? "pl"
+        : "en";
+
   const customerId = await upsertCustomerByEmail({
     email,
     customer_name: invoice.customer_name ?? email,
@@ -179,6 +193,7 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
     billing_address: billingAddress || undefined,
     country: invoice.customer_address?.country ?? undefined,
     phone: invoice.customer_phone ?? undefined,
+    preferred_language: countryLanguage,
   });
 
   // 2. Create order — paid + fulfilled immediately per business rules
@@ -242,11 +257,8 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://starlinkee.com";
   const activationUrl = `${appUrl}/portal/activate?token=${activationToken}`;
-  const language = invoice.customer_address?.country === "DE"
-    ? "de"
-    : invoice.customer_address?.country === "PL"
-      ? "pl"
-      : "en";
+  const customer = await getCustomerById(customerId);
+  const language = customer?.preferred_language ?? countryLanguage;
 
   sendPortalActivation(email, language, {
     customerName: invoice.customer_name ?? email,

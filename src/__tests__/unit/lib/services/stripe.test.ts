@@ -3,28 +3,46 @@ import type Stripe from "stripe";
 
 const {
   mockUpsertCustomerByEmail,
+  mockGetCustomerById,
   mockCreateOrder,
   mockCreateOrderItem,
   mockCreateShipment,
   mockCreateSubscription,
   mockSendOrderConfirmationToAdmin,
+  mockSetActivationToken,
+  mockGetCustomerByEmail,
+  mockSendPortalActivation,
 } = vi.hoisted(() => ({
   mockUpsertCustomerByEmail: vi.fn(),
+  mockGetCustomerById: vi.fn(),
   mockCreateOrder: vi.fn(),
   mockCreateOrderItem: vi.fn(),
   mockCreateShipment: vi.fn(),
   mockCreateSubscription: vi.fn(),
   mockSendOrderConfirmationToAdmin: vi.fn(),
+  mockSetActivationToken: vi.fn(),
+  mockGetCustomerByEmail: vi.fn(),
+  mockSendPortalActivation: vi.fn(),
 }));
 
-vi.mock("@/lib/db/customers", () => ({ upsertCustomerByEmail: mockUpsertCustomerByEmail }));
+vi.mock("@/lib/db/customers", () => ({
+  upsertCustomerByEmail: mockUpsertCustomerByEmail,
+  getCustomerById: mockGetCustomerById,
+}));
+vi.mock("@/lib/db/portal", () => ({
+  setActivationToken: mockSetActivationToken,
+  getCustomerByEmail: mockGetCustomerByEmail,
+}));
 vi.mock("@/lib/db/orders", () => ({
   createOrder: mockCreateOrder,
   createOrderItem: mockCreateOrderItem,
   createShipment: mockCreateShipment,
 }));
 vi.mock("@/lib/db/subscriptions", () => ({ createSubscription: mockCreateSubscription }));
-vi.mock("@/lib/email", () => ({ sendOrderConfirmationToAdmin: mockSendOrderConfirmationToAdmin }));
+vi.mock("@/lib/email", () => ({
+  sendOrderConfirmationToAdmin: mockSendOrderConfirmationToAdmin,
+  sendPortalActivation: mockSendPortalActivation,
+}));
 
 import { processInvoicePaymentSucceeded } from "@/lib/services/stripe";
 
@@ -56,11 +74,15 @@ beforeEach(() => {
   vi.clearAllMocks();
   process.env.STRIPE_PRICE_ID_1_YEAR_SUB = TEST_PRICE_ID;
   mockUpsertCustomerByEmail.mockResolvedValue(1);
+  mockGetCustomerById.mockResolvedValue({ customer_id: 1, preferred_language: "en" });
   mockCreateOrder.mockResolvedValue(100);
   mockCreateOrderItem.mockResolvedValue(undefined);
   mockCreateShipment.mockResolvedValue(undefined);
   mockCreateSubscription.mockResolvedValue({ subscription_id: 50 });
   mockSendOrderConfirmationToAdmin.mockResolvedValue(undefined);
+  mockSetActivationToken.mockResolvedValue(undefined);
+  mockGetCustomerByEmail.mockResolvedValue(null);
+  mockSendPortalActivation.mockResolvedValue(undefined);
 });
 
 describe("processInvoicePaymentSucceeded()", () => {

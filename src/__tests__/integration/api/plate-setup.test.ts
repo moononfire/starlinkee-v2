@@ -8,6 +8,7 @@ const {
   mockSetSubscriptionActive,
   mockUploadLogo,
   mockSendPlateSetupConfirmation,
+  mockGetCustomerById,
 } = vi.hoisted(() => ({
   mockGetPlateByNumber: vi.fn(),
   mockGetSubscriptionById: vi.fn(),
@@ -15,6 +16,7 @@ const {
   mockSetSubscriptionActive: vi.fn(),
   mockUploadLogo: vi.fn(),
   mockSendPlateSetupConfirmation: vi.fn(),
+  mockGetCustomerById: vi.fn(),
 }));
 
 vi.mock("@/lib/db/plates", () => ({ getPlateByNumber: mockGetPlateByNumber }));
@@ -22,6 +24,7 @@ vi.mock("@/lib/db/subscriptions", () => ({
   getSubscriptionById: mockGetSubscriptionById,
   setSubscriptionActive: mockSetSubscriptionActive,
 }));
+vi.mock("@/lib/db/customers", () => ({ getCustomerById: mockGetCustomerById }));
 vi.mock("@/lib/db/locations", () => ({ createLocation: mockCreateLocation }));
 vi.mock("@/lib/storage", () => ({ uploadLogo: mockUploadLogo }));
 vi.mock("@/lib/email", () => ({ sendPlateSetupConfirmation: mockSendPlateSetupConfirmation }));
@@ -58,6 +61,7 @@ beforeEach(() => {
   mockCreateLocation.mockResolvedValue({ location_id: 99 });
   mockSetSubscriptionActive.mockResolvedValue(undefined);
   mockSendPlateSetupConfirmation.mockResolvedValue(undefined);
+  mockGetCustomerById.mockResolvedValue({ customer_id: 1, preferred_language: "de" });
 });
 
 describe("POST /api/plate/setup", () => {

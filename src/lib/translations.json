@@ -187,6 +187,8 @@
     "phone_optional": "Phone (optional)",
     "sending_feedback": "Sending...",
     "send_feedback_btn": "Send feedback",
+    "already_rated_message": "You already rated this visit {stars} stars.",
+    "continue_to_contact_btn": "Continue to contact form",
 
     "check_btn": "Check",
     "invalid_coupon": "Invalid coupon code.",
@@ -384,6 +386,8 @@
     "phone_optional": "Telefon (optional)",
     "sending_feedback": "Wird gesendet...",
     "send_feedback_btn": "Feedback senden",
+    "already_rated_message": "Sie haben diesen Besuch bereits mit {stars} Sternen bewertet.",
+    "continue_to_contact_btn": "Weiter zum Kontaktformular",
 
     "check_btn": "Prüfen",
     "invalid_coupon": "Ungültiger Gutscheincode.",
@@ -580,6 +584,8 @@
     "phone_optional": "Telefon (opcjonalnie)",
     "sending_feedback": "Wysyłam...",
     "send_feedback_btn": "Wyślij opinię",
+    "already_rated_message": "Ta wizyta została już oceniona na {stars} gwiazdek.",
+    "continue_to_contact_btn": "Przejdź do formularza kontaktowego",
 
     "check_btn": "Sprawdź",
     "invalid_coupon": "Nieprawidłowy kod kuponu.",
