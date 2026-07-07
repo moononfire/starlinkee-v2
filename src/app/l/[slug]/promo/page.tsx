@@ -21,14 +21,14 @@ export default async function PromoPage({ params, searchParams }: Props) {
 
   const plates = await getPlatesBySubscriptionId(location.subscription_id);
   const plateLanguage = plates[0]?.plate_language ?? "pl";
-  const lang = await getLanguage(plateLanguage);
+  const lang = await getLanguage(slug, plateLanguage);
 
   return (
     <>
       <PageTracker locationId={location.location_id} pagePath={`/l/${slug}/promo`} pageType="promo" />
       <main className="min-h-screen bg-gray-50 flex flex-col items-center pt-4 px-4">
         <div className="flex justify-end w-full max-w-sm mb-3">
-          <LanguageSwitcher currentLang={lang} />
+          <LanguageSwitcher currentLang={lang} scopeKey={slug} />
         </div>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-full max-w-sm">
           {location.logo_link && (

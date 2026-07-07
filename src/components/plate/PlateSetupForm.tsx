@@ -65,6 +65,11 @@ export default function PlateSetupForm({ plateNumber, plateSecret, lang }: Props
   const [error, setError] = useState<string | null>(null);
   const [currentLang, setCurrentLang] = useState(lang);
 
+  function switchLang(code: string) {
+    setCurrentLang(code);
+    document.cookie = `lang_${plateNumber}=${code};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
+  }
+
   const [searchQuery, setSearchQuery] = useState("");
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -178,7 +183,7 @@ export default function PlateSetupForm({ plateNumber, plateSecret, lang }: Props
             <button
               key={l.code}
               type="button"
-              onClick={() => setCurrentLang(l.code)}
+              onClick={() => switchLang(l.code)}
               className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               style={
                 currentLang === l.code

@@ -31,6 +31,7 @@ export default async function ReviewsPage({
             <tr>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">ID</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Lokalizacja</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">ID lokalizacji</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Płytka</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Ocena</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Wiadomość</th>
@@ -41,7 +42,7 @@ export default async function ReviewsPage({
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {reviews.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
                   Brak recenzji
                 </td>
               </tr>
@@ -50,6 +51,7 @@ export default async function ReviewsPage({
               <tr key={r.review_id} className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${r.rating === null ? "opacity-50" : ""}`}>
                 <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{r.review_id}</td>
                 <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{r.location_name ?? "—"}</td>
+                <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{r.location_id ?? "—"}</td>
                 <td className="px-4 py-3 font-mono text-gray-600 dark:text-gray-300">{r.plate_number}</td>
                 <td className="px-4 py-3 text-gray-700 dark:text-gray-300 font-medium">
                   {r.rating ?? "—"}

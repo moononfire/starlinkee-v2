@@ -3,6 +3,7 @@ import type { Review } from "../types";
 
 export interface ReviewWithLocation extends Review {
   plate_number: string;
+  location_id: number | null;
   location_name: string | null;
 }
 
@@ -10,7 +11,7 @@ export async function listReviews(search?: string): Promise<ReviewWithLocation[]
   const supabase = createAdminClient();
   let query = supabase
     .from("reviews")
-    .select("*, plates(plate_number, subscriptions(customer_locations(location_name)))")
+    .select("*, plates(plate_number, subscriptions(customer_locations(location_id, location_name)))")
     .order("created_at", { ascending: false })
     .limit(500);
 
@@ -25,6 +26,7 @@ export async function listReviews(search?: string): Promise<ReviewWithLocation[]
   return (data ?? []).map((row: any) => ({
     ...row,
     plate_number: row.plates?.plate_number ?? "?",
+    location_id: row.plates?.subscriptions?.customer_locations?.[0]?.location_id ?? null,
     location_name: row.plates?.subscriptions?.customer_locations?.[0]?.location_name ?? null,
   }));
 }

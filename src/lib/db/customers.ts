@@ -71,6 +71,21 @@ export async function getCustomerById(id: number): Promise<Customer | null> {
   return data ?? null;
 }
 
+export async function updateCustomer(
+  id: number,
+  updates: Partial<Omit<Customer, "customer_id" | "created_at" | "updated_at">>
+): Promise<Customer> {
+  const supabase = createAdminClient();
+  const { data: customer, error } = await supabase
+    .from("customers")
+    .update(updates)
+    .eq("customer_id", id)
+    .select()
+    .single();
+  if (error) throw new Error(`Failed to update customer: ${error.message}`);
+  return customer;
+}
+
 export async function createCustomer(data: CustomerInsert): Promise<Customer> {
   const supabase = createAdminClient();
   const { data: customer, error } = await supabase

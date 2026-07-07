@@ -46,12 +46,13 @@ export default async function CustomersPage({
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Kraj</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Język</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Data</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {customers.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={10} className="px-4 py-8 text-center text-gray-400">
                   Brak klientów
                 </td>
               </tr>
@@ -72,6 +73,14 @@ export default async function CustomersPage({
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300 uppercase">{c.preferred_language}</td>
                 <td className="px-4 py-3 text-gray-500">
                   {new Date(c.created_at).toLocaleDateString("pl-PL")}
+                </td>
+                <td className="px-4 py-3">
+                  <Link
+                    href={`/admin/customers/${c.customer_id}`}
+                    className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                  >
+                    Edytuj
+                  </Link>
                 </td>
               </tr>
             ))}

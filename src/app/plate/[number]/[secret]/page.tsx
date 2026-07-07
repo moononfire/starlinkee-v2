@@ -23,7 +23,7 @@ export default async function PlatePage({ params }: Props) {
   // Strict secret key validation
   if (secret !== plate.secret_key) notFound();
 
-  const lang = await getLanguage(plate.plate_language);
+  const lang = await getLanguage(plate.plate_number, plate.plate_language);
 
   if (!plate.subscription_id) {
     return <InactivePage lang={lang} plateNumber={plate.plate_number} plateSecret={plate.secret_key} />;
@@ -84,7 +84,7 @@ function InactivePage({
       style={{ backgroundColor: "#f9fafb", color: "#111827" }}>
       <div className="max-w-sm w-full text-center">
         <div className="mb-4 flex justify-center">
-          <LanguageSwitcher currentLang={lang} />
+          <LanguageSwitcher currentLang={lang} scopeKey={plateNumber} />
         </div>
         <p className="text-lg font-medium" style={{ color: "#1f2937" }}>
           {t("plate_inactive_title", lang)}
