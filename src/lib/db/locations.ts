@@ -1,6 +1,75 @@
 import { createAdminClient } from "../supabase/admin";
 import type { CustomerLocation, CustomerLocationLink } from "../types";
 
+const PL_CHAR_MAP: Record<string, string> = {
+  ą: "a", ć: "c", ę: "e", ł: "l", ń: "n", ó: "o", ś: "s", ź: "z", ż: "z",
+};
+
+function slugify(name: string): string {
+  const lower = name.toLowerCase().replace(/[ąćęłńóśźż]/g, (ch) => PL_CHAR_MAP[ch] ?? ch);
+  const base = lower
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  return base || "lokal";
+}
+
+async function generateUniqueLinktreeSlug(
+  supabase: ReturnType<typeof createAdminClient>,
+  name: string
+): Promise<string> {
+  const baseSlug = slugify(name);
+  let candidate = baseSlug;
+  let suffix = 1;
+  for (;;) {
+    const { data } = await supabase
+      .from("customer_locations")
+      .select("location_id")
+      .eq("linktree_slug", candidate)
+      .maybeSingle();
+    if (!data) return candidate;
+    suffix += 1;
+    candidate = `${baseSlug}-${suffix}`;
+  }
+}
+
+export async function ensureLinktreeSlug(
+  locationId: number,
+  locationName: string
+): Promise<string> {
+  const supabase = createAdminClient();
+  const slug = await generateUniqueLinktreeSlug(supabase, locationName);
+  const { error } = await supabase
+    .from("customer_locations")
+    .update({ linktree_slug: slug })
+    .eq("location_id", locationId);
+  if (error) throw new Error(`Failed to set linktree slug: ${error.message}`);
+  return slug;
+}
+
+export async function setLinktreeSlug(
+  locationId: number,
+  slug: string
+): Promise<{ ok: true } | { ok: false; error: "taken" }> {
+  const supabase = createAdminClient();
+  const { data: existing } = await supabase
+    .from("customer_locations")
+    .select("location_id")
+    .eq("linktree_slug", slug)
+    .neq("location_id", locationId)
+    .maybeSingle();
+  if (existing) return { ok: false, error: "taken" };
+
+  const { error } = await supabase
+    .from("customer_locations")
+    .update({ linktree_slug: slug })
+    .eq("location_id", locationId);
+  if (error) return { ok: false, error: "taken" };
+  return { ok: true };
+}
+
 export async function getLocationBySubscriptionId(
   subscriptionId: number
 ): Promise<CustomerLocation | null> {

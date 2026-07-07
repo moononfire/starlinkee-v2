@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { redirect } from "next/navigation";
 import { getCustomerByEmail, getCustomerSubscriptions } from "@/lib/db/portal";
-import { updateLocation } from "@/lib/db/locations";
+import { updateLocation, setLinktreeSlug } from "@/lib/db/locations";
 
 function makeSupabase(cookieStore: Awaited<ReturnType<typeof cookies>>) {
   return createServerClient(
@@ -54,6 +54,44 @@ export async function updateScanRedirectMode(formData: FormData) {
     scan_redirect_mode: mode as "review" | "linktree",
   });
   redirect(`/portal/${matchingSub.subscription_id}?saved=1`);
+}
+
+export async function updateLinktreeSlug(formData: FormData) {
+  const cookieStore = await cookies();
+  const supabase = makeSupabase(cookieStore);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) redirect("/portal/login");
+
+  const customer = await getCustomerByEmail(user.email);
+  if (!customer) redirect("/portal/login");
+
+  const locationId = Number(formData.get("location_id"));
+  const subscriptionId = Number(formData.get("subscription_id"));
+  const slug = ((formData.get("linktree_slug") as string) ?? "").trim().toLowerCase();
+
+  if (!locationId || !subscriptionId) {
+    redirect("/portal/settings");
+  }
+
+  const subscriptions = await getCustomerSubscriptions(customer.customer_id);
+  const matchingSub = subscriptions.find(
+    (s) => s.location?.location_id === locationId
+  );
+  if (!matchingSub) redirect("/portal/settings");
+
+  if (!/^[a-z0-9-]{3,40}$/.test(slug) || slug.startsWith("-") || slug.endsWith("-")) {
+    redirect(`/portal/${subscriptionId}?linktreeError=invalid`);
+  }
+
+  const result = await setLinktreeSlug(locationId, slug);
+  if (!result.ok) {
+    redirect(`/portal/${subscriptionId}?linktreeError=taken`);
+  }
+
+  redirect(`/portal/${subscriptionId}?saved=1`);
 }
 
 export async function updateGoogleLocation(formData: FormData) {
