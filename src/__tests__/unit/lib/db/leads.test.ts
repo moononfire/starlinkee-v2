@@ -39,11 +39,11 @@ describe("createLead()", () => {
         })),
       })),
     });
-    await expect(createLead(1, "+48600000000", null, true, "token-abc")).rejects.toThrow("Failed to create lead");
+    await expect(createLead(1, "+48600000000", null, true, "token-abc", "COUPON1")).rejects.toThrow("Failed to create lead");
   });
 
   it("returns created lead", async () => {
-    const lead = { id: 1, location_id: 1, phone: "+48600000000", email: null, agreed_to_terms: true, claim_token: "token-abc", is_used: false, used_at: null, created_at: "" };
+    const lead = { id: 1, location_id: 1, phone: "+48600000000", email: null, agreed_to_terms: true, claim_token: "token-abc", coupon_code: "COUPON1", is_used: false, used_at: null, created_at: "" };
     supabaseMock.from.mockReturnValue({
       insert: vi.fn(() => ({
         select: vi.fn(() => ({
@@ -51,7 +51,7 @@ describe("createLead()", () => {
         })),
       })),
     });
-    const result = await createLead(1, "+48600000000", null, true, "token-abc");
+    const result = await createLead(1, "+48600000000", null, true, "token-abc", "COUPON1");
     expect(result.claim_token).toBe("token-abc");
     expect(result.is_used).toBe(false);
   });

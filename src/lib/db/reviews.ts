@@ -49,6 +49,23 @@ export async function createScanRecord(plateId: number, deviceInfo?: ScanDeviceI
   return scanId;
 }
 
+const SCAN_DEDUPE_WINDOW_MS = 10 * 60 * 1000;
+
+export async function findScanIdByDevice(plateId: number, deviceId: string): Promise<string | null> {
+  const supabase = createAdminClient();
+  const since = new Date(Date.now() - SCAN_DEDUPE_WINDOW_MS).toISOString();
+  const { data } = await supabase
+    .from("reviews")
+    .select("scan_id")
+    .eq("plate_id", plateId)
+    .eq("device_id", deviceId)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.scan_id ?? null;
+}
+
 export async function getReviewByScanId(scanId: string): Promise<Review | null> {
   const supabase = createAdminClient();
   const { data } = await supabase

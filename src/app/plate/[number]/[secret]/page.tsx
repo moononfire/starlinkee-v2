@@ -3,7 +3,7 @@ import { headers, cookies } from "next/headers";
 import { getPlateByNumber, incrementPlateVisits } from "@/lib/db/plates";
 import { getSubscriptionById } from "@/lib/db/subscriptions";
 import { getLocationBySubscriptionId } from "@/lib/db/locations";
-import { createScanRecord } from "@/lib/db/reviews";
+import { createScanRecord, findScanIdByDevice } from "@/lib/db/reviews";
 import { createScanToken } from "@/lib/db/scan-tokens";
 import { t } from "@/lib/translations";
 import { getLanguage } from "@/lib/language";
@@ -66,7 +66,13 @@ export default async function PlatePage({ params }: Props) {
   const userAgent = headersList.get("user-agent") ?? null;
   const deviceId = cookieStore.get("_did")?.value ?? null;
 
-  const scanId = await createScanRecord(plate.plate_id, { ip_address: ip, user_agent: userAgent, device_id: deviceId });
+  // Reuse this device's existing scan for this plate instead of minting a
+  // fresh one — otherwise re-navigating to the same QR/NFC URL would let a
+  // visitor re-roll a low rating into a 5-star one.
+  const existingScanId = deviceId ? await findScanIdByDevice(plate.plate_id, deviceId) : null;
+  const scanId =
+    existingScanId ??
+    (await createScanRecord(plate.plate_id, { ip_address: ip, user_agent: userAgent, device_id: deviceId }));
   redirect(`/plate/${plate.plate_number}/scan/${scanId}`);
 }
 
