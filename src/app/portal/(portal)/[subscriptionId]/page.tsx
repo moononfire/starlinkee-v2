@@ -10,15 +10,15 @@ import PortalSetupForm from "../settings/PortalSetupForm";
 import LogoUpload from "../settings/LogoUpload";
 import GoogleLocationEditor from "../settings/GoogleLocationEditor";
 import LinktreeLinksEditor from "../settings/LinktreeLinksEditor";
-import { updateScanRedirectMode } from "../settings/actions";
+import { updateScanRedirectMode, updateLinktreeSlug } from "../settings/actions";
 import { updateLocationName, updateSupportEmail } from "../settings/[subscriptionId]/actions";
-import { getLocationLinksByLocationId } from "@/lib/db/locations";
+import { getLocationLinksByLocationId, ensureLinktreeSlug } from "@/lib/db/locations";
 import SavedToast from "../SavedToast";
 import { getAllReviewsBySubscription } from "@/lib/db/portal";
 
 interface Props {
   params: Promise<{ subscriptionId: string }>;
-  searchParams: Promise<{ saved?: string }>;
+  searchParams: Promise<{ saved?: string; linktreeError?: string }>;
 }
 
 function formatDate(d: string | null) {
@@ -36,7 +36,7 @@ function Stars({ rating }: { rating: number }) {
 
 export default async function SubscriptionPage({ params, searchParams }: Props) {
   const { subscriptionId: rawId } = await params;
-  const { saved } = await searchParams;
+  const { saved, linktreeError } = await searchParams;
   const subscriptionId = Number(rawId);
   if (!subscriptionId) notFound();
 
@@ -75,6 +75,13 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
   const locationLinks: CustomerLocationLink[] = sub.location?.has_linktree_access
     ? await getLocationLinksByLocationId(sub.location.location_id)
     : [];
+
+  if (sub.location?.has_linktree_access && !sub.location.linktree_slug) {
+    sub.location.linktree_slug = await ensureLinktreeSlug(
+      sub.location.location_id,
+      sub.location.location_name
+    );
+  }
 
   // --- PENDING ---
   if (sub.status === "pending") {
@@ -176,7 +183,7 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
           </div>
         </section>
       )}
-      <LocationSettings sub={sub} locationLinks={locationLinks} />
+      <LocationSettings sub={sub} locationLinks={locationLinks} linktreeError={linktreeError} />
       <ReviewsSection reviews={recentReviews} subscriptionId={subscriptionId} />
       <SavedToast show={saved === "1"} />
     </div>
@@ -359,6 +366,7 @@ function SubHeader({
 function LocationSettings({
   sub,
   locationLinks,
+  linktreeError,
 }: {
   sub: {
     subscription_id: number;
@@ -377,6 +385,7 @@ function LocationSettings({
     } | null;
   };
   locationLinks: CustomerLocationLink[];
+  linktreeError?: string;
 }) {
   const location = sub.location;
   if (!location) return null;
@@ -485,6 +494,49 @@ function LocationSettings({
               url: l.url,
             }))}
           />
+        </section>
+      )}
+
+      {/* Adres Linktree */}
+      {location.has_linktree_access && location.linktree_slug && (
+        <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+            Adres strony Linktree
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            Wygenerowany automatycznie z nazwy lokalu — możesz go zmienić.
+          </p>
+          <form action={updateLinktreeSlug} className="flex gap-3">
+            <input type="hidden" name="location_id" value={location.location_id} />
+            <input type="hidden" name="subscription_id" value={sub.subscription_id} />
+            <div className="flex-1 flex items-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus-within:ring-2 focus-within:ring-blue-500">
+              <span className="pl-3 text-sm text-gray-400 dark:text-gray-500">/l/</span>
+              <input
+                name="linktree_slug"
+                required
+                type="text"
+                pattern="[a-z0-9-]{3,40}"
+                defaultValue={location.linktree_slug}
+                className="flex-1 bg-transparent px-1 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none"
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shrink-0"
+            >
+              Zapisz
+            </button>
+          </form>
+          {linktreeError === "taken" && (
+            <p className="text-xs text-red-600 dark:text-red-400 mt-2">
+              Ten adres jest już zajęty — wybierz inny.
+            </p>
+          )}
+          {linktreeError === "invalid" && (
+            <p className="text-xs text-red-600 dark:text-red-400 mt-2">
+              Adres może zawierać tylko małe litery, cyfry i myślniki (3–40 znaków).
+            </p>
+          )}
         </section>
       )}
 
