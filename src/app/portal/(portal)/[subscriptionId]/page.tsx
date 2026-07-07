@@ -277,7 +277,11 @@ function SubHeader({
     plates: { plate_id: number; plate_number: string; number_of_visits: number }[];
     activation_datetime: string | null;
     expiration_datetime: string | null;
-    location?: { location_name: string } | null;
+    location?: {
+      location_name: string;
+      has_linktree_access: boolean;
+      linktree_visits: number;
+    } | null;
   };
   totalScans: number;
 }) {
@@ -335,6 +339,14 @@ function SubHeader({
             {formatDate(sub.expiration_datetime)}
           </p>
         </div>
+        {sub.location?.has_linktree_access && (
+          <div>
+            <p className="text-gray-500 dark:text-gray-400 mb-0.5">Wizyty Linktree</p>
+            <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              {sub.location.linktree_visits}
+            </p>
+          </div>
+        )}
       </div>
 
       {sub.plates.length > 0 && (
