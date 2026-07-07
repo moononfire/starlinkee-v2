@@ -1,10 +1,11 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getReviewByScanId } from "@/lib/db/reviews";
 import { getPlateByNumber } from "@/lib/db/plates";
 import { getLocationBySubscriptionId } from "@/lib/db/locations";
 import { getSubscriptionById } from "@/lib/db/subscriptions";
 import { t } from "@/lib/translations";
 import RatingStars from "@/components/plate/RatingStars";
+import FeedbackForm from "@/components/plate/FeedbackForm";
 import PageTracker from "@/components/tracking/PageTracker";
 import { getLanguage } from "@/lib/language";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -29,14 +30,34 @@ export default async function ScanPage({ params }: Props) {
   const location = await getLocationBySubscriptionId(plate.subscription_id);
   if (!location) notFound();
 
-  const lang = await getLanguage(plate.plate_language);
+  const lang = await getLanguage(plate.plate_number, plate.plate_language);
+
+  // Rating already recorded for this scan — never show the star picker again,
+  // otherwise a refresh lets a dissatisfied visitor re-roll a 5-star rating
+  // straight to Google without physically rescanning the plate.
+  if (review.rating !== null) {
+    if (review.feedback_time !== null) {
+      return (
+        <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
+          <div className="max-w-sm w-full flex flex-col items-center gap-2 text-center">
+            <p className="text-lg font-semibold text-gray-800">{t("thank_you_short", lang)}</p>
+            <p className="text-gray-500">{t("appreciate_feedback", lang)}</p>
+          </div>
+        </main>
+      );
+    }
+
+    if (review.rating >= 4 && location.google_review_link) {
+      redirect(location.google_review_link);
+    }
+  }
 
   return (
     <>
       <PageTracker locationId={location.location_id} pagePath={`/plate/${number}/scan`} pageType="plate_scan" />
       <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
         <div className="max-w-sm w-full flex flex-col items-center gap-6">
-          <LanguageSwitcher currentLang={lang} />
+          <LanguageSwitcher currentLang={lang} scopeKey={plate.plate_number} />
 
           {location.logo_link && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -55,11 +76,15 @@ export default async function ScanPage({ params }: Props) {
             {t("proxy_page_title", lang)}
           </h1>
 
-          <RatingStars
-            scanId={scanId}
-            googleReviewLink={location.google_review_link ?? ""}
-            lang={lang}
-          />
+          {review.rating !== null ? (
+            <FeedbackForm scanId={scanId} lang={lang} />
+          ) : (
+            <RatingStars
+              scanId={scanId}
+              googleReviewLink={location.google_review_link ?? ""}
+              lang={lang}
+            />
+          )}
         </div>
       </main>
     </>

@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 const languages = [
   { code: "en", label: "EN" },
   { code: "de", label: "DE" },
@@ -45,12 +47,16 @@ const flagMap: Record<string, () => React.JSX.Element> = {
 
 interface Props {
   currentLang: string;
+  scopeKey?: string;
 }
 
-export default function LanguageSwitcher({ currentLang }: Props) {
+export default function LanguageSwitcher({ currentLang, scopeKey }: Props) {
+  const router = useRouter();
+
   function switchLang(lang: string) {
-    document.cookie = `lang=${lang};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
-    window.location.reload();
+    const cookieName = scopeKey ? `lang_${scopeKey}` : "lang";
+    document.cookie = `${cookieName}=${lang};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
+    router.refresh();
   }
 
   return (

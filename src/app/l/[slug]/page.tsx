@@ -22,7 +22,7 @@ export default async function LinktreePage({ params, searchParams }: Props) {
     getPlatesBySubscriptionId(location.subscription_id),
   ]);
   const plateLanguage = plates[0]?.plate_language ?? "pl";
-  const lang = await getLanguage(plateLanguage);
+  const lang = await getLanguage(slug, plateLanguage);
 
   incrementLinktreeVisits(location.location_id).catch(() => {});
 

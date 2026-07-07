@@ -42,7 +42,12 @@ export async function createLocation(data: {
   const supabase = createAdminClient();
   const { data: location, error } = await supabase
     .from("customer_locations")
-    .insert(data)
+    .insert({
+      ...data,
+      has_linktree_access: true,
+      has_promo_enabled: true,
+      has_loyalty_enabled: true,
+    })
     .select()
     .single();
   if (error) throw new Error(`Failed to create location: ${error.message}`);
