@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateRating } from "@/lib/db/reviews";
+import { updateRating, getRedirectFourStarReviews } from "@/lib/db/reviews";
 
 export async function POST(request: NextRequest) {
   const { scanId, rating } = await request.json();
@@ -18,5 +18,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to save rating" }, { status: 500 });
   }
 
-  return NextResponse.json({ redirectToGoogle: rating >= 4 });
+  const redirectFourStar = rating === 4 ? await getRedirectFourStarReviews(scanId) : false;
+  return NextResponse.json({ redirectToGoogle: rating === 5 || redirectFourStar });
 }
