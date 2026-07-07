@@ -3,6 +3,7 @@ import { updateFeedback, getReviewByScanId } from "@/lib/db/reviews";
 import { getPlateByNumber } from "@/lib/db/plates";
 import { getLocationBySubscriptionId } from "@/lib/db/locations";
 import { getSubscriptionById } from "@/lib/db/subscriptions";
+import { getCustomerById } from "@/lib/db/customers";
 import { sendFeedbackNotification } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
@@ -48,7 +49,10 @@ async function sendNotification(
   const location = await getLocationBySubscriptionId(plate.subscription_id);
   if (!location?.support_email) return;
 
-  await sendFeedbackNotification(location.support_email, {
+  const subscription = await getSubscriptionById(plate.subscription_id);
+  const customer = subscription ? await getCustomerById(subscription.customer_id) : null;
+
+  await sendFeedbackNotification(location.support_email, customer?.preferred_language ?? "en", {
     locationName: location.location_name,
     rating: review.rating ?? 0,
     message,

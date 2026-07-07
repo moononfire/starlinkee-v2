@@ -90,7 +90,7 @@ describe("sendPlateSetupConfirmation()", () => {
 
 describe("sendFeedbackNotification()", () => {
   it("sends to the provided address with location name and rating in subject", async () => {
-    await sendFeedbackNotification("owner@restaurant.com", {
+    await sendFeedbackNotification("owner@restaurant.com", "en", {
       locationName: "My Bistro",
       rating: 2,
       message: "Food was cold",
@@ -103,7 +103,7 @@ describe("sendFeedbackNotification()", () => {
   });
 
   it("includes optional contact fields in text body when provided", async () => {
-    await sendFeedbackNotification("owner@restaurant.com", {
+    await sendFeedbackNotification("owner@restaurant.com", "en", {
       locationName: "My Bistro",
       rating: 1,
       message: "Bad experience",
@@ -119,7 +119,7 @@ describe("sendFeedbackNotification()", () => {
   });
 
   it("omits optional fields when not provided", async () => {
-    await sendFeedbackNotification("owner@restaurant.com", {
+    await sendFeedbackNotification("owner@restaurant.com", "en", {
       locationName: "My Bistro",
       rating: 3,
       message: "OK",
@@ -128,6 +128,20 @@ describe("sendFeedbackNotification()", () => {
     const call = mockEmailsSend.mock.calls[0][0];
     expect(call.text).not.toContain("undefined");
     expect(call.text).not.toContain("null");
+  });
+
+  it("localizes subject and labels according to the given language", async () => {
+    await sendFeedbackNotification("owner@restaurant.com", "pl", {
+      locationName: "My Bistro",
+      rating: 4,
+      message: "Dobrze",
+      userName: "Anna",
+    });
+
+    const call = mockEmailsSend.mock.calls[0][0];
+    expect(call.subject).toContain("Nowa opinia");
+    expect(call.text).toContain("Imię: Anna");
+    expect(call.text).toContain("Ocena: 4/5");
   });
 });
 

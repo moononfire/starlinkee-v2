@@ -290,8 +290,45 @@ export async function sendRenewalConfirmationToAdmin(data: {
   );
 }
 
+const feedbackStrings = {
+  en: {
+    title: (locationName: string) => `New feedback — ${locationName}`,
+    subject: (locationName: string, rating: number) =>
+      `New feedback for ${locationName} — ${rating}/5`,
+    textTitle: (locationName: string) => `New feedback for ${locationName}`,
+    ratingText: (rating: number) => `Rating: ${rating}/5`,
+    messageText: (message: string) => `Message:\n${message}`,
+    nameLabel: "Name",
+    emailLabel: "Email",
+    phoneLabel: "Phone",
+  },
+  de: {
+    title: (locationName: string) => `Neues Feedback — ${locationName}`,
+    subject: (locationName: string, rating: number) =>
+      `Neues Feedback für ${locationName} — ${rating}/5`,
+    textTitle: (locationName: string) => `Neues Feedback für ${locationName}`,
+    ratingText: (rating: number) => `Bewertung: ${rating}/5`,
+    messageText: (message: string) => `Nachricht:\n${message}`,
+    nameLabel: "Name",
+    emailLabel: "E-Mail",
+    phoneLabel: "Telefon",
+  },
+  pl: {
+    title: (locationName: string) => `Nowa opinia — ${locationName}`,
+    subject: (locationName: string, rating: number) =>
+      `Nowa opinia dla ${locationName} — ${rating}/5`,
+    textTitle: (locationName: string) => `Nowa opinia dla ${locationName}`,
+    ratingText: (rating: number) => `Ocena: ${rating}/5`,
+    messageText: (message: string) => `Wiadomość:\n${message}`,
+    nameLabel: "Imię",
+    emailLabel: "E-mail",
+    phoneLabel: "Telefon",
+  },
+} satisfies Record<Lang, object>;
+
 export async function sendFeedbackNotification(
   to: string,
+  language: string,
   data: {
     locationName: string;
     rating: number;
@@ -301,20 +338,21 @@ export async function sendFeedbackNotification(
     contactPhone?: string;
   }
 ) {
+  const s = feedbackStrings[toLang(language)];
   const stars =
     "&#9733;".repeat(data.rating) + "&#9734;".repeat(5 - data.rating);
   const contactRows: [string, string][] = [
-    ...(data.userName ? ([["Name", data.userName]] as [string, string][]) : []),
+    ...(data.userName ? ([[s.nameLabel, data.userName]] as [string, string][]) : []),
     ...(data.contactEmail
-      ? ([["Email", data.contactEmail]] as [string, string][])
+      ? ([[s.emailLabel, data.contactEmail]] as [string, string][])
       : []),
     ...(data.contactPhone
-      ? ([["Phone", data.contactPhone]] as [string, string][])
+      ? ([[s.phoneLabel, data.contactPhone]] as [string, string][])
       : []),
   ];
 
   const html = layout(
-    h1(`New feedback — ${data.locationName}`) +
+    h1(s.title(data.locationName)) +
       para(
         `<span style="font-size:18px;letter-spacing:2px;color:#f59e0b;">${stars}</span>&nbsp; ${data.rating}/5`
       ) +
@@ -324,21 +362,16 @@ export async function sendFeedbackNotification(
   );
 
   const textLines = [
-    `New feedback for ${data.locationName}`,
-    `Rating: ${data.rating}/5`,
-    ...(data.userName ? [`Name: ${data.userName}`] : []),
-    ...(data.contactEmail ? [`Email: ${data.contactEmail}`] : []),
-    ...(data.contactPhone ? [`Phone: ${data.contactPhone}`] : []),
+    s.textTitle(data.locationName),
+    s.ratingText(data.rating),
+    ...(data.userName ? [`${s.nameLabel}: ${data.userName}`] : []),
+    ...(data.contactEmail ? [`${s.emailLabel}: ${data.contactEmail}`] : []),
+    ...(data.contactPhone ? [`${s.phoneLabel}: ${data.contactPhone}`] : []),
     "",
-    `Message:\n${data.message}`,
+    s.messageText(data.message),
   ];
 
-  await sendMail(
-    to,
-    `New feedback for ${data.locationName} — ${data.rating}/5`,
-    html,
-    textLines.join("\n")
-  );
+  await sendMail(to, s.subject(data.locationName, data.rating), html, textLines.join("\n"));
 }
 
 export async function sendPromoEmail(

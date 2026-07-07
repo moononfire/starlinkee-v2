@@ -16,6 +16,7 @@ vi.mock("@/lib/db/locations", () => ({
   getLocationBySlug: vi.fn(),
 }));
 vi.mock("@/lib/db/subscriptions", () => ({ getSubscriptionById: vi.fn() }));
+vi.mock("@/lib/db/customers", () => ({ getCustomerById: vi.fn() }));
 vi.mock("@/lib/email", () => ({ sendFeedbackNotification: vi.fn() }));
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
