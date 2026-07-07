@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { redirect } from "next/navigation";
 import { getCustomerByEmail, getCustomerSubscriptions } from "@/lib/db/portal";
+import { getLanguage } from "@/lib/language";
+import { t } from "@/lib/translations";
 
 export default async function PortalIndexPage() {
   const cookieStore = await cookies();
@@ -33,11 +35,11 @@ export default async function PortalIndexPage() {
   const subscriptions = await getCustomerSubscriptions(customer.customer_id);
 
   if (subscriptions.length === 0) {
+    const lang = await getLanguage();
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-8 text-center">
         <p className="text-gray-500 dark:text-gray-400 text-sm">
-          Nie masz jeszcze żadnych subskrypcji. Skontaktuj się z nami, aby
-          aktywować usługę.
+          {t("portal_no_subscriptions", lang)}
         </p>
       </div>
     );

@@ -1,25 +1,30 @@
 "use client";
 
 import type { LocationLead } from "@/lib/types";
+import { t } from "@/lib/translations";
 
-function formatDate(d: string) {
-  return new Date(d).toLocaleDateString("pl-PL", {
+const DATE_LOCALES: Record<string, string> = { en: "en-US", de: "de-DE", pl: "pl-PL" };
+
+function formatDate(d: string, lang: string) {
+  const locale = DATE_LOCALES[lang] ?? "en-US";
+  return new Date(d).toLocaleDateString(locale, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   });
 }
 
-export default function PromoContactsTable({ leads }: { leads: LocationLead[] }) {
+export default function PromoContactsTable({ leads, lang }: { leads: LocationLead[]; lang: string }) {
   function exportCsv() {
-    const header = "Telefon,Email,Zgoda marketingowa,Status kuponu,Data dodania";
+    const locale = DATE_LOCALES[lang] ?? "en-US";
+    const header = t("portal_contacts_csv_header", lang);
     const rows = leads.map((l) =>
       [
         l.phone,
         l.email ?? "",
-        l.agreed_to_terms ? "Tak" : "Nie",
-        l.is_used ? "Użyty" : "Aktywny",
-        new Date(l.created_at).toLocaleDateString("pl-PL"),
+        l.agreed_to_terms ? t("portal_yes", lang) : t("portal_no", lang),
+        l.is_used ? t("portal_used", lang) : t("portal_active", lang),
+        new Date(l.created_at).toLocaleDateString(locale),
       ]
         .map((v) => `"${String(v).replace(/"/g, '""')}"`)
         .join(",")
@@ -43,21 +48,21 @@ export default function PromoContactsTable({ leads }: { leads: LocationLead[] })
       <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-start justify-between gap-4">
         <div>
           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-            Zebrane kontakty
+            {t("portal_contacts_title", lang)}
           </h3>
           {leads.length > 0 && (
             <div className="flex flex-wrap gap-3 mt-2">
               <span className="text-xs text-gray-500 dark:text-gray-400">
-                <span className="font-medium text-gray-900 dark:text-gray-100">{leads.length}</span> łącznie
+                <span className="font-medium text-gray-900 dark:text-gray-100">{leads.length}</span> {t("portal_contacts_total", lang)}
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400">
-                <span className="font-medium text-gray-900 dark:text-gray-100">{totalUsed}</span> wykorzystanych
+                <span className="font-medium text-gray-900 dark:text-gray-100">{totalUsed}</span> {t("portal_contacts_used", lang)}
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400">
-                <span className="font-medium text-gray-900 dark:text-gray-100">{withEmail}</span> z e-mailem
+                <span className="font-medium text-gray-900 dark:text-gray-100">{withEmail}</span> {t("portal_contacts_with_email", lang)}
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400">
-                <span className="font-medium text-gray-900 dark:text-gray-100">{withConsent}</span> ze zgodą
+                <span className="font-medium text-gray-900 dark:text-gray-100">{withConsent}</span> {t("portal_contacts_with_consent", lang)}
               </span>
             </div>
           )}
@@ -67,14 +72,14 @@ export default function PromoContactsTable({ leads }: { leads: LocationLead[] })
             onClick={exportCsv}
             className="shrink-0 text-xs px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
-            Eksportuj CSV
+            {t("portal_export_csv", lang)}
           </button>
         )}
       </div>
 
       {leads.length === 0 ? (
         <p className="px-5 py-10 text-sm text-gray-400 dark:text-gray-500 text-center">
-          Brak kontaktów — pojawią się tu po pierwszych odebraniach promocji.
+          {t("portal_no_contacts", lang)}
         </p>
       ) : (
         <div className="overflow-x-auto">
@@ -82,19 +87,19 @@ export default function PromoContactsTable({ leads }: { leads: LocationLead[] })
             <thead>
               <tr className="border-b border-gray-100 dark:border-gray-700">
                 <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium">
-                  Telefon
+                  {t("portal_phone", lang)}
                 </th>
                 <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium hidden sm:table-cell">
-                  E-mail
+                  {t("portal_email", lang)}
                 </th>
                 <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium hidden md:table-cell">
-                  Zgoda
+                  {t("portal_consent", lang)}
                 </th>
                 <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium">
-                  Status
+                  {t("portal_status", lang)}
                 </th>
                 <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium hidden sm:table-cell">
-                  Data
+                  {t("portal_date", lang)}
                 </th>
               </tr>
             </thead>
@@ -112,24 +117,24 @@ export default function PromoContactsTable({ leads }: { leads: LocationLead[] })
                   </td>
                   <td className="px-5 py-3 hidden md:table-cell">
                     {lead.agreed_to_terms ? (
-                      <span className="text-green-600 dark:text-green-400 text-xs">✓ Tak</span>
+                      <span className="text-green-600 dark:text-green-400 text-xs">✓ {t("portal_yes", lang)}</span>
                     ) : (
-                      <span className="text-gray-400 text-xs">Nie</span>
+                      <span className="text-gray-400 text-xs">{t("portal_no", lang)}</span>
                     )}
                   </td>
                   <td className="px-5 py-3">
                     {lead.is_used ? (
                       <span className="text-xs font-medium px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full whitespace-nowrap">
-                        Użyty
+                        {t("portal_used", lang)}
                       </span>
                     ) : (
                       <span className="text-xs font-medium px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400 rounded-full whitespace-nowrap">
-                        Aktywny
+                        {t("portal_active", lang)}
                       </span>
                     )}
                   </td>
                   <td className="px-5 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap hidden sm:table-cell">
-                    {formatDate(lead.created_at)}
+                    {formatDate(lead.created_at, lang)}
                   </td>
                 </tr>
               ))}

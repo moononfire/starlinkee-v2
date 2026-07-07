@@ -16,15 +16,19 @@ import { updateLocationName, updateSupportEmail } from "../settings/[subscriptio
 import { getLocationLinksByLocationId, ensureLinktreeSlug } from "@/lib/db/locations";
 import SavedToast from "../SavedToast";
 import { getAllReviewsBySubscription } from "@/lib/db/portal";
+import { getLanguage } from "@/lib/language";
+import { t } from "@/lib/translations";
 
 interface Props {
   params: Promise<{ subscriptionId: string }>;
   searchParams: Promise<{ saved?: string; linktreeError?: string }>;
 }
 
-function formatDate(d: string | null) {
+const DATE_LOCALES: Record<string, string> = { en: "en-US", de: "de-DE", pl: "pl-PL" };
+
+function formatDate(d: string | null, lang: string) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("pl-PL");
+  return new Date(d).toLocaleDateString(DATE_LOCALES[lang] ?? "en-US");
 }
 
 function Stars({ rating }: { rating: number }) {
@@ -67,6 +71,8 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
   const customer = await getCustomerByEmail(user.email);
   if (!customer) redirect("/portal/login");
 
+  const lang = await getLanguage();
+
   const subscriptions = await getCustomerSubscriptions(customer.customer_id);
   const sub = subscriptions.find((s) => s.subscription_id === subscriptionId);
   if (!sub) notFound();
@@ -88,8 +94,8 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
   if (sub.status === "pending") {
     return (
       <div className="space-y-6">
-        <SubHeader sub={sub} totalScans={totalScans} scansByPlate={scansByPlate} />
-        <PortalSetupForm subscriptionId={sub.subscription_id} />
+        <SubHeader sub={sub} totalScans={totalScans} scansByPlate={scansByPlate} lang={lang} />
+        <PortalSetupForm subscriptionId={sub.subscription_id} lang={lang} />
       </div>
     );
   }
@@ -98,7 +104,7 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
   if (sub.status === "inactive") {
     return (
       <div className="space-y-6">
-        <SubHeader sub={sub} totalScans={totalScans} scansByPlate={scansByPlate} />
+        <SubHeader sub={sub} totalScans={totalScans} scansByPlate={scansByPlate} lang={lang} />
 
         <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-5">
           <div className="flex gap-3">
@@ -117,15 +123,13 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
             </svg>
             <div>
               <h3 className="font-semibold text-red-800 dark:text-red-300">
-                Subskrypcja nieaktywna
+                {t("portal_subscription_inactive_title", lang)}
               </h3>
               <p className="text-sm text-red-700 dark:text-red-400 mt-1">
-                Subskrypcja wygasła lub ostatnia płatność nie powiodła się.
-                Płytki przypisane do tego lokalu są chwilowo wyłączone —
-                klienci nie mogą ich skanować.
+                {t("portal_subscription_inactive_message", lang)}
               </p>
               <p className="text-sm text-red-700 dark:text-red-400 mt-2">
-                Skontaktuj się z nami, aby odnowić:{" "}
+                {t("portal_contact_to_renew", lang)}{" "}
                 <a
                   href="mailto:kontakt@starlinkee.pl"
                   className="underline font-medium hover:text-red-900 dark:hover:text-red-200 transition-colors"
@@ -140,11 +144,10 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
         {sub.location && (
           <>
             <p className="text-xs text-gray-400 dark:text-gray-500 px-1">
-              Dane lokalu są zachowane i zostaną przywrócone po odnowieniu
-              subskrypcji.
+              {t("portal_data_preserved", lang)}
             </p>
             <div className="opacity-50 pointer-events-none select-none space-y-6">
-              <LocationSettings sub={sub} locationLinks={locationLinks} />
+              <LocationSettings sub={sub} locationLinks={locationLinks} lang={lang} />
             </div>
           </>
         )}
@@ -164,29 +167,29 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
 
   return (
     <div className="space-y-6">
-      <SubHeader sub={sub} totalScans={totalScans} scansByPlate={scansByPlate} />
-      <ReviewStats total={reviewTotal} avg={reviewAvg} byStars={reviewByStars} subscriptionId={subscriptionId} />
+      <SubHeader sub={sub} totalScans={totalScans} scansByPlate={scansByPlate} lang={lang} />
+      <ReviewStats total={reviewTotal} avg={reviewAvg} byStars={reviewByStars} subscriptionId={subscriptionId} lang={lang} />
       {sub.location?.has_promo_enabled && (
         <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Promocja</h3>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t("portal_promo_title", lang)}</h3>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Edytuj treści strony i SMS-a, przeglądaj zebrane kontakty.
+                {t("portal_promo_card_desc", lang)}
               </p>
             </div>
             <a
               href={`/portal/${subscriptionId}/promo`}
               className="text-xs text-blue-600 dark:text-blue-400 hover:underline shrink-0"
             >
-              Zarządzaj →
+              {t("portal_manage", lang)} →
             </a>
           </div>
         </section>
       )}
-      <LocationSettings sub={sub} locationLinks={locationLinks} linktreeError={linktreeError} />
-      <ReviewsSection reviews={recentReviews} subscriptionId={subscriptionId} />
-      <SavedToast show={saved === "1"} />
+      <LocationSettings sub={sub} locationLinks={locationLinks} linktreeError={linktreeError} lang={lang} />
+      <ReviewsSection reviews={recentReviews} subscriptionId={subscriptionId} lang={lang} />
+      <SavedToast show={saved === "1"} lang={lang} />
     </div>
   );
 }
@@ -198,11 +201,13 @@ function ReviewStats({
   avg,
   byStars,
   subscriptionId,
+  lang,
 }: {
   total: number;
   avg: number | null;
   byStars: Record<number, number>;
   subscriptionId: number;
+  lang: string;
 }) {
   const STAR_COLORS: Record<number, string> = {
     1: "#ef4444", 2: "#f97316", 3: "#eab308", 4: "#84cc16", 5: "#22c55e",
@@ -211,27 +216,27 @@ function ReviewStats({
   return (
     <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Opinie Google</h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t("portal_google_reviews", lang)}</h3>
         <a
           href={`/portal/${subscriptionId}/reviews`}
           className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
         >
-          Szczegóły →
+          {t("portal_details_link", lang)} →
         </a>
       </div>
       {total === 0 ? (
         <p className="text-sm text-gray-400 dark:text-gray-500">
-          Brak opinii — pojawią się tu po pierwszych skanowaniach.
+          {t("portal_no_reviews_yet", lang)}
         </p>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Łącznie</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{t("portal_total", lang)}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{total}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Średnia</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{t("portal_average", lang)}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {avg !== null ? avg.toFixed(2) : "—"}
                 <span className="text-sm font-normal text-amber-500 ml-1">★</span>
@@ -272,6 +277,7 @@ function SubHeader({
   sub,
   totalScans,
   scansByPlate,
+  lang,
 }: {
   sub: {
     subscription_name: string;
@@ -283,6 +289,7 @@ function SubHeader({
   };
   totalScans: number;
   scansByPlate: Record<number, number>;
+  lang: string;
 }) {
   const statusColors: Record<string, string> = {
     active: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
@@ -290,13 +297,13 @@ function SubHeader({
     inactive: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
   };
   const statusLabel: Record<string, string> = {
-    active: "Aktywna",
-    pending: "Wymaga konfiguracji",
-    inactive: "Nieaktywna",
+    active: t("portal_status_active", lang),
+    pending: t("portal_status_pending", lang),
+    inactive: t("portal_status_inactive_badge", lang),
   };
 
   const title = sub.location?.location_name
-    ?? (sub.plates.length > 0 ? sub.plates.map((p) => p.plate_number).join(", ") : "Nieprzypisana");
+    ?? (sub.plates.length > 0 ? sub.plates.map((p) => p.plate_number).join(", ") : t("portal_unassigned", lang));
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
@@ -315,27 +322,27 @@ function SubHeader({
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
         <div>
-          <p className="text-gray-500 dark:text-gray-400 mb-0.5">Płytki</p>
+          <p className="text-gray-500 dark:text-gray-400 mb-0.5">{t("portal_plates", lang)}</p>
           <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
             {sub.plates.length}
           </p>
         </div>
         <div>
-          <p className="text-gray-500 dark:text-gray-400 mb-0.5">Skanowania</p>
+          <p className="text-gray-500 dark:text-gray-400 mb-0.5">{t("portal_scans", lang)}</p>
           <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
             {totalScans}
           </p>
         </div>
         <div>
-          <p className="text-gray-500 dark:text-gray-400 mb-0.5">Aktywacja</p>
+          <p className="text-gray-500 dark:text-gray-400 mb-0.5">{t("portal_activation", lang)}</p>
           <p className="font-medium text-gray-900 dark:text-gray-100">
-            {formatDate(sub.activation_datetime)}
+            {formatDate(sub.activation_datetime, lang)}
           </p>
         </div>
         <div>
-          <p className="text-gray-500 dark:text-gray-400 mb-0.5">Ważna do</p>
+          <p className="text-gray-500 dark:text-gray-400 mb-0.5">{t("portal_valid_until", lang)}</p>
           <p className="font-medium text-gray-900 dark:text-gray-100">
-            {formatDate(sub.expiration_datetime)}
+            {formatDate(sub.expiration_datetime, lang)}
           </p>
         </div>
       </div>
@@ -343,7 +350,7 @@ function SubHeader({
       {sub.plates.length > 0 && (
         <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
           <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-            Numery płytek
+            {t("portal_plate_numbers", lang)}
           </p>
           <div className="flex flex-wrap gap-2">
             {sub.plates.map((plate) => (
@@ -355,7 +362,7 @@ function SubHeader({
                   {plate.plate_number}
                 </span>
                 <span className="text-gray-400 dark:text-gray-500 ml-2">
-                  {scansByPlate[plate.plate_id] ?? 0} skan.
+                  {scansByPlate[plate.plate_id] ?? 0} {t("portal_scan_suffix", lang)}
                 </span>
               </div>
             ))}
@@ -370,6 +377,7 @@ function LocationSettings({
   sub,
   locationLinks,
   linktreeError,
+  lang,
 }: {
   sub: {
     subscription_id: number;
@@ -390,6 +398,7 @@ function LocationSettings({
   };
   locationLinks: CustomerLocationLink[];
   linktreeError?: string;
+  lang: string;
 }) {
   const location = sub.location;
   if (!location) return null;
@@ -399,10 +408,10 @@ function LocationSettings({
       {/* Nazwa lokalu */}
       <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-          Nazwa lokalu
+          {t("portal_location_name_title", lang)}
         </h3>
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-          Wyświetlana na stronie po skanowaniu płytki.
+          {t("portal_location_name_desc", lang)}
         </p>
         <form action={updateLocationName} className="flex gap-3">
           <input type="hidden" name="subscription_id" value={sub.subscription_id} />
@@ -418,7 +427,7 @@ function LocationSettings({
             type="submit"
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shrink-0"
           >
-            Zapisz
+            {t("portal_save", lang)}
           </button>
         </form>
       </section>
@@ -426,41 +435,43 @@ function LocationSettings({
       {/* Google Maps */}
       <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-          Lokalizacja Google Maps
+          {t("portal_google_maps_location_title", lang)}
         </h3>
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-          Firma powiązana z płytką — zmiana aktualizuje link do opinii Google.
+          {t("portal_google_maps_location_desc", lang)}
         </p>
         <GoogleLocationEditor
           locationId={location.location_id}
           locationName={location.location_name}
           currentBusinessName={location.google_business_name}
           currentBusinessAddress={location.google_business_address}
+          lang={lang}
         />
       </section>
 
       {/* Logo */}
       <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-          Logo firmy
+          {t("portal_logo_title", lang)}
         </h3>
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-          Wyświetlane na stronie po skanowaniu płytki.
+          {t("portal_logo_desc", lang)}
         </p>
         <LogoUpload
           locationId={location.location_id}
           locationName={location.location_name}
           currentLogoLink={location.logo_link}
+          lang={lang}
         />
       </section>
 
       {/* E-mail pomocniczy */}
       <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-          Adres e-mail pomocniczy
+          {t("portal_support_email_title", lang)}
         </h3>
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-          Widoczny na stronie z oceną — klienci mogą się z Tobą skontaktować.
+          {t("portal_support_email_desc", lang)}
         </p>
         <form action={updateSupportEmail} className="flex gap-3">
           <input type="hidden" name="subscription_id" value={sub.subscription_id} />
@@ -476,7 +487,7 @@ function LocationSettings({
             type="submit"
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shrink-0"
           >
-            Zapisz
+            {t("portal_save", lang)}
           </button>
         </form>
       </section>
@@ -485,10 +496,10 @@ function LocationSettings({
       {location.has_linktree_access && (
         <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-            Linki Linktree
+            {t("portal_linktree_links_title", lang)}
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-            Do 7 własnych linków wyświetlanych na Twojej stronie. Pierwszy i ostatnie dwa przyciski są stałe.
+            {t("portal_linktree_links_desc", lang)}
           </p>
           <LinktreeLinksEditor
             locationId={location.location_id}
@@ -497,6 +508,7 @@ function LocationSettings({
               title: l.title_pl || l.title,
               url: l.url,
             }))}
+            lang={lang}
           />
         </section>
       )}
@@ -505,10 +517,10 @@ function LocationSettings({
       {location.has_linktree_access && location.linktree_slug && (
         <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-            Adres strony Linktree
+            {t("portal_linktree_slug_title", lang)}
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            Wygenerowany automatycznie z nazwy lokalu — możesz go zmienić.
+            {t("portal_linktree_slug_desc", lang)}
           </p>
           <form action={updateLinktreeSlug} className="flex gap-3">
             <input type="hidden" name="location_id" value={location.location_id} />
@@ -528,17 +540,17 @@ function LocationSettings({
               type="submit"
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shrink-0"
             >
-              Zapisz
+              {t("portal_save", lang)}
             </button>
           </form>
           {linktreeError === "taken" && (
             <p className="text-xs text-red-600 dark:text-red-400 mt-2">
-              Ten adres jest już zajęty — wybierz inny.
+              {t("portal_linktree_slug_taken", lang)}
             </p>
           )}
           {linktreeError === "invalid" && (
             <p className="text-xs text-red-600 dark:text-red-400 mt-2">
-              Adres może zawierać tylko małe litery, cyfry i myślniki (3–40 znaków).
+              {t("portal_linktree_slug_invalid", lang)}
             </p>
           )}
         </section>
@@ -548,10 +560,10 @@ function LocationSettings({
       {location.has_linktree_access && location.linktree_slug && (
         <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-            Tryb skanowania
+            {t("portal_scan_mode_title", lang)}
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            Co widzi klient po zeskanowaniu płytki.
+            {t("portal_scan_mode_desc", lang)}
           </p>
           <form action={updateScanRedirectMode} className="space-y-3">
             <input type="hidden" name="location_id" value={location.location_id} />
@@ -565,11 +577,10 @@ function LocationSettings({
               />
               <div>
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  Bezpośrednio do opinii
+                  {t("portal_scan_mode_review_title", lang)}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Klient od razu widzi stronę z oceną i może zostawić opinię
-                  Google.
+                  {t("portal_scan_mode_review_desc", lang)}
                 </p>
               </div>
             </label>
@@ -583,11 +594,10 @@ function LocationSettings({
               />
               <div>
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  Linktree
+                  {t("portal_scan_mode_linktree_title", lang)}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Klient widzi Twój Linktree z listą linków (opinia, menu,
-                  rezerwacje itp.).
+                  {t("portal_scan_mode_linktree_desc", lang)}
                 </p>
               </div>
             </label>
@@ -595,7 +605,7 @@ function LocationSettings({
               type="submit"
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
             >
-              Zapisz
+              {t("portal_save", lang)}
             </button>
           </form>
         </section>
@@ -604,12 +614,10 @@ function LocationSettings({
       {/* Przekierowanie dla oceny 4 gwiazdek */}
       <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-          Przekierowanie do opinii Google
+          {t("portal_four_star_title", lang)}
         </h3>
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-          Ocena 5 gwiazdek zawsze przekierowuje do opinii Google. Ocena 3
-          gwiazdki i niżej nigdy nie przekierowuje. Tutaj decydujesz, czy
-          ocena 4 gwiazdki też ma przekierowywać.
+          {t("portal_four_star_desc", lang)}
         </p>
         <form action={updateFourStarRedirect} className="space-y-3">
           <input type="hidden" name="location_id" value={location.location_id} />
@@ -622,11 +630,10 @@ function LocationSettings({
             />
             <div>
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                Ocena 4 gwiazdki też przekierowuje do opinii Google
+                {t("portal_four_star_checkbox_label", lang)}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Jeśli odznaczone, ocena 4 gwiazdki pokaże formularz opinii
-                wewnętrznej zamiast przekierowania do Google.
+                {t("portal_four_star_checkbox_desc", lang)}
               </p>
             </div>
           </label>
@@ -634,7 +641,7 @@ function LocationSettings({
             type="submit"
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
           >
-            Zapisz
+            {t("portal_save", lang)}
           </button>
         </form>
       </section>
@@ -645,44 +652,46 @@ function LocationSettings({
 function ReviewsSection({
   reviews,
   subscriptionId,
+  lang,
 }: {
   reviews: (Review & { plate_number: string })[];
   subscriptionId: number;
+  lang: string;
 }) {
   return (
     <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 overflow-hidden">
       <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-          Ostatnie opinie
+          {t("portal_recent_reviews", lang)}
         </h3>
         <a
           href={`/portal/${subscriptionId}/reviews`}
           className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
         >
-          Wszystkie opinie →
+          {t("portal_all_reviews", lang)} →
         </a>
       </div>
 
       {reviews.length === 0 && (
         <p className="px-5 py-6 text-sm text-gray-400 dark:text-gray-500">
-          Brak opinii — pojawią się tu po pierwszych skanowaniach.
+          {t("portal_no_reviews_yet", lang)}
         </p>
       )}
       {reviews.length > 0 && (
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 dark:border-gray-700">
-              <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium">Data</th>
-              <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium">Płytka</th>
-              <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium">Ocena</th>
-              <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium hidden sm:table-cell">Komentarz</th>
+              <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium">{t("portal_date", lang)}</th>
+              <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium">{t("portal_plate", lang)}</th>
+              <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium">{t("portal_rating", lang)}</th>
+              <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium hidden sm:table-cell">{t("portal_comment", lang)}</th>
             </tr>
           </thead>
           <tbody>
             {reviews.map((review) => (
               <tr key={review.review_id} className="border-b border-gray-50 dark:border-gray-700/50 last:border-0">
                 <td className="px-5 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                  {formatDate(review.rating_time ?? review.created_at)}
+                  {formatDate(review.rating_time ?? review.created_at, lang)}
                 </td>
                 <td className="px-5 py-3 font-mono text-gray-900 dark:text-gray-100">
                   {review.plate_number}

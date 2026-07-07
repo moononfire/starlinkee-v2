@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import type { Review } from "@/lib/types";
+import { t } from "@/lib/translations";
 
 type ReviewWithPlate = Review & { plate_number: string };
 type Range = "7d" | "30d" | "90d" | "1y" | "all";
@@ -15,13 +16,17 @@ const STAR_COLORS: Record<number, string> = {
   5: "#22c55e",
 };
 
-const RANGES: { key: Range; label: string }[] = [
-  { key: "7d", label: "7 dni" },
-  { key: "30d", label: "30 dni" },
-  { key: "90d", label: "3 mies." },
-  { key: "1y", label: "Rok" },
-  { key: "all", label: "Wszystko" },
-];
+function getRanges(lang: string): { key: Range; label: string }[] {
+  return [
+    { key: "7d", label: t("portal_range_7d", lang) },
+    { key: "30d", label: t("portal_range_30d", lang) },
+    { key: "90d", label: t("portal_range_90d", lang) },
+    { key: "1y", label: t("portal_range_1y", lang) },
+    { key: "all", label: t("portal_range_all", lang) },
+  ];
+}
+
+const DATE_LOCALES: Record<string, string> = { en: "en-US", de: "de-DE", pl: "pl-PL" };
 
 function getCutoff(range: Range): Date {
   const now = Date.now();
@@ -43,15 +48,16 @@ function groupKey(d: Date, range: Range): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function formatKey(key: string, range: Range): string {
+function formatKey(key: string, range: Range, lang: string): string {
+  const locale = DATE_LOCALES[lang] ?? "en-US";
   if (range === "7d" || range === "30d" || range === "90d") {
-    return new Date(key + "T12:00:00").toLocaleDateString("pl-PL", { day: "numeric", month: "short" });
+    return new Date(key + "T12:00:00").toLocaleDateString(locale, { day: "numeric", month: "short" });
   }
   const [y, m] = key.split("-");
-  return new Date(Number(y), Number(m) - 1).toLocaleDateString("pl-PL", { month: "short", year: "2-digit" });
+  return new Date(Number(y), Number(m) - 1).toLocaleDateString(locale, { month: "short", year: "2-digit" });
 }
 
-function buildChartData(reviews: ReviewWithPlate[], range: Range) {
+function buildChartData(reviews: ReviewWithPlate[], range: Range, lang: string) {
   const cutoff = getCutoff(range);
   const filtered = reviews.filter((r) => new Date(r.rating_time ?? r.created_at) >= cutoff && r.rating);
 
@@ -66,17 +72,17 @@ function buildChartData(reviews: ReviewWithPlate[], range: Range) {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, byStars]) => ({
       key,
-      label: formatKey(key, range),
+      label: formatKey(key, range, lang),
       byStars,
       total: Object.values(byStars).reduce((s, n) => s + n, 0),
     }));
 }
 
-function BarChart({ bars, maxY }: { bars: ReturnType<typeof buildChartData>; maxY: number }) {
+function BarChart({ bars, maxY, lang }: { bars: ReturnType<typeof buildChartData>; maxY: number; lang: string }) {
   if (bars.length === 0) {
     return (
       <div className="flex items-center justify-center h-40 text-sm text-gray-400 dark:text-gray-500">
-        Brak danych w wybranym zakresie
+        {t("portal_no_data_range", lang)}
       </div>
     );
   }
@@ -172,9 +178,9 @@ function BarChart({ bars, maxY }: { bars: ReturnType<typeof buildChartData>; max
   );
 }
 
-function formatDate(d: string | null) {
+function formatDate(d: string | null, lang: string) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("pl-PL");
+  return new Date(d).toLocaleDateString(DATE_LOCALES[lang] ?? "en-US");
 }
 
 function Stars({ rating }: { rating: number }) {
@@ -191,9 +197,10 @@ interface Props {
   avgRating: number | null;
   byStars: Record<number, number>;
   initialStars?: number;
+  lang: string;
 }
 
-export default function ReviewsAnalytics({ reviews, totalCount, avgRating, byStars, initialStars }: Props) {
+export default function ReviewsAnalytics({ reviews, totalCount, avgRating, byStars, initialStars, lang }: Props) {
   const [range, setRange] = useState<Range>("30d");
   const [starFilter, setStarFilter] = useState<Set<StarFilter>>(
     initialStars && [1, 2, 3, 4, 5].includes(initialStars)
@@ -201,7 +208,8 @@ export default function ReviewsAnalytics({ reviews, totalCount, avgRating, bySta
       : new Set()
   );
 
-  const bars = useMemo(() => buildChartData(reviews, range), [reviews, range]);
+  const RANGES = useMemo(() => getRanges(lang), [lang]);
+  const bars = useMemo(() => buildChartData(reviews, range, lang), [reviews, range, lang]);
   const maxY = useMemo(() => Math.max(...bars.map((b) => b.total), 1), [bars]);
 
   const displayed = useMemo(() => {
@@ -232,11 +240,11 @@ export default function ReviewsAnalytics({ reviews, totalCount, avgRating, bySta
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Łącznie</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{t("portal_total", lang)}</p>
           <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalCount}</p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Średnia</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{t("portal_average", lang)}</p>
           <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {avgRating !== null ? avgRating.toFixed(2) : "—"}
             <span className="text-sm font-normal text-amber-500 ml-1">★</span>
@@ -252,7 +260,7 @@ export default function ReviewsAnalytics({ reviews, totalCount, avgRating, bySta
 
       {/* Star breakdown */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Rozkład ocen</h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">{t("portal_rating_distribution", lang)}</h3>
         <div className="space-y-2">
           {([5, 4, 3, 2, 1] as const).map((star) => {
             const count = byStars[star] ?? 0;
@@ -277,7 +285,7 @@ export default function ReviewsAnalytics({ reviews, totalCount, avgRating, bySta
       {/* Chart */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Opinie w czasie</h3>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t("portal_reviews_over_time", lang)}</h3>
           <div className="flex gap-1">
             {RANGES.map((r) => (
               <button
@@ -294,7 +302,7 @@ export default function ReviewsAnalytics({ reviews, totalCount, avgRating, bySta
             ))}
           </div>
         </div>
-        <BarChart bars={bars} maxY={maxY} />
+        <BarChart bars={bars} maxY={maxY} lang={lang} />
       </div>
 
       {/* Filtered table */}
@@ -302,9 +310,9 @@ export default function ReviewsAnalytics({ reviews, totalCount, avgRating, bySta
         <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-              Opinie ({rangeTotal}
+              {t("portal_reviews_count_label", lang)} ({rangeTotal}
               {rangeAvg !== null && (
-                <span className="text-gray-400 dark:text-gray-500 font-normal ml-1">· śr. {rangeAvg.toFixed(2)} ★</span>
+                <span className="text-gray-400 dark:text-gray-500 font-normal ml-1">· {t("portal_avg_abbrev", lang)} {rangeAvg.toFixed(2)} ★</span>
               )}
               )
             </h3>
@@ -328,7 +336,7 @@ export default function ReviewsAnalytics({ reviews, totalCount, avgRating, bySta
                   onClick={() => setStarFilter(new Set())}
                   className="px-2.5 py-1 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
                 >
-                  ✕ wyczyść
+                  ✕ {t("portal_clear_filter", lang)}
                 </button>
               )}
             </div>
@@ -337,23 +345,23 @@ export default function ReviewsAnalytics({ reviews, totalCount, avgRating, bySta
 
         {displayed.length === 0 ? (
           <p className="px-5 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
-            Brak opinii dla wybranych filtrów
+            {t("portal_no_reviews_filtered", lang)}
           </p>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 dark:border-gray-700">
-                <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium">Data</th>
-                <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium">Płytka</th>
-                <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium">Ocena</th>
-                <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium hidden sm:table-cell">Komentarz</th>
+                <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium">{t("portal_date", lang)}</th>
+                <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium">{t("portal_plate", lang)}</th>
+                <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium">{t("portal_rating", lang)}</th>
+                <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium hidden sm:table-cell">{t("portal_comment", lang)}</th>
               </tr>
             </thead>
             <tbody>
               {displayed.map((review) => (
                 <tr key={review.review_id} className="border-b border-gray-50 dark:border-gray-700/50 last:border-0">
                   <td className="px-5 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                    {formatDate(review.rating_time ?? review.created_at)}
+                    {formatDate(review.rating_time ?? review.created_at, lang)}
                   </td>
                   <td className="px-5 py-3 font-mono text-gray-900 dark:text-gray-100">
                     {review.plate_number}

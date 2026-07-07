@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { t } from "@/lib/translations";
 
 export interface SidebarSubscription {
   subscription_id: number;
@@ -10,37 +11,39 @@ export interface SidebarSubscription {
   locationName: string | null;
 }
 
-function StatusBadge({ status }: { status: SidebarSubscription["status"] }) {
+function StatusBadge({ status, lang }: { status: SidebarSubscription["status"]; lang: string }) {
   if (status === "active") return null;
   if (status === "pending")
     return (
       <span className="ml-auto shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
-        Setup
+        {t("portal_status_setup_badge", lang)}
       </span>
     );
   return (
     <span className="ml-auto shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400">
-      Nieaktywna
+      {t("portal_status_inactive_badge", lang)}
     </span>
   );
 }
 
 export default function SubscriptionSidebar({
   subscriptions,
+  lang,
 }: {
   subscriptions: SidebarSubscription[];
+  lang: string;
 }) {
   const pathname = usePathname();
 
   return (
     <nav className="space-y-1">
       <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3 px-2">
-        Twoje lokale
+        {t("portal_your_locations", lang)}
       </p>
       {subscriptions.map((sub) => {
         const href = `/portal/${sub.subscription_id}`;
         const isActive = pathname === href;
-        const label = sub.locationName ?? "Nieprzypisana subskrypcja";
+        const label = sub.locationName ?? t("portal_unassigned_subscription", lang);
 
         return (
           <Link
@@ -53,7 +56,7 @@ export default function SubscriptionSidebar({
             }`}
           >
             <span className="truncate">{label}</span>
-            <StatusBadge status={sub.status} />
+            <StatusBadge status={sub.status} lang={lang} />
           </Link>
         );
       })}
