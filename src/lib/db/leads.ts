@@ -78,6 +78,30 @@ export async function getLeadsByLocationId(locationId: number): Promise<Location
   return data ?? [];
 }
 
+const CLAIM_WINDOW_MS = 15 * 60 * 1000;
+
+export async function claimLead(token: string): Promise<{ claimedAt: string; isUsed: boolean } | null> {
+  const supabase = createAdminClient();
+  const { data: lead } = await supabase
+    .from("location_leads")
+    .select("id, is_used, claimed_at")
+    .eq("claim_token", token)
+    .single();
+  if (!lead) return null;
+  if (lead.is_used) return { claimedAt: lead.claimed_at ?? new Date().toISOString(), isUsed: true };
+
+  const stillActive = lead.claimed_at && Date.now() - new Date(lead.claimed_at).getTime() < CLAIM_WINDOW_MS;
+  if (stillActive) return { claimedAt: lead.claimed_at, isUsed: false };
+
+  const claimedAt = new Date().toISOString();
+  const { error } = await supabase
+    .from("location_leads")
+    .update({ claimed_at: claimedAt })
+    .eq("id", lead.id);
+  if (error) throw new Error(`Failed to claim lead: ${error.message}`);
+  return { claimedAt, isUsed: false };
+}
+
 export async function markLeadAsUsed(leadId: number): Promise<void> {
   const supabase = createAdminClient();
   const { error } = await supabase

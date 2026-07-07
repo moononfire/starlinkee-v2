@@ -1,12 +1,19 @@
 export async function sendSms(phone: string, message: string): Promise<void> {
   const senderNumber = phone.startsWith("+48")
-    ? process.env.HTTPSMS_SENDER_NUMBER_PL!
-    : process.env.HTTPSMS_SENDER_NUMBER!;
+    ? process.env.HTTPSMS_SENDER_NUMBER_PL
+    : process.env.HTTPSMS_SENDER_NUMBER;
+  const apiKey = process.env.HTTPSMS_API_KEY;
+
+  if (!apiKey || !senderNumber) {
+    throw new Error(
+      `httpsms env vars missing: ${!apiKey ? "HTTPSMS_API_KEY " : ""}${!senderNumber ? "HTTPSMS_SENDER_NUMBER(_PL)" : ""}`
+    );
+  }
 
   const res = await fetch("https://api.httpsms.com/v1/messages/send", {
     method: "POST",
     headers: {
-      "x-api-key": process.env.HTTPSMS_API_KEY!,
+      "x-api-key": apiKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({

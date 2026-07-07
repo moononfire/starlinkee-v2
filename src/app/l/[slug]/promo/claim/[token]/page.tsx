@@ -44,9 +44,11 @@ export default async function ClaimPage({ params }: Props) {
           <p className="text-sm text-gray-500 text-center mb-8">{t("your_promo_coupon", lang)}</p>
 
           <ClaimClient
+            token={token}
             isUsed={lead.is_used}
             bannerText={location.promo_banner_text ?? ""}
             couponCode={lead.coupon_code ?? ""}
+            claimedAt={lead.claimed_at}
             lang={lang}
           />
         </div>

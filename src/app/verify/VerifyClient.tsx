@@ -1,7 +1,26 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { t } from "@/lib/translations";
+
+declare global {
+  interface Window {
+    BarcodeDetector?: new (options: { formats: string[] }) => {
+      detect: (source: CanvasImageSource) => Promise<{ rawValue: string }[]>;
+    };
+  }
+}
+
+function extractCode(raw: string): string {
+  try {
+    const url = new URL(raw);
+    const fromUrl = url.searchParams.get("code");
+    if (fromUrl) return fromUrl.toUpperCase().slice(0, 8);
+  } catch {
+    // not a URL, fall through
+  }
+  return raw.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+}
 
 interface VerifyResult {
   valid: boolean;
@@ -23,6 +42,80 @@ export default function VerifyClient({ initialCode, lang }: Props) {
   const [result, setResult] = useState<VerifyResult | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const rafRef = useRef<number | null>(null);
+
+  const stopScan = useCallback(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setScanning(false);
+  }, []);
+
+  useEffect(() => {
+    return () => stopScan();
+  }, [stopScan]);
+
+  async function startScan() {
+    setScanError(null);
+
+    if (!("BarcodeDetector" in window) || !navigator.mediaDevices?.getUserMedia) {
+      setScanError(t("scan_not_supported", lang));
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      });
+      streamRef.current = stream;
+      setScanning(true);
+
+      requestAnimationFrame(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play();
+        }
+      });
+
+      const detector = new window.BarcodeDetector!({ formats: ["qr_code"] });
+
+      const tick = async () => {
+        if (!videoRef.current || videoRef.current.readyState < 2) {
+          rafRef.current = requestAnimationFrame(tick);
+          return;
+        }
+        try {
+          const barcodes = await detector.detect(videoRef.current);
+          if (barcodes.length > 0) {
+            const detectedCode = extractCode(barcodes[0].rawValue);
+            stopScan();
+            if (detectedCode) {
+              setCode(detectedCode);
+              handleVerify(detectedCode);
+            }
+            return;
+          }
+        } catch {
+          // detection failed on this frame, keep trying
+        }
+        rafRef.current = requestAnimationFrame(tick);
+      };
+      rafRef.current = requestAnimationFrame(tick);
+    } catch {
+      setScanError(t("camera_error", lang));
+      stopScan();
+    }
+  }
 
   useEffect(() => {
     if (initialCode) {
@@ -104,6 +197,14 @@ export default function VerifyClient({ initialCode, lang }: Props) {
         </button>
       </div>
 
+      <button
+        onClick={startScan}
+        className="border border-gray-300 text-gray-700 rounded-lg px-4 py-2 text-sm font-medium"
+      >
+        {t("scan_qr_btn", lang)}
+      </button>
+
+      {scanError && <p className="text-red-500 text-sm text-center">{scanError}</p>}
       {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
       {notFound && (
@@ -139,6 +240,24 @@ export default function VerifyClient({ initialCode, lang }: Props) {
             className="bg-black text-white rounded-lg px-4 py-3 font-medium disabled:opacity-50"
           >
             {activating ? t("processing", lang) : t("mark_as_used", lang)}
+          </button>
+        </div>
+      )}
+
+      {scanning && (
+        <div className="fixed inset-0 bg-black/80 flex flex-col items-center justify-center z-50 p-4">
+          <p className="text-white text-sm font-medium mb-4 text-center">{t("scan_qr_title", lang)}</p>
+          <video
+            ref={videoRef}
+            muted
+            playsInline
+            className="w-full max-w-sm rounded-xl bg-black"
+          />
+          <button
+            onClick={stopScan}
+            className="mt-4 bg-white text-black rounded-lg px-4 py-2 text-sm font-medium"
+          >
+            {t("scan_qr_close", lang)}
           </button>
         </div>
       )}

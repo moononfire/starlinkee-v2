@@ -177,6 +177,7 @@
     "your_promo": "Your promotion",
     "coupon_code_label": "Coupon code",
     "show_to_staff": "Show this code to the staff member.",
+    "claim_code_btn": "Reveal code",
 
     "thank_you_short": "Thank you!",
     "appreciate_feedback": "We appreciate your feedback.",
@@ -196,7 +197,12 @@
     "coupon_valid": "Coupon is valid",
     "mark_as_used": "Mark as used",
     "activate_failed": "Failed to use the coupon. Please try again.",
-    "code_placeholder": "e.g. A3K9X2B7"
+    "code_placeholder": "e.g. A3K9X2B7",
+    "scan_qr_btn": "Scan QR code",
+    "scan_qr_title": "Point the camera at the QR code",
+    "scan_qr_close": "Cancel",
+    "scan_not_supported": "QR scanning is not supported in this browser. Please enter the code manually.",
+    "camera_error": "Could not access the camera. Check permissions and try again."
   },
   "de": {
     "proxy_page_title": "Wie bewerten Sie Ihre Erfahrung?",
@@ -376,6 +382,7 @@
     "your_promo": "Ihre Promotion",
     "coupon_code_label": "Gutscheincode",
     "show_to_staff": "Zeigen Sie diesen Code dem Servicepersonal.",
+    "claim_code_btn": "Code anzeigen",
 
     "thank_you_short": "Vielen Dank!",
     "appreciate_feedback": "Wir schätzen Ihr Feedback.",
@@ -395,7 +402,12 @@
     "coupon_valid": "Gutschein ist gültig",
     "mark_as_used": "Als eingelöst markieren",
     "activate_failed": "Gutschein konnte nicht eingelöst werden. Bitte versuchen Sie es erneut.",
-    "code_placeholder": "z.B. A3K9X2B7"
+    "code_placeholder": "z.B. A3K9X2B7",
+    "scan_qr_btn": "QR-Code scannen",
+    "scan_qr_title": "Richten Sie die Kamera auf den QR-Code",
+    "scan_qr_close": "Abbrechen",
+    "scan_not_supported": "QR-Scannen wird in diesem Browser nicht unterstützt. Bitte geben Sie den Code manuell ein.",
+    "camera_error": "Kamerazugriff nicht möglich. Überprüfen Sie die Berechtigungen und versuchen Sie es erneut."
   },
   "pl": {
     "proxy_page_title": "Jak oceniasz swoje doświadczenie?",
@@ -574,6 +586,7 @@
     "your_promo": "Twoja promocja",
     "coupon_code_label": "Kod kuponu",
     "show_to_staff": "Pokaż ten kod pracownikowi obsługi.",
+    "claim_code_btn": "Odbierz kod",
 
     "thank_you_short": "Dziękujemy!",
     "appreciate_feedback": "Doceniamy Twoją opinię.",
@@ -593,7 +606,12 @@
     "coupon_valid": "Kupon jest ważny",
     "mark_as_used": "Oznacz jako wykorzystany",
     "activate_failed": "Nie udało się zużyć kuponu. Spróbuj ponownie.",
-    "code_placeholder": "Np. A3K9X2B7"
+    "code_placeholder": "Np. A3K9X2B7",
+    "scan_qr_btn": "Skanuj kod QR",
+    "scan_qr_title": "Skieruj kamerę na kod QR",
+    "scan_qr_close": "Anuluj",
+    "scan_not_supported": "Skanowanie QR nie jest obsługiwane w tej przeglądarce. Wpisz kod ręcznie.",
+    "camera_error": "Nie udało się uzyskać dostępu do kamery. Sprawdź uprawnienia i spróbuj ponownie."
   },
   "zh": {
     "proxy_page_title": "您如何评价您的体验？",
@@ -712,6 +730,7 @@
     "location_not_found_exception": "未找到位置。",
     "subscription_not_found_exception": "未找到此平台的订阅。",
     "plate_setup_success_message": "平台已设置成功。您将通过电子邮件收到确认。",
-    "show_to_staff": "请将此代码出示给工作人员。"
+    "show_to_staff": "请将此代码出示给工作人员。",
+    "claim_code_btn": "显示代码"
   }
 }

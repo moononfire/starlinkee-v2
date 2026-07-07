@@ -136,6 +136,7 @@ export interface LocationLead {
   coupon_code: string | null;
   is_used: boolean;
   used_at: string | null;
+  claimed_at: string | null;
   created_at: string;
 }
 
