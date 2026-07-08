@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { upsertLinktreeLinks } from "./[subscriptionId]/actions";
 import { t } from "@/lib/translations";
-import { SUPPORTED_LANGUAGES, type Language } from "@/lib/language";
+import { SUPPORTED_LANGUAGES, type Language } from "@/lib/languages";
 
 interface LinkItem {
   title_pl: string;
