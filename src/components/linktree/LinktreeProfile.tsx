@@ -74,7 +74,7 @@ export default function LinktreeProfile({ location, links, slug, scanToken, lang
         {location.has_loyalty_enabled && (
           <div className="w-full">
             <Link
-              href={`/l/${slug}/loyalty`}
+              href={`/l/${slug}/loyalty${scanToken ? `?scan=${scanToken}` : ""}`}
               className="block w-full text-center py-3 px-6 rounded-full bg-gray-900 hover:bg-gray-700 font-semibold text-white transition-colors"
             >
               {t("loyalty_card_link", lang)}

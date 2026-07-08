@@ -11,10 +11,12 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 interface Props {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ scan?: string }>;
 }
 
-export default async function LoyaltyPage({ params }: Props) {
+export default async function LoyaltyPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const { scan } = await searchParams;
 
   const location = await getLocationBySlug(slug);
   if (!location || !location.has_loyalty_enabled) notFound();
@@ -64,6 +66,7 @@ export default async function LoyaltyPage({ params }: Props) {
 
           <LoyaltyCard
             slug={slug}
+            scanToken={scan}
             initialStamps={initialStamps}
             isAuthenticated={isAuthenticated}
             maxStamps={maxStamps}

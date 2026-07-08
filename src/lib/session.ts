@@ -13,7 +13,7 @@ const sessionOptions: SessionOptions = {
     secure: process.env.NODE_ENV === "production",
     httpOnly: true,
     sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 30, // 30 days
+    maxAge: 60 * 10, // 10 minutes — force phone/SMS re-verification on every visit
   },
 };
 

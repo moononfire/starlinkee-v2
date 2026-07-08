@@ -171,6 +171,7 @@
     "collecting": "Collecting...",
     "collect_stamp": "Collect stamp",
     "next_stamp_available": "Next stamp available in {time}",
+    "loyalty_rescan_required": "Please tap your phone on the device again to collect a stamp.",
     "error_try_again": "Error. Please try again.",
 
     "coupon_already_used": "This coupon has already been used.",
@@ -547,6 +548,7 @@
     "collecting": "Wird gesammelt...",
     "collect_stamp": "Stempel sammeln",
     "next_stamp_available": "Nächster Stempel verfügbar in {time}",
+    "loyalty_rescan_required": "Bitte halten Sie Ihr Telefon erneut an das Gerät, um einen Stempel zu sammeln.",
     "error_try_again": "Fehler. Bitte versuchen Sie es erneut.",
 
     "coupon_already_used": "Dieser Gutschein wurde bereits eingelöst.",
@@ -922,6 +924,7 @@
     "collecting": "Zbieram...",
     "collect_stamp": "Zbierz pieczątkę",
     "next_stamp_available": "Następna pieczątka dostępna za {time}",
+    "loyalty_rescan_required": "Przyłóż telefon do urządzenia ponownie, aby odebrać pieczątkę.",
     "error_try_again": "Błąd. Spróbuj ponownie.",
 
     "coupon_already_used": "Ten kupon został już wykorzystany.",
