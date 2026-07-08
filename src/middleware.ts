@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { isAdminUser } from "@/lib/admin-auth";
 
 // Matches /plate/[number]/[secret] — exactly 2 path segments (scan initiation, not the review page)
 const PLATE_SCAN_PATTERN = /^\/plate\/[^/]+\/[^/]+$/;
@@ -65,7 +66,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (isAdminLoginPage && user) {
+  // Portal customers share the Supabase user pool with admins — a session
+  // alone must not open the admin panel.
+  if (isAdminRoute && user && !isAdminUser(user)) {
+    return NextResponse.redirect(new URL("/portal", request.url));
+  }
+
+  if (isAdminLoginPage && user && isAdminUser(user)) {
     return NextResponse.redirect(new URL("/admin/dashboard", request.url));
   }
 

@@ -53,7 +53,7 @@ export async function updateScanRedirectMode(formData: FormData) {
   await updateLocation(locationId, {
     scan_redirect_mode: mode as "review" | "linktree",
   });
-  redirect(`/portal/${matchingSub.subscription_id}?saved=1`);
+  redirect(`/portal/${matchingSub.subscription_id}/settings?saved=scan_mode`);
 }
 
 export async function updateFourStarRedirect(formData: FormData) {
@@ -84,7 +84,7 @@ export async function updateFourStarRedirect(formData: FormData) {
   await updateLocation(locationId, {
     redirect_four_star_reviews: redirectFourStar,
   });
-  redirect(`/portal/${matchingSub.subscription_id}?saved=1`);
+  redirect(`/portal/${matchingSub.subscription_id}/settings?saved=four_star`);
 }
 
 export async function updateLinktreeSlug(formData: FormData) {
@@ -114,15 +114,15 @@ export async function updateLinktreeSlug(formData: FormData) {
   if (!matchingSub) redirect("/portal/settings");
 
   if (!/^[a-z0-9-]{3,40}$/.test(slug) || slug.startsWith("-") || slug.endsWith("-")) {
-    redirect(`/portal/${subscriptionId}?linktreeError=invalid`);
+    redirect(`/portal/${subscriptionId}/settings?linktreeError=invalid`);
   }
 
   const result = await setLinktreeSlug(locationId, slug);
   if (!result.ok) {
-    redirect(`/portal/${subscriptionId}?linktreeError=taken`);
+    redirect(`/portal/${subscriptionId}/settings?linktreeError=taken`);
   }
 
-  redirect(`/portal/${subscriptionId}?saved=1`);
+  redirect(`/portal/${subscriptionId}/settings?saved=linktree_slug`);
 }
 
 export async function updateGoogleLocation(formData: FormData) {
@@ -159,5 +159,5 @@ export async function updateGoogleLocation(formData: FormData) {
     google_review_link: googleReviewLink,
     google_places_id: googlePlacesId,
   });
-  redirect(`/portal/${matchingSub.subscription_id}?saved=1`);
+  redirect(`/portal/${matchingSub.subscription_id}/settings?saved=google_location`);
 }

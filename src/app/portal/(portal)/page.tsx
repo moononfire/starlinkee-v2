@@ -1,38 +1,11 @@
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
 import { redirect } from "next/navigation";
-import { getCustomerByEmail, getCustomerSubscriptions } from "@/lib/db/portal";
+import { getPortalSession } from "@/lib/portal-session";
 import { getLanguage } from "@/lib/language";
 import { t } from "@/lib/translations";
 
 export default async function PortalIndexPage() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.email) redirect("/portal/login");
-
-  const customer = await getCustomerByEmail(user.email);
-  if (!customer) redirect("/portal/login");
-
-  const subscriptions = await getCustomerSubscriptions(customer.customer_id);
+  const { user, customer, subscriptions } = await getPortalSession();
+  if (!user || !customer) redirect("/portal/login");
 
   if (subscriptions.length === 0) {
     const lang = await getLanguage();
@@ -41,6 +14,12 @@ export default async function PortalIndexPage() {
         <p className="text-gray-500 dark:text-gray-400 text-sm">
           {t("portal_no_subscriptions", lang)}
         </p>
+        <a
+          href="mailto:kontakt@starlinkee.pl"
+          className="inline-block mt-3 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          kontakt@starlinkee.pl
+        </a>
       </div>
     );
   }

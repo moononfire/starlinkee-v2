@@ -1,30 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
 import { generateUniquePlateCodes } from "@/lib/db/plates";
+import { requireAdmin } from "@/lib/api-auth";
 
 export async function GET(request: NextRequest) {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll() {},
-      },
-    }
-  );
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = await requireAdmin();
+  if (authError) return authError;
 
   const { searchParams } = new URL(request.url);
   const count = Math.min(parseInt(searchParams.get("count") ?? "10"), 500);

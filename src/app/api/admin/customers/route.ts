@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateCustomer } from "@/lib/db/customers";
+import { requireAdmin } from "@/lib/api-auth";
 
 export async function PUT(req: NextRequest) {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
   const body = await req.json();
   const { customer_id, ...updates } = body;
 

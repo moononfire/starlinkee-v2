@@ -1,27 +1,17 @@
 import { notFound, redirect } from "next/navigation";
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import Link from "next/link";
+import { getPortalSession } from "@/lib/portal-session";
 import {
-  getCustomerByEmail,
-  getCustomerSubscriptions,
   getScanCountsBySubscription,
+  getAllReviewsBySubscription,
 } from "@/lib/db/portal";
-import type { CustomerLocationLink, Review } from "@/lib/types";
+import type { Review } from "@/lib/types";
 import PortalSetupForm from "../settings/PortalSetupForm";
-import LogoUpload from "../settings/LogoUpload";
-import GoogleLocationEditor from "../settings/GoogleLocationEditor";
-import LinktreeLinksEditor from "../settings/LinktreeLinksEditor";
-import { updateScanRedirectMode, updateLinktreeSlug, updateFourStarRedirect } from "../settings/actions";
-import { updateLocationName, updateSupportEmail } from "../settings/[subscriptionId]/actions";
-import { getLocationLinksByLocationId, ensureLinktreeSlug } from "@/lib/db/locations";
-import SavedToast from "../SavedToast";
-import { getAllReviewsBySubscription } from "@/lib/db/portal";
 import { getLanguage } from "@/lib/language";
 import { t } from "@/lib/translations";
 
 interface Props {
   params: Promise<{ subscriptionId: string }>;
-  searchParams: Promise<{ saved?: string; linktreeError?: string }>;
 }
 
 const DATE_LOCALES: Record<string, string> = { en: "en-US", de: "de-DE", pl: "pl-PL" };
@@ -39,62 +29,26 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
-export default async function SubscriptionPage({ params, searchParams }: Props) {
+export default async function SubscriptionPage({ params }: Props) {
   const { subscriptionId: rawId } = await params;
-  const { saved, linktreeError } = await searchParams;
   const subscriptionId = Number(rawId);
   if (!subscriptionId) notFound();
 
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
+  const { user, customer, subscriptions } = await getPortalSession();
+  if (!user || !customer) redirect("/portal/login");
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.email) redirect("/portal/login");
-
-  const customer = await getCustomerByEmail(user.email);
-  if (!customer) redirect("/portal/login");
-
-  const lang = await getLanguage();
-
-  const subscriptions = await getCustomerSubscriptions(customer.customer_id);
   const sub = subscriptions.find((s) => s.subscription_id === subscriptionId);
   if (!sub) notFound();
 
-  const { total: totalScans, byPlate: scansByPlate } = await getScanCountsBySubscription(subscriptionId);
-
-  const locationLinks: CustomerLocationLink[] = sub.location?.has_linktree_access
-    ? await getLocationLinksByLocationId(sub.location.location_id)
-    : [];
-
-  if (sub.location?.has_linktree_access && !sub.location.linktree_slug) {
-    sub.location.linktree_slug = await ensureLinktreeSlug(
-      sub.location.location_id,
-      sub.location.location_name
-    );
-  }
+  const lang = await getLanguage();
+  const { total: totalScans, byPlate: scansByPlate } =
+    await getScanCountsBySubscription(subscriptionId);
 
   // --- PENDING ---
   if (sub.status === "pending") {
     return (
       <div className="space-y-6">
-        <SubHeader sub={sub} totalScans={totalScans} scansByPlate={scansByPlate} lang={lang} />
+        <SubscriptionStats sub={sub} totalScans={totalScans} scansByPlate={scansByPlate} lang={lang} />
         <PortalSetupForm subscriptionId={sub.subscription_id} lang={lang} />
       </div>
     );
@@ -104,7 +58,7 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
   if (sub.status === "inactive") {
     return (
       <div className="space-y-6">
-        <SubHeader sub={sub} totalScans={totalScans} scansByPlate={scansByPlate} lang={lang} />
+        <SubscriptionStats sub={sub} totalScans={totalScans} scansByPlate={scansByPlate} lang={lang} />
 
         <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-5">
           <div className="flex gap-3">
@@ -140,17 +94,6 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
             </div>
           </div>
         </div>
-
-        {sub.location && (
-          <>
-            <p className="text-xs text-gray-400 dark:text-gray-500 px-1">
-              {t("portal_data_preserved", lang)}
-            </p>
-            <div className="opacity-50 pointer-events-none select-none space-y-6">
-              <LocationSettings sub={sub} locationLinks={locationLinks} lang={lang} />
-            </div>
-          </>
-        )}
       </div>
     );
   }
@@ -167,29 +110,9 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
 
   return (
     <div className="space-y-6">
-      <SubHeader sub={sub} totalScans={totalScans} scansByPlate={scansByPlate} lang={lang} />
+      <SubscriptionStats sub={sub} totalScans={totalScans} scansByPlate={scansByPlate} lang={lang} />
       <ReviewStats total={reviewTotal} avg={reviewAvg} byStars={reviewByStars} subscriptionId={subscriptionId} lang={lang} />
-      {sub.location?.has_promo_enabled && (
-        <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t("portal_promo_title", lang)}</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                {t("portal_promo_card_desc", lang)}
-              </p>
-            </div>
-            <a
-              href={`/portal/${subscriptionId}/promo`}
-              className="text-xs text-blue-600 dark:text-blue-400 hover:underline shrink-0"
-            >
-              {t("portal_manage", lang)} →
-            </a>
-          </div>
-        </section>
-      )}
-      <LocationSettings sub={sub} locationLinks={locationLinks} linktreeError={linktreeError} lang={lang} />
       <ReviewsSection reviews={recentReviews} subscriptionId={subscriptionId} lang={lang} />
-      <SavedToast show={saved === "1"} lang={lang} />
     </div>
   );
 }
@@ -217,12 +140,12 @@ function ReviewStats({
     <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t("portal_google_reviews", lang)}</h3>
-        <a
+        <Link
           href={`/portal/${subscriptionId}/reviews`}
           className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
         >
           {t("portal_details_link", lang)} →
-        </a>
+        </Link>
       </div>
       {total === 0 ? (
         <p className="text-sm text-gray-400 dark:text-gray-500">
@@ -248,7 +171,7 @@ function ReviewStats({
               const count = byStars[star] ?? 0;
               const pct = (count / total) * 100;
               return (
-                <a
+                <Link
                   key={star}
                   href={`/portal/${subscriptionId}/reviews?stars=${star}`}
                   className="flex items-center gap-2 text-xs group"
@@ -263,7 +186,7 @@ function ReviewStats({
                     />
                   </div>
                   <span className="w-6 text-right text-gray-400 dark:text-gray-500">{count}</span>
-                </a>
+                </Link>
               );
             })}
           </div>
@@ -273,53 +196,23 @@ function ReviewStats({
   );
 }
 
-function SubHeader({
+function SubscriptionStats({
   sub,
   totalScans,
   scansByPlate,
   lang,
 }: {
   sub: {
-    subscription_name: string;
-    status: string;
     plates: { plate_id: number; plate_number: string; number_of_visits: number }[];
     activation_datetime: string | null;
     expiration_datetime: string | null;
-    location?: { location_name: string } | null;
   };
   totalScans: number;
   scansByPlate: Record<number, number>;
   lang: string;
 }) {
-  const statusColors: Record<string, string> = {
-    active: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-    pending: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
-    inactive: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-  };
-  const statusLabel: Record<string, string> = {
-    active: t("portal_status_active", lang),
-    pending: t("portal_status_pending", lang),
-    inactive: t("portal_status_inactive_badge", lang),
-  };
-
-  const title = sub.location?.location_name
-    ?? (sub.plates.length > 0 ? sub.plates.map((p) => p.plate_number).join(", ") : t("portal_unassigned", lang));
-
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-      <div className="flex items-start justify-between gap-4 mb-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          {title}
-        </h2>
-        <span
-          className={`shrink-0 inline-block px-2.5 py-1 rounded-full text-xs font-medium ${
-            statusColors[sub.status] ?? statusColors.inactive
-          }`}
-        >
-          {statusLabel[sub.status] ?? sub.status}
-        </span>
-      </div>
-
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
         <div>
           <p className="text-gray-500 dark:text-gray-400 mb-0.5">{t("portal_plates", lang)}</p>
@@ -373,282 +266,6 @@ function SubHeader({
   );
 }
 
-function LocationSettings({
-  sub,
-  locationLinks,
-  linktreeError,
-  lang,
-}: {
-  sub: {
-    subscription_id: number;
-    subscription_name: string;
-    status: string;
-    location: {
-      location_id: number;
-      location_name: string;
-      google_business_name: string | null;
-      google_business_address: string | null;
-      logo_link: string | null;
-      support_email: string | null;
-      has_linktree_access: boolean;
-      linktree_slug: string | null;
-      scan_redirect_mode: "review" | "linktree";
-      redirect_four_star_reviews: boolean;
-    } | null;
-  };
-  locationLinks: CustomerLocationLink[];
-  linktreeError?: string;
-  lang: string;
-}) {
-  const location = sub.location;
-  if (!location) return null;
-
-  return (
-    <div className="space-y-4">
-      {/* Nazwa lokalu */}
-      <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-          {t("portal_location_name_title", lang)}
-        </h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-          {t("portal_location_name_desc", lang)}
-        </p>
-        <form action={updateLocationName} className="flex gap-3">
-          <input type="hidden" name="subscription_id" value={sub.subscription_id} />
-          <input type="hidden" name="location_id" value={location.location_id} />
-          <input
-            name="location_name"
-            required
-            type="text"
-            defaultValue={location.location_name}
-            className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shrink-0"
-          >
-            {t("portal_save", lang)}
-          </button>
-        </form>
-      </section>
-
-      {/* Google Maps */}
-      <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-          {t("portal_google_maps_location_title", lang)}
-        </h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-          {t("portal_google_maps_location_desc", lang)}
-        </p>
-        <GoogleLocationEditor
-          locationId={location.location_id}
-          locationName={location.location_name}
-          currentBusinessName={location.google_business_name}
-          currentBusinessAddress={location.google_business_address}
-          lang={lang}
-        />
-      </section>
-
-      {/* Logo */}
-      <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-          {t("portal_logo_title", lang)}
-        </h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-          {t("portal_logo_desc", lang)}
-        </p>
-        <LogoUpload
-          locationId={location.location_id}
-          locationName={location.location_name}
-          currentLogoLink={location.logo_link}
-          lang={lang}
-        />
-      </section>
-
-      {/* E-mail pomocniczy */}
-      <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-          {t("portal_support_email_title", lang)}
-        </h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-          {t("portal_support_email_desc", lang)}
-        </p>
-        <form action={updateSupportEmail} className="flex gap-3">
-          <input type="hidden" name="subscription_id" value={sub.subscription_id} />
-          <input type="hidden" name="location_id" value={location.location_id} />
-          <input
-            name="support_email"
-            required
-            type="email"
-            defaultValue={location.support_email ?? ""}
-            className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shrink-0"
-          >
-            {t("portal_save", lang)}
-          </button>
-        </form>
-      </section>
-
-      {/* Linki Linktree */}
-      {location.has_linktree_access && (
-        <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-            {t("portal_linktree_links_title", lang)}
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-            {t("portal_linktree_links_desc", lang)}
-          </p>
-          <LinktreeLinksEditor
-            locationId={location.location_id}
-            subscriptionId={sub.subscription_id}
-            initialLinks={locationLinks.map((l) => ({
-              title: l.title_pl || l.title,
-              url: l.url,
-            }))}
-            lang={lang}
-          />
-        </section>
-      )}
-
-      {/* Adres Linktree */}
-      {location.has_linktree_access && location.linktree_slug && (
-        <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-            {t("portal_linktree_slug_title", lang)}
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            {t("portal_linktree_slug_desc", lang)}
-          </p>
-          <form action={updateLinktreeSlug} className="flex gap-3">
-            <input type="hidden" name="location_id" value={location.location_id} />
-            <input type="hidden" name="subscription_id" value={sub.subscription_id} />
-            <div className="flex-1 flex items-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus-within:ring-2 focus-within:ring-blue-500">
-              <span className="pl-3 text-sm text-gray-400 dark:text-gray-500">/l/</span>
-              <input
-                name="linktree_slug"
-                required
-                type="text"
-                pattern="[a-z0-9-]{3,40}"
-                defaultValue={location.linktree_slug}
-                className="flex-1 bg-transparent px-1 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none"
-              />
-            </div>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shrink-0"
-            >
-              {t("portal_save", lang)}
-            </button>
-          </form>
-          {linktreeError === "taken" && (
-            <p className="text-xs text-red-600 dark:text-red-400 mt-2">
-              {t("portal_linktree_slug_taken", lang)}
-            </p>
-          )}
-          {linktreeError === "invalid" && (
-            <p className="text-xs text-red-600 dark:text-red-400 mt-2">
-              {t("portal_linktree_slug_invalid", lang)}
-            </p>
-          )}
-        </section>
-      )}
-
-      {/* Tryb skanowania */}
-      {location.has_linktree_access && location.linktree_slug && (
-        <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-            {t("portal_scan_mode_title", lang)}
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            {t("portal_scan_mode_desc", lang)}
-          </p>
-          <form action={updateScanRedirectMode} className="space-y-3">
-            <input type="hidden" name="location_id" value={location.location_id} />
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="radio"
-                name="scan_redirect_mode"
-                value="review"
-                defaultChecked={location.scan_redirect_mode === "review"}
-                className="mt-0.5"
-              />
-              <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {t("portal_scan_mode_review_title", lang)}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {t("portal_scan_mode_review_desc", lang)}
-                </p>
-              </div>
-            </label>
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="radio"
-                name="scan_redirect_mode"
-                value="linktree"
-                defaultChecked={location.scan_redirect_mode === "linktree"}
-                className="mt-0.5"
-              />
-              <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {t("portal_scan_mode_linktree_title", lang)}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {t("portal_scan_mode_linktree_desc", lang)}
-                </p>
-              </div>
-            </label>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              {t("portal_save", lang)}
-            </button>
-          </form>
-        </section>
-      )}
-
-      {/* Przekierowanie dla oceny 4 gwiazdek */}
-      <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-          {t("portal_four_star_title", lang)}
-        </h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-          {t("portal_four_star_desc", lang)}
-        </p>
-        <form action={updateFourStarRedirect} className="space-y-3">
-          <input type="hidden" name="location_id" value={location.location_id} />
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              name="redirect_four_star_reviews"
-              defaultChecked={location.redirect_four_star_reviews}
-              className="mt-0.5"
-            />
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                {t("portal_four_star_checkbox_label", lang)}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {t("portal_four_star_checkbox_desc", lang)}
-              </p>
-            </div>
-          </label>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            {t("portal_save", lang)}
-          </button>
-        </form>
-      </section>
-    </div>
-  );
-}
-
 function ReviewsSection({
   reviews,
   subscriptionId,
@@ -664,12 +281,12 @@ function ReviewsSection({
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
           {t("portal_recent_reviews", lang)}
         </h3>
-        <a
+        <Link
           href={`/portal/${subscriptionId}/reviews`}
           className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
         >
           {t("portal_all_reviews", lang)} →
-        </a>
+        </Link>
       </div>
 
       {reviews.length === 0 && (

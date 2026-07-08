@@ -5,7 +5,9 @@ import { upsertLinktreeLinks } from "./[subscriptionId]/actions";
 import { t } from "@/lib/translations";
 
 interface LinkItem {
-  title: string;
+  title_pl: string;
+  title_en: string;
+  title_de: string;
   url: string;
 }
 
@@ -13,17 +15,21 @@ interface Props {
   locationId: number;
   subscriptionId: number;
   initialLinks: LinkItem[];
+  saved?: boolean;
   lang: string;
 }
 
 const MAX_LINKS = 7;
+const LINK_LANGS = ["pl", "en", "de"] as const;
+type LinkLang = (typeof LINK_LANGS)[number];
 
-export default function LinktreeLinksEditor({ locationId, subscriptionId, initialLinks, lang }: Props) {
+export default function LinktreeLinksEditor({ locationId, subscriptionId, initialLinks, saved, lang }: Props) {
   const [links, setLinks] = useState<LinkItem[]>(initialLinks);
+  const [activeTab, setActiveTab] = useState<Record<number, LinkLang>>({});
 
   const addLink = () => {
     if (links.length >= MAX_LINKS) return;
-    setLinks([...links, { title: "", url: "" }]);
+    setLinks([...links, { title_pl: "", title_en: "", title_de: "", url: "" }]);
   };
 
   const removeLink = (idx: number) => {
@@ -54,33 +60,68 @@ export default function LinktreeLinksEditor({ locationId, subscriptionId, initia
         </p>
       )}
 
-      {links.map((link, idx) => (
-        <div key={idx} className="flex gap-2 items-center">
-          <input
-            type="text"
-            placeholder={t("portal_link_name_placeholder", lang)}
-            value={link.title}
-            onChange={(e) => update(idx, "title", e.target.value)}
-            className="w-2/5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            maxLength={60}
-          />
-          <input
-            type="url"
-            placeholder="https://..."
-            value={link.url}
-            onChange={(e) => update(idx, "url", e.target.value)}
-            className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            type="button"
-            onClick={() => removeLink(idx)}
-            aria-label={t("portal_remove_link", lang)}
-            className="shrink-0 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors rounded"
-          >
-            ✕
-          </button>
-        </div>
-      ))}
+      {links.map((link, idx) => {
+        const tab = activeTab[idx] ?? "pl";
+        const fieldKey = `title_${tab}` as const;
+
+        return (
+          <div key={idx} className="rounded-lg border border-gray-200 dark:border-gray-600 p-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex gap-1">
+                {LINK_LANGS.map((l) => {
+                  const filled = link[`title_${l}` as const].trim().length > 0;
+                  const isActive = tab === l;
+                  return (
+                    <button
+                      key={l}
+                      type="button"
+                      onClick={() => setActiveTab((prev) => ({ ...prev, [idx]: l }))}
+                      className={`relative px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                        isActive
+                          ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900"
+                          : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
+                      }`}
+                    >
+                      {l.toUpperCase()}
+                      {filled && (
+                        <span
+                          className={`absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${
+                            isActive ? "bg-green-400" : "bg-green-500"
+                          }`}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                type="button"
+                onClick={() => removeLink(idx)}
+                aria-label={t("portal_remove_link", lang)}
+                className="shrink-0 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors rounded"
+              >
+                ✕
+              </button>
+            </div>
+
+            <input
+              type="text"
+              placeholder={t("portal_link_name_placeholder", lang)}
+              value={link[fieldKey]}
+              onChange={(e) => update(idx, fieldKey, e.target.value)}
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              maxLength={60}
+            />
+            <input
+              type="url"
+              placeholder="https://..."
+              value={link.url}
+              onChange={(e) => update(idx, "url", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        );
+      })}
 
       <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900 text-amber-700 dark:text-amber-400 text-sm font-medium select-none">
         <span className="flex-1">{t("portal_claim_promo_link", lang)}</span>
@@ -100,12 +141,22 @@ export default function LinktreeLinksEditor({ locationId, subscriptionId, initia
         >
           + {t("portal_add_link", lang)} ({links.length}/{MAX_LINKS})
         </button>
-        <button
-          type="submit"
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          {t("portal_save", lang)}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            {t("portal_save", lang)}
+          </button>
+          {saved && (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400 shrink-0">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+              </svg>
+              {t("portal_saved_toast", lang)}
+            </span>
+          )}
+        </div>
       </div>
     </form>
   );

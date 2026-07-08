@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 const API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 
 export async function GET(request: NextRequest) {
+  // Public endpoint (plate setup runs unauthenticated) proxying a paid API —
+  // cap per-IP usage so the key can't be farmed.
+  if (!rateLimit(`google-ac:${clientIp(request)}`, 30, 60_000)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   const input = request.nextUrl.searchParams.get("input");
   if (!input || input.length < 2) {
     return NextResponse.json({ predictions: [] });

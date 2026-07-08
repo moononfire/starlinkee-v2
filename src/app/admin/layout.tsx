@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import AdminNav from "./AdminNav";
 import ThemeToggle from "@/components/ThemeToggle";
+import { isAdminUser } from "@/lib/admin-auth";
 
 export default async function AdminLayout({
   children,
@@ -34,6 +35,12 @@ export default async function AdminLayout({
 
   if (!user) {
     redirect("/login");
+  }
+
+  // Defense in depth: middleware also checks this, but the role gate must not
+  // depend on middleware alone (portal customers share the same auth pool).
+  if (!isAdminUser(user)) {
+    redirect("/portal");
   }
 
   return (
