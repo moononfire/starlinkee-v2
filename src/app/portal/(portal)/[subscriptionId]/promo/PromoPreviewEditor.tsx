@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { t } from "@/lib/translations";
-import { SUPPORTED_LANGUAGES, type Language } from "@/lib/language";
+import { SUPPORTED_LANGUAGES, type Language } from "@/lib/languages";
 
 const LANGUAGE_LABELS: Record<Language, string> = {
   pl: "Polski",

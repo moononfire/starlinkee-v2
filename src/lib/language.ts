@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
+import { SUPPORTED_LANGUAGES, type Language } from "@/lib/languages";
 
-export const SUPPORTED_LANGUAGES = ["en", "de", "pl"] as const;
-export type Language = (typeof SUPPORTED_LANGUAGES)[number];
+export { SUPPORTED_LANGUAGES, type Language };
 
 export async function getLanguage(
   scopeKey?: string,

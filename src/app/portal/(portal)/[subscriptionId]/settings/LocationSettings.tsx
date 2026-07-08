@@ -19,7 +19,7 @@ import {
   AutoSavePendingHint,
 } from "../../settings/AutoSaveControls";
 import { t } from "@/lib/translations";
-import { SUPPORTED_LANGUAGES } from "@/lib/language";
+import { SUPPORTED_LANGUAGES } from "@/lib/languages";
 
 export default function LocationSettings({
   subscriptionId,
