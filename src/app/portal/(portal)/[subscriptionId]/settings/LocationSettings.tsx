@@ -10,6 +10,7 @@ import {
 import {
   updateLocationName,
   updateSupportEmail,
+  updateActiveLanguages,
 } from "../../settings/[subscriptionId]/actions";
 import SubmitButton from "../../SubmitButton";
 import {
@@ -18,6 +19,7 @@ import {
   AutoSavePendingHint,
 } from "../../settings/AutoSaveControls";
 import { t } from "@/lib/translations";
+import { SUPPORTED_LANGUAGES } from "@/lib/language";
 
 export default function LocationSettings({
   subscriptionId,
@@ -118,6 +120,33 @@ export default function LocationSettings({
         </form>
       </section>
 
+      {/* Aktywne języki */}
+      <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+          {t("portal_active_languages_title", lang)}
+        </h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          {t("portal_active_languages_desc", lang)}
+        </p>
+        <form action={updateActiveLanguages} className="space-y-2">
+          <input type="hidden" name="location_id" value={location.location_id} />
+          <input type="hidden" name="subscription_id" value={subscriptionId} />
+          {SUPPORTED_LANGUAGES.map((l) => (
+            <label key={l} className="flex items-center gap-3 cursor-pointer">
+              <AutoSaveToggle
+                name={`lang_${l}`}
+                defaultChecked={location.active_languages.includes(l)}
+                ariaLabel={l.toUpperCase()}
+              />
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {l.toUpperCase()}
+              </span>
+            </label>
+          ))}
+          <AutoSavePendingHint lang={lang} />
+        </form>
+      </section>
+
       {/* Linki Linktree */}
       {location.has_linktree_access && (
         <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
@@ -139,6 +168,7 @@ export default function LocationSettings({
               title_de: l.title_de ?? "",
               url: l.url,
             }))}
+            activeLanguages={location.active_languages}
             saved={saved === "linktree_links"}
             lang={lang}
           />

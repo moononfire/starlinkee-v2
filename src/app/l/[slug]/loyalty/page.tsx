@@ -33,14 +33,23 @@ export default async function LoyaltyPage({ params }: Props) {
   }
 
   const plateLanguage = plates[0]?.plate_language ?? "pl";
-  const lang = await getLanguage(slug, plateLanguage);
+  const lang = await getLanguage(slug, plateLanguage, location.active_languages);
+
+  const maxStamps = location.loyalty_stamps_required ?? 10;
+  const customText =
+    lang === "en"
+      ? location.loyalty_card_text_en || location.loyalty_card_text || location.loyalty_card_text_de
+      : lang === "de"
+        ? location.loyalty_card_text_de || location.loyalty_card_text || location.loyalty_card_text_en
+        : location.loyalty_card_text || location.loyalty_card_text_en || location.loyalty_card_text_de;
+  const subtitle = customText?.trim() || t("loyalty_program", lang);
 
   return (
     <>
       <PageTracker locationId={location.location_id} pagePath={`/l/${slug}/loyalty`} pageType="loyalty" />
       <main className="min-h-screen bg-gray-50 flex flex-col items-center pt-4 px-4">
         <div className="flex justify-end w-full max-w-sm mb-3">
-          <LanguageSwitcher currentLang={lang} scopeKey={slug} />
+          <LanguageSwitcher currentLang={lang} scopeKey={slug} availableLanguages={location.active_languages} />
         </div>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-full max-w-sm">
           {location.logo_link && (
@@ -51,12 +60,13 @@ export default async function LoyaltyPage({ params }: Props) {
             />
           )}
           <h1 className="text-xl font-semibold text-center mb-1">{location.location_name}</h1>
-          <p className="text-sm text-gray-500 text-center mb-8">{t("loyalty_program", lang)}</p>
+          <p className="text-sm text-gray-500 text-center mb-8">{subtitle}</p>
 
           <LoyaltyCard
             slug={slug}
             initialStamps={initialStamps}
             isAuthenticated={isAuthenticated}
+            maxStamps={maxStamps}
             lang={lang}
           />
         </div>

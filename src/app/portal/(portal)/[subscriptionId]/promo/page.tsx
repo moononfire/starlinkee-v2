@@ -39,11 +39,24 @@ export default async function PromoPortalPage({ params, searchParams }: Props) {
         <input type="hidden" name="subscription_id" value={subscriptionId} />
         <input type="hidden" name="location_id" value={location.location_id} />
         <PromoPreviewEditor
-          initialDescription={location.promo_description ?? ""}
-          initialBannerText={location.promo_banner_text ?? ""}
-          initialSmsText={location.promo_sms_text ?? ""}
+          initialDescription={{
+            pl: location.promo_description ?? "",
+            en: location.promo_description_en ?? "",
+            de: location.promo_description_de ?? "",
+          }}
+          initialBannerText={{
+            pl: location.promo_banner_text ?? "",
+            en: location.promo_banner_text_en ?? "",
+            de: location.promo_banner_text_de ?? "",
+          }}
+          initialSmsText={{
+            pl: location.promo_sms_text ?? "",
+            en: location.promo_sms_text_en ?? "",
+            de: location.promo_sms_text_de ?? "",
+          }}
           logoLink={location.logo_link}
           locationName={locationName}
+          activeLanguages={location.active_languages}
           lang={lang}
         />
       </form>

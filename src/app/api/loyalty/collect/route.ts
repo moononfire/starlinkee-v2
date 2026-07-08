@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { getLoyaltySession } from "@/lib/session";
 import { getLoyaltyCard, createLoyaltyCard, incrementStamp } from "@/lib/db/loyalty";
+import { getLocationById } from "@/lib/db/locations";
 
 const COOLDOWN_MS = 12 * 60 * 60 * 1000; // 12h
-const MAX_STAMPS = 10;
 
 export async function POST() {
   const session = await getLoyaltySession();
@@ -13,15 +13,21 @@ export async function POST() {
 
   const { phone, locationId } = session;
 
+  const location = await getLocationById(locationId);
+  const maxStamps = location?.loyalty_stamps_required ?? 10;
+
   let card = await getLoyaltyCard(locationId, phone);
 
   if (!card) {
     card = await createLoyaltyCard(locationId, phone);
-    return NextResponse.json({ stamps: card.stamps_count, reward_ready: false });
+    return NextResponse.json({
+      stamps: card.stamps_count,
+      reward_ready: card.stamps_count >= maxStamps,
+    });
   }
 
-  if (card.stamps_count >= MAX_STAMPS) {
-    return NextResponse.json({ stamps: MAX_STAMPS, reward_ready: true });
+  if (card.stamps_count >= maxStamps) {
+    return NextResponse.json({ stamps: card.stamps_count, reward_ready: true });
   }
 
   if (card.last_stamp_at) {
@@ -33,7 +39,7 @@ export async function POST() {
   }
 
   const updated = await incrementStamp(card.id);
-  const reward_ready = updated.stamps_count >= MAX_STAMPS;
+  const reward_ready = updated.stamps_count >= maxStamps;
 
   return NextResponse.json({ stamps: updated.stamps_count, reward_ready });
 }

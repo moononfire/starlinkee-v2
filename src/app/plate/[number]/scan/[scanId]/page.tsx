@@ -30,7 +30,7 @@ export default async function ScanPage({ params }: Props) {
   const location = await getLocationBySubscriptionId(plate.subscription_id);
   if (!location) notFound();
 
-  const lang = await getLanguage(plate.plate_number, plate.plate_language);
+  const lang = await getLanguage(plate.plate_number, plate.plate_language, location.active_languages);
 
   // Rating already recorded for this scan — never show the star picker again,
   // otherwise a refresh lets a dissatisfied visitor re-roll a 5-star rating
@@ -59,7 +59,7 @@ export default async function ScanPage({ params }: Props) {
       <PageTracker locationId={location.location_id} pagePath={`/plate/${number}/scan`} pageType="plate_scan" />
       <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
         <div className="max-w-sm w-full flex flex-col items-center gap-6">
-          <LanguageSwitcher currentLang={lang} scopeKey={plate.plate_number} />
+          <LanguageSwitcher currentLang={lang} scopeKey={plate.plate_number} availableLanguages={location.active_languages} />
 
           {location.logo_link && (
             // eslint-disable-next-line @next/next/no-img-element

@@ -36,7 +36,7 @@ async function verifyOwnership(
   return true;
 }
 
-export async function updatePromoSettings(formData: FormData) {
+export async function updateLoyaltySettings(formData: FormData) {
   const cookieStore = await cookies();
   const supabase = makeSupabase(cookieStore);
 
@@ -50,24 +50,23 @@ export async function updatePromoSettings(formData: FormData) {
 
   const subscriptionId = Number(formData.get("subscription_id"));
   const locationId = Number(formData.get("location_id"));
-  const field = (name: string) => (formData.get(name) as string)?.trim() || null;
+  const cardText = (formData.get("loyalty_card_text") as string)?.trim() || null;
+  const cardTextEn = (formData.get("loyalty_card_text_en") as string)?.trim() || null;
+  const cardTextDe = (formData.get("loyalty_card_text_de") as string)?.trim() || null;
+  const rawStamps = Number(formData.get("loyalty_stamps_required"));
+  const stampsRequired = Math.min(10, Math.max(5, Number.isFinite(rawStamps) ? rawStamps : 10));
 
-  const dest = `/portal/${subscriptionId}/promo`;
+  const dest = `/portal/${subscriptionId}/loyalty`;
   if (!subscriptionId || !locationId) redirect(dest);
 
   const ok = await verifyOwnership(customer.customer_id, subscriptionId, locationId);
   if (!ok) redirect(`/portal/${subscriptionId}`);
 
   await updateLocation(locationId, {
-    promo_description: field("promo_description"),
-    promo_description_en: field("promo_description_en"),
-    promo_description_de: field("promo_description_de"),
-    promo_banner_text: field("promo_banner_text"),
-    promo_banner_text_en: field("promo_banner_text_en"),
-    promo_banner_text_de: field("promo_banner_text_de"),
-    promo_sms_text: field("promo_sms_text"),
-    promo_sms_text_en: field("promo_sms_text_en"),
-    promo_sms_text_de: field("promo_sms_text_de"),
+    loyalty_card_text: cardText,
+    loyalty_card_text_en: cardTextEn,
+    loyalty_card_text_de: cardTextDe,
+    loyalty_stamps_required: stampsRequired,
   });
 
   redirect(`${dest}?saved=1`);
