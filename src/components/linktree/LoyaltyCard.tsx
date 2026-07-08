@@ -63,6 +63,9 @@ export default function LoyaltyCard({ slug, scanToken, initialStamps, isAuthenti
       setError(t("invalid_code", lang));
       return;
     }
+    const data = await res.json();
+    setStamps(data.stamps ?? 0);
+    setRewardReady(data.reward_ready ?? false);
     setScreen("card");
   }
 

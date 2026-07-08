@@ -10,12 +10,12 @@ beforeEach(() => {
 });
 
 describe("sendSms()", () => {
-  it("uses PL sender number for +48 phone numbers", async () => {
+  it("uses default sender number for +48 phone numbers", async () => {
     await sendSms("+48600000000", "Test message");
 
     const call = mockFetch.mock.calls[0];
     const body = JSON.parse(call[1].body);
-    expect(body.from).toBe(process.env.HTTPSMS_SENDER_NUMBER_PL);
+    expect(body.from).toBe(process.env.HTTPSMS_SENDER_NUMBER);
     expect(body.to).toBe("+48600000000");
     expect(body.content).toBe("Test message");
   });
