@@ -3,12 +3,21 @@ import { timingSafeEqual } from "crypto";
 import { getLocationBySlug } from "@/lib/db/locations";
 import { getOtp, deleteOtp } from "@/lib/db/loyalty";
 import { setLoyaltySession } from "@/lib/session";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   const { phone, code, slug } = await request.json();
 
   if (!phone || !code || !slug) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  }
+
+  // A 4-digit code is brute-forceable — cap verification attempts.
+  if (
+    !rateLimit(`otp-verify-phone:${phone}`, 5, 10 * 60_000) ||
+    !rateLimit(`otp-verify-ip:${clientIp(request)}`, 20, 10 * 60_000)
+  ) {
+    return NextResponse.json({ error: "Too many attempts" }, { status: 429 });
   }
 
   const location = await getLocationBySlug(slug);

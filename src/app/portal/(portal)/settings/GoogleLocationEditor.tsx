@@ -21,6 +21,7 @@ interface Props {
   locationName: string;
   currentBusinessName: string | null;
   currentBusinessAddress: string | null;
+  saved?: boolean;
   lang: string;
 }
 
@@ -29,6 +30,7 @@ export default function GoogleLocationEditor({
   locationName,
   currentBusinessName,
   currentBusinessAddress,
+  saved,
   lang,
 }: Props) {
   const [editing, setEditing] = useState(false);
@@ -120,13 +122,23 @@ export default function GoogleLocationEditor({
               <p className="text-gray-400 dark:text-gray-500 italic">{t("portal_no_location_configured", lang)}</p>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition-colors"
-          >
-            {t("portal_change", lang)}
-          </button>
+          <div className="flex items-center gap-3 shrink-0">
+            {saved && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                {t("portal_saved_toast", lang)}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition-colors"
+            >
+              {t("portal_change", lang)}
+            </button>
+          </div>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-3 mt-3">

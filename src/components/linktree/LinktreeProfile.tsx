@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { CustomerLocation, CustomerLocationLink } from "@/lib/types";
 import { t } from "@/lib/translations";
+import { isSafeHttpUrl } from "@/lib/urls";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 interface Props {
@@ -46,7 +47,7 @@ export default function LinktreeProfile({ location, links, slug, scanToken, lang
           >
             ⭐ {t("leave_review", lang)}
           </Link>
-          {links.map((link) => (
+          {links.filter((link) => isSafeHttpUrl(link.url)).map((link) => (
             <a
               key={link.id}
               href={link.url}

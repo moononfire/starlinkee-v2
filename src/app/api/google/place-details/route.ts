@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 const API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 
 export async function GET(request: NextRequest) {
+  if (!rateLimit(`google-pd:${clientIp(request)}`, 15, 60_000)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   const placeId = request.nextUrl.searchParams.get("place_id");
   if (!placeId) {
     return NextResponse.json({ error: "Missing place_id" }, { status: 400 });

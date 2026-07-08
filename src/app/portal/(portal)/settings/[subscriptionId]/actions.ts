@@ -5,6 +5,7 @@ import { createServerClient } from "@supabase/ssr";
 import { redirect } from "next/navigation";
 import { getCustomerByEmail, getCustomerSubscriptions } from "@/lib/db/portal";
 import { updateLocation, upsertLocationLinks } from "@/lib/db/locations";
+import { isSafeHttpUrl } from "@/lib/urls";
 
 function makeSupabase(cookieStore: Awaited<ReturnType<typeof cookies>>) {
   return createServerClient(
@@ -59,7 +60,7 @@ export async function updateLocationName(formData: FormData) {
   if (!ok) redirect(dest);
 
   await updateLocation(locationId, { location_name: locationName });
-  redirect(`${dest}?saved=1`);
+  redirect(`${dest}/settings?saved=location_name`);
 }
 
 export async function upsertLinktreeLinks(formData: FormData) {
@@ -84,7 +85,7 @@ export async function upsertLinktreeLinks(formData: FormData) {
   const ok = await verifyOwnership(customer.customer_id, subscriptionId, locationId);
   if (!ok) redirect(dest);
 
-  let rawLinks: { title: string; url: string }[];
+  let rawLinks: { title_pl: string; title_en: string; title_de: string; url: string }[];
   try {
     rawLinks = JSON.parse(linksJson);
     if (!Array.isArray(rawLinks)) throw new Error();
@@ -94,16 +95,23 @@ export async function upsertLinktreeLinks(formData: FormData) {
 
   const links = rawLinks
     .slice(0, 7)
-    .filter((l) => l.title?.trim() && l.url?.trim())
-    .map((l, i) => ({
-      title: l.title.trim(),
-      title_pl: l.title.trim(),
-      url: l.url.trim(),
-      sort_order: i,
-    }));
+    .filter((l) => l.title_pl?.trim() && l.url?.trim() && isSafeHttpUrl(l.url.trim()))
+    .map((l, i) => {
+      const title_pl = l.title_pl.trim();
+      const title_en = l.title_en?.trim() || null;
+      const title_de = l.title_de?.trim() || null;
+      return {
+        title: title_pl,
+        title_pl,
+        title_en,
+        title_de,
+        url: l.url.trim(),
+        sort_order: i,
+      };
+    });
 
   await upsertLocationLinks(locationId, links);
-  redirect(`${dest}?saved=1`);
+  redirect(`${dest}/settings?saved=linktree_links`);
 }
 
 export async function updateSupportEmail(formData: FormData) {
@@ -132,5 +140,5 @@ export async function updateSupportEmail(formData: FormData) {
     support_email: supportEmail,
     owner_email: supportEmail,
   });
-  redirect(`${dest}?saved=1`);
+  redirect(`${dest}/settings?saved=support_email`);
 }

@@ -13,6 +13,7 @@ vi.mock("@/lib/db/loyalty", () => ({ getOtp: mockGetOtp, deleteOtp: mockDeleteOt
 vi.mock("@/lib/session", () => ({ setLoyaltySession: mockSetLoyaltySession }));
 
 import { POST } from "@/app/api/loyalty/verify-otp/route";
+import { resetRateLimits } from "@/lib/rate-limit";
 
 const location = { location_id: 1, has_loyalty_enabled: true };
 const validOtp = {
@@ -30,6 +31,7 @@ function makeRequest(body: unknown) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetRateLimits();
   mockGetLocationBySlug.mockResolvedValue(location);
   mockGetOtp.mockResolvedValue(validOtp);
   mockDeleteOtp.mockResolvedValue(undefined);

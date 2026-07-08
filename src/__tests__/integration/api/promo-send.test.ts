@@ -24,6 +24,7 @@ vi.mock("@/lib/sms", () => ({ sendSms: mockSendSms }));
 vi.mock("@/lib/email", () => ({ sendPromoEmail: mockSendPromoEmail }));
 
 import { POST } from "@/app/api/promo/send/route";
+import { resetRateLimits } from "@/lib/rate-limit";
 
 const location = {
   location_id: 1,
@@ -44,6 +45,7 @@ const validBody = { phone: "+48600000000", slug: "good-eats", agreed: true };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetRateLimits();
   mockGetLocationBySlug.mockResolvedValue(location);
   mockCheckLeadExists.mockResolvedValue(false);
   mockCreateLead.mockResolvedValue({ id: 1, claim_token: "tok" });
