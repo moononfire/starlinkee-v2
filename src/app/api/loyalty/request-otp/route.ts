@@ -4,19 +4,22 @@ import { getLocationBySlug } from "@/lib/db/locations";
 import { upsertOtp } from "@/lib/db/loyalty";
 import { sendSms } from "@/lib/sms";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { normalizePhone } from "@/lib/phone";
 
 const PHONE_PATTERN = /^\+?[0-9 ()-]{6,20}$/;
 
 export async function POST(request: NextRequest) {
-  const { phone, slug } = await request.json();
+  const { phone: rawPhone, slug } = await request.json();
 
-  if (!phone || !slug) {
+  if (!rawPhone || !slug) {
     return NextResponse.json({ error: "Missing phone or slug" }, { status: 400 });
   }
 
-  if (typeof phone !== "string" || !PHONE_PATTERN.test(phone)) {
+  if (typeof rawPhone !== "string" || !PHONE_PATTERN.test(rawPhone)) {
     return NextResponse.json({ error: "Invalid phone number" }, { status: 400 });
   }
+
+  const phone = normalizePhone(rawPhone);
 
   // Each request sends a paid SMS — throttle per phone and per IP.
   if (

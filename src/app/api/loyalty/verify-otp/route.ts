@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 import { getLocationBySlug } from "@/lib/db/locations";
-import { getOtp, deleteOtp } from "@/lib/db/loyalty";
+import { getOtp, deleteOtp, getLoyaltyCard } from "@/lib/db/loyalty";
 import { setLoyaltySession } from "@/lib/session";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { normalizePhone } from "@/lib/phone";
 
 export async function POST(request: NextRequest) {
-  const { phone, code, slug } = await request.json();
+  const { phone: rawPhone, code, slug } = await request.json();
 
-  if (!phone || !code || !slug) {
+  if (!rawPhone || !code || !slug) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
+
+  const phone = normalizePhone(rawPhone);
 
   // A 4-digit code is brute-forceable — cap verification attempts.
   if (
@@ -47,5 +50,9 @@ export async function POST(request: NextRequest) {
   await deleteOtp(location.location_id, phone);
   await setLoyaltySession(phone, location.location_id);
 
-  return NextResponse.json({ ok: true });
+  const maxStamps = location.loyalty_stamps_required ?? 10;
+  const card = await getLoyaltyCard(location.location_id, phone);
+  const stamps = card?.stamps_count ?? 0;
+
+  return NextResponse.json({ ok: true, stamps, reward_ready: stamps >= maxStamps });
 }
