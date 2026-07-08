@@ -5,6 +5,7 @@ import { t } from "@/lib/translations";
 
 interface Props {
   slug: string;
+  scanToken?: string;
   initialStamps: number | null;
   isAuthenticated: boolean;
   maxStamps: number;
@@ -20,7 +21,7 @@ function formatRemaining(seconds: number): string {
   return `${m}m`;
 }
 
-export default function LoyaltyCard({ slug, initialStamps, isAuthenticated, maxStamps, lang }: Props) {
+export default function LoyaltyCard({ slug, scanToken, initialStamps, isAuthenticated, maxStamps, lang }: Props) {
   const [screen, setScreen] = useState<Screen>(isAuthenticated ? "card" : "phone");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
@@ -69,12 +70,20 @@ export default function LoyaltyCard({ slug, initialStamps, isAuthenticated, maxS
     setLoading(true);
     setError(null);
     setCooldownSeconds(null);
-    const res = await fetch("/api/loyalty/collect", { method: "POST" });
+    const res = await fetch("/api/loyalty/collect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scanToken }),
+    });
     const data = await res.json();
     setLoading(false);
 
     if (res.status === 429 && data.error === "cooldown") {
       setCooldownSeconds(data.remaining_seconds);
+      return;
+    }
+    if (res.status === 403 && data.error === "scan_required") {
+      setError(t("loyalty_rescan_required", lang));
       return;
     }
     if (!res.ok) {

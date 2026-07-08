@@ -1,17 +1,26 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getLoyaltySession } from "@/lib/session";
 import { getLoyaltyCard, createLoyaltyCard, incrementStamp } from "@/lib/db/loyalty";
 import { getLocationById } from "@/lib/db/locations";
+import { validateScanToken } from "@/lib/db/scan-tokens";
 
 const COOLDOWN_MS = 12 * 60 * 60 * 1000; // 12h
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   const session = await getLoyaltySession();
   if (!session.phone || !session.locationId) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   const { phone, locationId } = session;
+
+  // Require proof of a real, recent NFC tap — otherwise the loyalty link
+  // could be reused remotely without ever visiting the location.
+  const { scanToken } = await request.json().catch(() => ({ scanToken: undefined }));
+  const scanResult = scanToken ? await validateScanToken(scanToken) : { valid: false as const };
+  if (!scanResult.valid || scanResult.locationId !== locationId) {
+    return NextResponse.json({ error: "scan_required" }, { status: 403 });
+  }
 
   const location = await getLocationById(locationId);
   const maxStamps = location?.loyalty_stamps_required ?? 10;
