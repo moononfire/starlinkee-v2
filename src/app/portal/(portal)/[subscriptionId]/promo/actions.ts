@@ -50,9 +50,7 @@ export async function updatePromoSettings(formData: FormData) {
 
   const subscriptionId = Number(formData.get("subscription_id"));
   const locationId = Number(formData.get("location_id"));
-  const promoDescription = (formData.get("promo_description") as string)?.trim() || null;
-  const promoBannerText = (formData.get("promo_banner_text") as string)?.trim() || null;
-  const promoSmsText = (formData.get("promo_sms_text") as string)?.trim() || null;
+  const field = (name: string) => (formData.get(name) as string)?.trim() || null;
 
   const dest = `/portal/${subscriptionId}/promo`;
   if (!subscriptionId || !locationId) redirect(dest);
@@ -61,9 +59,15 @@ export async function updatePromoSettings(formData: FormData) {
   if (!ok) redirect(`/portal/${subscriptionId}`);
 
   await updateLocation(locationId, {
-    promo_description: promoDescription,
-    promo_banner_text: promoBannerText,
-    promo_sms_text: promoSmsText,
+    promo_description: field("promo_description"),
+    promo_description_en: field("promo_description_en"),
+    promo_description_de: field("promo_description_de"),
+    promo_banner_text: field("promo_banner_text"),
+    promo_banner_text_en: field("promo_banner_text_en"),
+    promo_banner_text_de: field("promo_banner_text_de"),
+    promo_sms_text: field("promo_sms_text"),
+    promo_sms_text_en: field("promo_sms_text_en"),
+    promo_sms_text_de: field("promo_sms_text_de"),
   });
 
   redirect(`${dest}?saved=1`);

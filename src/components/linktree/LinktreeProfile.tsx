@@ -23,7 +23,7 @@ export default function LinktreeProfile({ location, links, slug, scanToken, lang
   return (
     <main className="min-h-screen flex flex-col items-center p-6 bg-white">
       <div className="flex justify-end w-full max-w-sm mb-3">
-        <LanguageSwitcher currentLang={lang} scopeKey={slug} />
+        <LanguageSwitcher currentLang={lang} scopeKey={slug} availableLanguages={location.active_languages} />
       </div>
       <div className="max-w-sm w-full flex flex-col items-center gap-6">
 

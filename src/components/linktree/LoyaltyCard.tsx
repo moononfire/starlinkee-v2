@@ -7,6 +7,7 @@ interface Props {
   slug: string;
   initialStamps: number | null;
   isAuthenticated: boolean;
+  maxStamps: number;
   lang: string;
 }
 
@@ -19,12 +20,12 @@ function formatRemaining(seconds: number): string {
   return `${m}m`;
 }
 
-export default function LoyaltyCard({ slug, initialStamps, isAuthenticated, lang }: Props) {
+export default function LoyaltyCard({ slug, initialStamps, isAuthenticated, maxStamps, lang }: Props) {
   const [screen, setScreen] = useState<Screen>(isAuthenticated ? "card" : "phone");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [stamps, setStamps] = useState(initialStamps ?? 0);
-  const [rewardReady, setRewardReady] = useState((initialStamps ?? 0) >= 10);
+  const [rewardReady, setRewardReady] = useState((initialStamps ?? 0) >= maxStamps);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldownSeconds, setCooldownSeconds] = useState<number | null>(null);
@@ -95,7 +96,7 @@ export default function LoyaltyCard({ slug, initialStamps, isAuthenticated, lang
     setRewardReady(false);
   }
 
-  const MAX = 10;
+  const MAX = maxStamps;
 
   if (screen === "phone") {
     return (

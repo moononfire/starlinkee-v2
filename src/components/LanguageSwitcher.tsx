@@ -48,9 +48,10 @@ const flagMap: Record<string, () => React.JSX.Element> = {
 interface Props {
   currentLang: string;
   scopeKey?: string;
+  availableLanguages?: readonly string[];
 }
 
-export default function LanguageSwitcher({ currentLang, scopeKey }: Props) {
+export default function LanguageSwitcher({ currentLang, scopeKey, availableLanguages }: Props) {
   const router = useRouter();
 
   function switchLang(lang: string) {
@@ -59,9 +60,13 @@ export default function LanguageSwitcher({ currentLang, scopeKey }: Props) {
     router.refresh();
   }
 
+  const visibleLanguages = availableLanguages
+    ? languages.filter((l) => availableLanguages.includes(l.code))
+    : languages;
+
   return (
     <div className="flex items-center gap-1.5">
-      {languages.map(({ code, label }) => {
+      {visibleLanguages.map(({ code, label }) => {
         const Flag = flagMap[code];
         const isActive = currentLang === code;
         return (

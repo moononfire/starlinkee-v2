@@ -7,10 +7,12 @@ import { t } from "@/lib/translations";
 export default function SubTabs({
   subscriptionId,
   hasPromo,
+  hasLoyalty,
   lang,
 }: {
   subscriptionId: number;
   hasPromo: boolean;
+  hasLoyalty: boolean;
   lang: string;
 }) {
   const pathname = usePathname();
@@ -21,6 +23,9 @@ export default function SubTabs({
     { href: `${base}/reviews`, label: t("portal_tab_reviews", lang) },
     ...(hasPromo
       ? [{ href: `${base}/promo`, label: t("portal_tab_promo", lang) }]
+      : []),
+    ...(hasLoyalty
+      ? [{ href: `${base}/loyalty`, label: t("portal_tab_loyalty", lang) }]
       : []),
     { href: `${base}/settings`, label: t("portal_tab_settings", lang) },
   ];

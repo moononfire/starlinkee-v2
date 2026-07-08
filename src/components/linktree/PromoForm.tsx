@@ -45,7 +45,7 @@ export default function PromoForm({ slug, bannerText, scanToken, lang }: Props) 
     const res = await fetch("/api/promo/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, email: email || null, agreed, slug, scanToken }),
+      body: JSON.stringify({ phone, email: email || null, agreed, slug, scanToken, lang }),
     });
 
     setLoading(false);

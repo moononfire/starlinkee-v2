@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { upsertLinktreeLinks } from "./[subscriptionId]/actions";
 import { t } from "@/lib/translations";
+import { SUPPORTED_LANGUAGES, type Language } from "@/lib/language";
 
 interface LinkItem {
   title_pl: string;
@@ -15,17 +16,19 @@ interface Props {
   locationId: number;
   subscriptionId: number;
   initialLinks: LinkItem[];
+  activeLanguages: Language[];
   saved?: boolean;
   lang: string;
 }
 
 const MAX_LINKS = 7;
-const LINK_LANGS = ["pl", "en", "de"] as const;
-type LinkLang = (typeof LINK_LANGS)[number];
+type LinkLang = (typeof SUPPORTED_LANGUAGES)[number];
 
-export default function LinktreeLinksEditor({ locationId, subscriptionId, initialLinks, saved, lang }: Props) {
+export default function LinktreeLinksEditor({ locationId, subscriptionId, initialLinks, activeLanguages, saved, lang }: Props) {
   const [links, setLinks] = useState<LinkItem[]>(initialLinks);
   const [activeTab, setActiveTab] = useState<Record<number, LinkLang>>({});
+  const linkLangs = SUPPORTED_LANGUAGES.filter((l) => activeLanguages.includes(l));
+  const defaultLang = linkLangs[0] ?? "pl";
 
   const addLink = () => {
     if (links.length >= MAX_LINKS) return;
@@ -61,14 +64,14 @@ export default function LinktreeLinksEditor({ locationId, subscriptionId, initia
       )}
 
       {links.map((link, idx) => {
-        const tab = activeTab[idx] ?? "pl";
+        const tab = activeTab[idx] ?? defaultLang;
         const fieldKey = `title_${tab}` as const;
 
         return (
           <div key={idx} className="rounded-lg border border-gray-200 dark:border-gray-600 p-3 space-y-2">
             <div className="flex items-center justify-between gap-2">
               <div className="flex gap-1">
-                {LINK_LANGS.map((l) => {
+                {linkLangs.map((l) => {
                   const filled = link[`title_${l}` as const].trim().length > 0;
                   const isActive = tab === l;
                   return (

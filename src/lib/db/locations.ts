@@ -117,6 +117,7 @@ export async function createLocation(data: {
         has_linktree_access: true,
         has_promo_enabled: true,
         has_loyalty_enabled: true,
+        active_languages: ["pl", "en", "de"],
       },
       { onConflict: "subscription_id" }
     )
@@ -206,9 +207,19 @@ export async function updateLocation(
     has_linktree_access?: boolean;
     has_promo_enabled?: boolean;
     has_loyalty_enabled?: boolean;
+    loyalty_stamps_required?: number;
+    loyalty_card_text?: string | null;
+    loyalty_card_text_en?: string | null;
+    loyalty_card_text_de?: string | null;
     promo_description?: string | null;
+    promo_description_en?: string | null;
+    promo_description_de?: string | null;
     promo_banner_text?: string | null;
+    promo_banner_text_en?: string | null;
+    promo_banner_text_de?: string | null;
     promo_sms_text?: string | null;
+    promo_sms_text_en?: string | null;
+    promo_sms_text_de?: string | null;
     google_review_link?: string | null;
     google_places_id?: string | null;
     support_email?: string | null;
@@ -217,6 +228,7 @@ export async function updateLocation(
     owner_email?: string | null;
     scan_redirect_mode?: "review" | "linktree";
     redirect_four_star_reviews?: boolean;
+    active_languages?: string[];
   }
 ): Promise<CustomerLocation> {
   const supabase = createAdminClient();

@@ -1,12 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockGetLoyaltySession, mockGetLoyaltyCard, mockCreateLoyaltyCard, mockIncrementStamp } =
-  vi.hoisted(() => ({
-    mockGetLoyaltySession: vi.fn(),
-    mockGetLoyaltyCard: vi.fn(),
-    mockCreateLoyaltyCard: vi.fn(),
-    mockIncrementStamp: vi.fn(),
-  }));
+const {
+  mockGetLoyaltySession,
+  mockGetLoyaltyCard,
+  mockCreateLoyaltyCard,
+  mockIncrementStamp,
+  mockGetLocationById,
+} = vi.hoisted(() => ({
+  mockGetLoyaltySession: vi.fn(),
+  mockGetLoyaltyCard: vi.fn(),
+  mockCreateLoyaltyCard: vi.fn(),
+  mockIncrementStamp: vi.fn(),
+  mockGetLocationById: vi.fn(),
+}));
 
 vi.mock("@/lib/session", () => ({ getLoyaltySession: mockGetLoyaltySession }));
 vi.mock("@/lib/db/loyalty", () => ({
@@ -14,6 +20,7 @@ vi.mock("@/lib/db/loyalty", () => ({
   createLoyaltyCard: mockCreateLoyaltyCard,
   incrementStamp: mockIncrementStamp,
 }));
+vi.mock("@/lib/db/locations", () => ({ getLocationById: mockGetLocationById }));
 
 import { POST } from "@/app/api/loyalty/collect/route";
 
@@ -22,6 +29,7 @@ const session = { phone: "+48600000000", locationId: 1 };
 beforeEach(() => {
   vi.clearAllMocks();
   mockGetLoyaltySession.mockResolvedValue(session);
+  mockGetLocationById.mockResolvedValue({ location_id: 1, loyalty_stamps_required: 10 });
 });
 
 describe("POST /api/loyalty/collect", () => {
@@ -97,5 +105,40 @@ describe("POST /api/loyalty/collect", () => {
     const res = await POST();
     expect(res.status).toBe(200);
     expect(mockIncrementStamp).toHaveBeenCalledOnce();
+  });
+
+  it("returns reward_ready=true at a custom loyalty_stamps_required threshold", async () => {
+    mockGetLocationById.mockResolvedValue({ location_id: 1, loyalty_stamps_required: 5 });
+    const oldStamp = new Date(Date.now() - 13 * 60 * 60 * 1000).toISOString();
+    mockGetLoyaltyCard.mockResolvedValue({ id: 1, stamps_count: 4, last_stamp_at: oldStamp });
+    mockIncrementStamp.mockResolvedValue({ stamps_count: 5 });
+
+    const res = await POST();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.stamps).toBe(5);
+    expect(body.reward_ready).toBe(true);
+  });
+
+  it("does not increment past a custom threshold", async () => {
+    mockGetLocationById.mockResolvedValue({ location_id: 1, loyalty_stamps_required: 5 });
+    mockGetLoyaltyCard.mockResolvedValue({ id: 1, stamps_count: 5, last_stamp_at: null });
+
+    const res = await POST();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.reward_ready).toBe(true);
+    expect(mockIncrementStamp).not.toHaveBeenCalled();
+  });
+
+  it("falls back to 10 stamps when location is missing", async () => {
+    mockGetLocationById.mockResolvedValue(null);
+    const oldStamp = new Date(Date.now() - 13 * 60 * 60 * 1000).toISOString();
+    mockGetLoyaltyCard.mockResolvedValue({ id: 1, stamps_count: 8, last_stamp_at: oldStamp });
+    mockIncrementStamp.mockResolvedValue({ stamps_count: 9 });
+
+    const res = await POST();
+    const body = await res.json();
+    expect(body.reward_ready).toBe(false);
   });
 });

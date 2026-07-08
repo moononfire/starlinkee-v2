@@ -5,11 +5,12 @@ import { validateScanToken } from "@/lib/db/scan-tokens";
 import { sendSms } from "@/lib/sms";
 import { sendPromoEmail } from "@/lib/email";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { getPromoText } from "@/lib/promo-i18n";
 
 const PHONE_PATTERN = /^\+?[0-9 ()-]{6,20}$/;
 
 export async function POST(request: NextRequest) {
-  const { phone, email, agreed, slug, scanToken } = await request.json();
+  const { phone, email, agreed, slug, scanToken, lang } = await request.json();
 
   if (!phone || !slug || !agreed) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -55,8 +56,9 @@ export async function POST(request: NextRequest) {
   try {
     await createLead(location.location_id, phone, email ?? null, agreed, claimToken, couponCode);
 
-    const smsText = location.promo_sms_text
-      ? `${location.promo_sms_text} ${claimUrl}`
+    const localizedSmsText = getPromoText(location, typeof lang === "string" ? lang : "pl", "promo_sms_text");
+    const smsText = localizedSmsText
+      ? `${localizedSmsText} ${claimUrl}`
       : `Twoja promocja od ${location.location_name}: ${claimUrl}`;
 
     await sendSms(phone, smsText);
@@ -65,7 +67,7 @@ export async function POST(request: NextRequest) {
       sendPromoEmail(email, {
         locationName: location.location_name,
         claimUrl,
-        smsText: location.promo_sms_text ?? `Twoja promocja od ${location.location_name}`,
+        smsText: localizedSmsText || `Twoja promocja od ${location.location_name}`,
       }).catch(() => {});
     }
   } catch {

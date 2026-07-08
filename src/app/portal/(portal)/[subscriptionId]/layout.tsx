@@ -59,6 +59,7 @@ export default async function SubscriptionLayout({
         <SubTabs
           subscriptionId={subscriptionId}
           hasPromo={sub.status === "active" && !!sub.location?.has_promo_enabled}
+          hasLoyalty={sub.status === "active" && !!sub.location?.has_loyalty_enabled}
           lang={lang}
         />
       )}

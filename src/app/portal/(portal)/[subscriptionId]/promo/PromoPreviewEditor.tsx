@@ -2,14 +2,28 @@
 
 import { useState } from "react";
 import { t } from "@/lib/translations";
+import { SUPPORTED_LANGUAGES, type Language } from "@/lib/language";
+
+const LANGUAGE_LABELS: Record<Language, string> = {
+  pl: "Polski",
+  en: "English",
+  de: "Deutsch",
+};
+
+type LocalizedText = Record<Language, string>;
 
 interface Props {
-  initialDescription: string;
-  initialBannerText: string;
-  initialSmsText: string;
+  initialDescription: LocalizedText;
+  initialBannerText: LocalizedText;
+  initialSmsText: LocalizedText;
   logoLink: string | null;
   locationName: string;
+  activeLanguages: Language[];
   lang: string;
+}
+
+function fieldName(base: string, editLang: Language): string {
+  return editLang === "pl" ? base : `${base}_${editLang}`;
 }
 
 export default function PromoPreviewEditor({
@@ -18,14 +32,45 @@ export default function PromoPreviewEditor({
   initialSmsText,
   logoLink,
   locationName,
+  activeLanguages,
   lang,
 }: Props) {
-  const [description, setDescription] = useState(initialDescription);
-  const [bannerText, setBannerText] = useState(initialBannerText);
-  const [smsText, setSmsText] = useState(initialSmsText);
+  const editableLanguages = SUPPORTED_LANGUAGES.filter((l) => activeLanguages.includes(l));
+  const [editLang, setEditLang] = useState<Language>(editableLanguages[0] ?? "pl");
+  const [description, setDescription] = useState<LocalizedText>(initialDescription);
+  const [bannerText, setBannerText] = useState<LocalizedText>(initialBannerText);
+  const [smsText, setSmsText] = useState<LocalizedText>(initialSmsText);
+
+  function hiddenInputsFor(base: string, values: LocalizedText, active: Language) {
+    return SUPPORTED_LANGUAGES.filter((l) => l !== active).map((l) => (
+      <input key={l} type="hidden" name={fieldName(base, l)} value={values[l]} />
+    ));
+  }
 
   return (
     <div className="space-y-5">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-4 flex items-center gap-3">
+        <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+          {t("portal_promo_editing_language", lang)}
+        </span>
+        <div className="flex gap-1">
+          {editableLanguages.map((l) => (
+            <button
+              key={l}
+              type="button"
+              onClick={() => setEditLang(l)}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                editLang === l
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+              }`}
+            >
+              {LANGUAGE_LABELS[l]}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Strona formularza */}
       <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-0.5">
@@ -48,10 +93,11 @@ export default function PromoPreviewEditor({
             )}
             <p className="text-sm font-semibold text-gray-800 text-center mb-2">{locationName}</p>
 
+            {hiddenInputsFor("promo_description", description, editLang)}
             <textarea
-              name="promo_description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              name={fieldName("promo_description", editLang)}
+              value={description[editLang]}
+              onChange={(e) => setDescription({ ...description, [editLang]: e.target.value })}
               placeholder={t("portal_promo_description_placeholder", lang)}
               rows={2}
               className="w-full text-xs text-gray-500 text-center bg-transparent border border-dashed border-gray-300 hover:border-blue-300 focus:border-blue-400 rounded-lg px-2 py-1.5 mb-4 resize-none focus:outline-none transition-colors placeholder-gray-300"
@@ -102,10 +148,11 @@ export default function PromoPreviewEditor({
             <p className="text-xs text-gray-500 text-center mb-4">{t("portal_promo_your_coupon", lang)}</p>
 
             <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 mb-5">
+              {hiddenInputsFor("promo_banner_text", bannerText, editLang)}
               <textarea
-                name="promo_banner_text"
-                value={bannerText}
-                onChange={(e) => setBannerText(e.target.value)}
+                name={fieldName("promo_banner_text", editLang)}
+                value={bannerText[editLang]}
+                onChange={(e) => setBannerText({ ...bannerText, [editLang]: e.target.value })}
                 placeholder={t("portal_promo_banner_placeholder", lang)}
                 rows={2}
                 className="w-full text-amber-900 font-semibold text-sm text-center bg-transparent border-none resize-none focus:outline-none focus:ring-0 placeholder-amber-300"
@@ -141,7 +188,7 @@ export default function PromoPreviewEditor({
 
         <div className="flex justify-center mb-4">
           <div className="bg-gray-100 dark:bg-gray-700 rounded-2xl rounded-bl-sm px-4 py-3 max-w-xs w-full text-sm text-gray-800 dark:text-gray-200 min-h-[48px]">
-            {smsText || (
+            {smsText[editLang] || (
               <span className="text-gray-400 dark:text-gray-500 text-xs">
                 {t("portal_promo_sms_preview_placeholder", lang)}
               </span>
@@ -149,10 +196,11 @@ export default function PromoPreviewEditor({
           </div>
         </div>
 
+        {hiddenInputsFor("promo_sms_text", smsText, editLang)}
         <textarea
-          name="promo_sms_text"
-          value={smsText}
-          onChange={(e) => setSmsText(e.target.value)}
+          name={fieldName("promo_sms_text", editLang)}
+          value={smsText[editLang]}
+          onChange={(e) => setSmsText({ ...smsText, [editLang]: e.target.value })}
           placeholder={t("portal_promo_sms_placeholder", lang)}
           rows={3}
           className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
