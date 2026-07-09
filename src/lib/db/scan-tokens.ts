@@ -13,6 +13,23 @@ export async function createScanToken(locationId: number): Promise<string> {
   return token;
 }
 
+// Returns true only the first time this token's linktree visit is claimed —
+// navigating back and forth within the scan window won't count again.
+export async function claimLinktreeVisit(
+  token: string,
+  locationId: number
+): Promise<boolean> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("scan_tokens")
+    .update({ visit_counted_at: new Date().toISOString() })
+    .eq("token", token)
+    .eq("location_id", locationId)
+    .is("visit_counted_at", null)
+    .select("id");
+  return (data?.length ?? 0) > 0;
+}
+
 export async function validateScanToken(
   token: string
 ): Promise<{ valid: boolean; locationId?: number }> {

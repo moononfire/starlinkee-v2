@@ -1,4 +1,5 @@
 import type { CustomerLocation, CustomerLocationLink } from "@/lib/types";
+import { isLinkIconKey } from "@/lib/linkIcons";
 import GoogleLocationEditor from "../../settings/GoogleLocationEditor";
 import LogoUpload from "../../settings/LogoUpload";
 import LinktreeLinksEditor from "../../settings/LinktreeLinksEditor";
@@ -167,6 +168,7 @@ export default function LocationSettings({
               title_en: l.title_en ?? "",
               title_de: l.title_de ?? "",
               url: l.url,
+              icon: isLinkIconKey(l.icon) ? l.icon : null,
             }))}
             activeLanguages={location.active_languages}
             saved={saved === "linktree_links"}

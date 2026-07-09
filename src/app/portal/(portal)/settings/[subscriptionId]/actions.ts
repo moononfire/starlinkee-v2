@@ -7,6 +7,7 @@ import { getCustomerByEmail, getCustomerSubscriptions } from "@/lib/db/portal";
 import { updateLocation, upsertLocationLinks } from "@/lib/db/locations";
 import { isSafeHttpUrl } from "@/lib/urls";
 import { SUPPORTED_LANGUAGES } from "@/lib/language";
+import { isLinkIconKey } from "@/lib/linkIcons";
 
 function makeSupabase(cookieStore: Awaited<ReturnType<typeof cookies>>) {
   return createServerClient(
@@ -100,7 +101,7 @@ export async function upsertLinktreeLinks(formData: FormData) {
   const primaryLang = SUPPORTED_LANGUAGES.find((l) => location.active_languages.includes(l)) ?? "pl";
   const primaryField = `title_${primaryLang}` as const;
 
-  let rawLinks: { title_pl: string; title_en: string; title_de: string; url: string }[];
+  let rawLinks: { title_pl: string; title_en: string; title_de: string; url: string; icon?: string | null }[];
   try {
     rawLinks = JSON.parse(linksJson);
     if (!Array.isArray(rawLinks)) throw new Error();
@@ -121,6 +122,7 @@ export async function upsertLinktreeLinks(formData: FormData) {
         title_en,
         title_de,
         url: l.url.trim(),
+        icon: isLinkIconKey(l.icon) ? l.icon : null,
         sort_order: i,
       };
     });

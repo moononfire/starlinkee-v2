@@ -1,5 +1,6 @@
 {
   "en": {
+    "back_button": "Back",
     "proxy_page_title": "How would you rate your experience?",
     "we_are_sorry_to_hear_that": "We are sorry to hear that.",
     "we_would_love_to_hear_your_feedback": "We'd love to hear your feedback and make things right. Please fill out the form below, and we'll get in touch with you.",
@@ -327,6 +328,9 @@
     "portal_claim_promo_link": "Collect promotion",
     "portal_loyalty_card_link_label": "Loyalty card",
     "portal_add_link": "Add link",
+    "portal_link_icon_label": "Icon",
+    "portal_link_icon_none": "No icon",
+    "portal_link_icon_none_short": "None",
     "portal_range_7d": "7 days",
     "portal_range_30d": "30 days",
     "portal_range_90d": "3 mo.",
@@ -377,6 +381,7 @@
     "portal_active": "Active"
   },
   "de": {
+    "back_button": "Zurück",
     "proxy_page_title": "Wie bewerten Sie Ihre Erfahrung?",
     "we_are_sorry_to_hear_that": "Es tut uns leid, das zu hören.",
     "we_would_love_to_hear_your_feedback": "Wir würden uns freuen, Ihr Feedback zu erhalten und die Dinge in Ordnung zu bringen. Bitte füllen Sie das untenstehende Formular aus, und wir setzen uns mit Ihnen in Verbindung.",
@@ -704,6 +709,9 @@
     "portal_claim_promo_link": "Promotion abholen",
     "portal_loyalty_card_link_label": "Treuekarte",
     "portal_add_link": "Link hinzufügen",
+    "portal_link_icon_label": "Symbol",
+    "portal_link_icon_none": "Kein Symbol",
+    "portal_link_icon_none_short": "Keins",
     "portal_range_7d": "7 Tage",
     "portal_range_30d": "30 Tage",
     "portal_range_90d": "3 Mon.",
@@ -754,6 +762,7 @@
     "portal_active": "Aktiv"
   },
   "pl": {
+    "back_button": "Powrót",
     "proxy_page_title": "Jak oceniasz swoje doświadczenie?",
     "we_are_sorry_to_hear_that": "Przykro nam to słyszeć.",
     "we_would_love_to_hear_your_feedback": "Chcielibyśmy poznać Twoją opinię i naprawić sytuację. Wypełnij poniższy formularz, a skontaktujemy się z Tobą.",
@@ -1080,6 +1089,9 @@
     "portal_claim_promo_link": "Odbierz promocję",
     "portal_loyalty_card_link_label": "Karta lojalnościowa",
     "portal_add_link": "Dodaj link",
+    "portal_link_icon_label": "Ikona",
+    "portal_link_icon_none": "Brak ikony",
+    "portal_link_icon_none_short": "Brak",
     "portal_range_7d": "7 dni",
     "portal_range_30d": "30 dni",
     "portal_range_90d": "3 mies.",

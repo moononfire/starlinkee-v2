@@ -87,14 +87,14 @@ export default function PromoForm({ slug, bannerText, scanToken, lang }: Props) 
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           required
-          className="border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-800 bg-white placeholder-gray-400 w-full"
+          className="border border-gray-300 rounded-lg px-4 py-2 text-sm text-black bg-white placeholder-gray-500 w-full"
         />
         <input
           type="email"
           placeholder={t("email_optional_placeholder", lang)}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-800 bg-white placeholder-gray-400 w-full"
+          className="border border-gray-300 rounded-lg px-4 py-2 text-sm text-black bg-white placeholder-gray-500 w-full"
         />
         <div>
           <label className={`flex items-start gap-2 text-sm cursor-pointer ${showConsentError ? "text-red-500" : "text-gray-600"}`}>

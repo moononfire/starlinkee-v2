@@ -244,7 +244,7 @@ export async function updateLocation(
 
 export async function upsertLocationLinks(
   locationId: number,
-  links: { title: string; title_pl?: string | null; title_en?: string | null; title_de?: string | null; url: string; sort_order: number }[]
+  links: { title: string; title_pl?: string | null; title_en?: string | null; title_de?: string | null; url: string; icon?: string | null; sort_order: number }[]
 ): Promise<void> {
   const supabase = createAdminClient();
 
