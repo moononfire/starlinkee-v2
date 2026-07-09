@@ -186,7 +186,7 @@ export default function VerifyClient({ initialCode, lang }: Props) {
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 8))}
           maxLength={8}
-          className="border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-800 bg-white placeholder-gray-400 w-full font-mono tracking-widest uppercase"
+          className="border border-gray-300 rounded-lg px-4 py-2 text-sm text-black bg-white placeholder-gray-500 w-full font-mono tracking-widest uppercase"
         />
         <button
           onClick={() => handleVerify()}

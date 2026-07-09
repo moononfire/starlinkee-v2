@@ -119,7 +119,7 @@ export default function LoyaltyCard({ slug, scanToken, initialStamps, isAuthenti
           placeholder="+48 600 000 000"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          className="border rounded-lg px-4 py-2 text-sm w-full"
+          className="border border-gray-300 rounded-lg px-4 py-2 text-sm w-full text-black bg-white placeholder-gray-500"
         />
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <button
@@ -144,7 +144,7 @@ export default function LoyaltyCard({ slug, scanToken, initialStamps, isAuthenti
           placeholder="1234"
           value={code}
           onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-          className="border rounded-lg px-4 py-2 text-sm w-full tracking-widest text-center text-lg"
+          className="border border-gray-300 rounded-lg px-4 py-2 text-sm w-full tracking-widest text-center text-lg text-black bg-white placeholder-gray-500"
         />
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <button

@@ -4,12 +4,14 @@ import { useState } from "react";
 import { upsertLinktreeLinks } from "./[subscriptionId]/actions";
 import { t } from "@/lib/translations";
 import { SUPPORTED_LANGUAGES, type Language } from "@/lib/languages";
+import { LINK_ICON_KEYS, LinkIconGlyph, type LinkIconKey } from "@/lib/linkIcons";
 
 interface LinkItem {
   title_pl: string;
   title_en: string;
   title_de: string;
   url: string;
+  icon: LinkIconKey | null;
 }
 
 interface Props {
@@ -32,7 +34,7 @@ export default function LinktreeLinksEditor({ locationId, subscriptionId, initia
 
   const addLink = () => {
     if (links.length >= MAX_LINKS) return;
-    setLinks([...links, { title_pl: "", title_en: "", title_de: "", url: "" }]);
+    setLinks([...links, { title_pl: "", title_en: "", title_de: "", url: "", icon: null }]);
   };
 
   const removeLink = (idx: number) => {
@@ -42,6 +44,12 @@ export default function LinktreeLinksEditor({ locationId, subscriptionId, initia
   const update = (idx: number, field: keyof LinkItem, value: string) => {
     const next = [...links];
     next[idx] = { ...next[idx], [field]: value };
+    setLinks(next);
+  };
+
+  const setIcon = (idx: number, icon: LinkIconKey | null) => {
+    const next = [...links];
+    next[idx] = { ...next[idx], icon };
     setLinks(next);
   };
 
@@ -122,6 +130,41 @@ export default function LinktreeLinksEditor({ locationId, subscriptionId, initia
               onChange={(e) => update(idx, "url", e.target.value)}
               className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+
+            <div>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{t("portal_link_icon_label", lang)}</p>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setIcon(idx, null)}
+                  aria-label={t("portal_link_icon_none", lang)}
+                  title={t("portal_link_icon_none", lang)}
+                  className={`w-8 h-8 flex items-center justify-center rounded-lg border text-[10px] font-medium transition-colors ${
+                    link.icon === null
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300"
+                      : "border-gray-200 dark:border-gray-600 text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  }`}
+                >
+                  {t("portal_link_icon_none_short", lang)}
+                </button>
+                {LINK_ICON_KEYS.map((iconKey) => (
+                  <button
+                    key={iconKey}
+                    type="button"
+                    onClick={() => setIcon(idx, iconKey)}
+                    aria-label={iconKey}
+                    title={iconKey}
+                    className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${
+                      link.icon === iconKey
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300"
+                        : "border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    <LinkIconGlyph icon={iconKey} className="w-4 h-4" />
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         );
       })}

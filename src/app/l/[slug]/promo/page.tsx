@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLocationBySlug } from "@/lib/db/locations";
 import { getPlatesBySubscriptionId } from "@/lib/db/plates";
@@ -28,7 +29,13 @@ export default async function PromoPage({ params, searchParams }: Props) {
     <>
       <PageTracker locationId={location.location_id} pagePath={`/l/${slug}/promo`} pageType="promo" />
       <main className="min-h-screen bg-gray-50 flex flex-col items-center pt-4 px-4">
-        <div className="flex justify-end w-full max-w-sm mb-3">
+        <div className="flex items-center justify-between w-full max-w-sm mb-3">
+          <Link
+            href={`/l/${slug}${scan ? `?scan=${encodeURIComponent(scan)}` : ""}`}
+            className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            ← {t("back_button", lang)}
+          </Link>
           <LanguageSwitcher currentLang={lang} scopeKey={slug} availableLanguages={location.active_languages} />
         </div>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-full max-w-sm">

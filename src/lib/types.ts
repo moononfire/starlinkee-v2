@@ -100,6 +100,7 @@ export interface CustomerLocationLink {
   title_en: string | null;
   title_de: string | null;
   url: string;
+  icon: string | null;
   sort_order: number;
 }
 
