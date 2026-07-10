@@ -44,8 +44,11 @@ export default function RatingStars({ scanId, googleReviewLink, lang }: Props) {
     // window.open must fire synchronously off the click to avoid popup
     // blockers, so we open a blank tab now and point it at the review link
     // once we know the rating actually redirects.
+    // Note: no "noopener" here — that flag makes window.open() return null,
+    // which would defeat holding a reference to redirect later.
     const embedded = window.self !== window.top;
-    const popup = embedded ? window.open("", "_blank", "noopener,noreferrer") : null;
+    const popup = embedded ? window.open("", "_blank") : null;
+    if (popup) popup.opener = null; // sever the back-reference without nulling window.open's return value
 
     const res = await fetch("/api/plate/rating", {
       method: "POST",
