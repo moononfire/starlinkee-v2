@@ -56,7 +56,7 @@ export default function LanguageSwitcher({ currentLang, scopeKey, availableLangu
 
   function switchLang(lang: string) {
     const cookieName = scopeKey ? `lang_${scopeKey}` : "lang";
-    document.cookie = `${cookieName}=${lang};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
+    document.cookie = `${cookieName}=${lang};path=/;max-age=${60 * 60 * 24 * 365};SameSite=None;Secure`;
     router.refresh();
   }
 

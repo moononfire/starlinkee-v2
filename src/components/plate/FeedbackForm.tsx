@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { t } from "@/lib/translations";
+import { postDemoStep } from "@/lib/demoTour";
 
 interface Props {
   scanId: string;
@@ -11,6 +12,10 @@ interface Props {
 export default function FeedbackForm({ scanId, lang }: Props) {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    postDemoStep("low_rating_feedback");
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

@@ -5,6 +5,8 @@ import { upsertLinktreeLinks } from "./[subscriptionId]/actions";
 import { t } from "@/lib/translations";
 import { SUPPORTED_LANGUAGES, type Language } from "@/lib/languages";
 import { LINK_ICON_KEYS, LinkIconGlyph, type LinkIconKey } from "@/lib/linkIcons";
+import { TILE_BACKGROUND_GROUPS, getTileBackground, type TileBackgroundKey } from "@/lib/linkBackgrounds";
+import LinktreePreview from "@/components/linktree/LinktreePreview";
 
 interface LinkItem {
   title_pl: string;
@@ -12,6 +14,7 @@ interface LinkItem {
   title_de: string;
   url: string;
   icon: LinkIconKey | null;
+  background: TileBackgroundKey | null;
 }
 
 interface Props {
@@ -21,20 +24,45 @@ interface Props {
   activeLanguages: Language[];
   saved?: boolean;
   lang: string;
+  locationName: string;
+  logoUrl: string | null;
+  hasPromo: boolean;
+  promoBannerText: string | null;
+  hasLoyalty: boolean;
 }
 
 const MAX_LINKS = 7;
 type LinkLang = (typeof SUPPORTED_LANGUAGES)[number];
 
-export default function LinktreeLinksEditor({ locationId, subscriptionId, initialLinks, activeLanguages, saved, lang }: Props) {
+export default function LinktreeLinksEditor({
+  locationId,
+  subscriptionId,
+  initialLinks,
+  activeLanguages,
+  saved,
+  lang,
+  locationName,
+  logoUrl,
+  hasPromo,
+  promoBannerText,
+  hasLoyalty,
+}: Props) {
   const [links, setLinks] = useState<LinkItem[]>(initialLinks);
   const [activeTab, setActiveTab] = useState<Record<number, LinkLang>>({});
   const linkLangs = SUPPORTED_LANGUAGES.filter((l) => activeLanguages.includes(l));
   const defaultLang = linkLangs[0] ?? "pl";
 
+  const previewTitle = (link: LinkItem) => {
+    for (const l of linkLangs) {
+      const value = link[`title_${l}` as const];
+      if (value.trim()) return value;
+    }
+    return "";
+  };
+
   const addLink = () => {
     if (links.length >= MAX_LINKS) return;
-    setLinks([...links, { title_pl: "", title_en: "", title_de: "", url: "", icon: null }]);
+    setLinks([...links, { title_pl: "", title_en: "", title_de: "", url: "", icon: null, background: null }]);
   };
 
   const removeLink = (idx: number) => {
@@ -53,8 +81,15 @@ export default function LinktreeLinksEditor({ locationId, subscriptionId, initia
     setLinks(next);
   };
 
+  const setBackground = (idx: number, background: TileBackgroundKey | null) => {
+    const next = [...links];
+    next[idx] = { ...next[idx], background };
+    setLinks(next);
+  };
+
   return (
-    <form action={upsertLinktreeLinks} className="space-y-2">
+    <div className="lg:flex lg:items-start lg:gap-6">
+    <form action={upsertLinktreeLinks} className="space-y-2 lg:flex-1 lg:min-w-0">
       <input type="hidden" name="location_id" value={locationId} />
       <input type="hidden" name="subscription_id" value={subscriptionId} />
       <input type="hidden" name="links_json" value={JSON.stringify(links)} />
@@ -165,6 +200,42 @@ export default function LinktreeLinksEditor({ locationId, subscriptionId, initia
                 ))}
               </div>
             </div>
+
+            <div>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{t("portal_link_bg_label", lang)}</p>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setBackground(idx, null)}
+                    aria-label={t("portal_link_icon_none", lang)}
+                    title={t("portal_link_icon_none", lang)}
+                    className={`w-7 h-7 rounded-full ${getTileBackground(null).swatch} ${
+                      link.background === null ? "ring-2 ring-offset-1 ring-blue-500" : ""
+                    }`}
+                  />
+                </div>
+                {TILE_BACKGROUND_GROUPS.map((group) => (
+                  <div key={group.key} className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500 w-14 shrink-0">
+                      {t(`portal_link_bg_group_${group.key}`, lang)}
+                    </span>
+                    {group.keys.map((bgKey) => (
+                      <button
+                        key={bgKey}
+                        type="button"
+                        onClick={() => setBackground(idx, bgKey)}
+                        aria-label={bgKey}
+                        title={bgKey}
+                        className={`w-7 h-7 rounded-full ${getTileBackground(bgKey).swatch} ${
+                          link.background === bgKey ? "ring-2 ring-offset-1 ring-blue-500" : ""
+                        }`}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         );
       })}
@@ -205,5 +276,23 @@ export default function LinktreeLinksEditor({ locationId, subscriptionId, initia
         </div>
       </div>
     </form>
+
+      <div className="mt-6 lg:mt-0 lg:sticky lg:top-4 lg:w-64 lg:shrink-0">
+        <LinktreePreview
+          locationName={locationName}
+          logoUrl={logoUrl}
+          links={links.map((l) => ({
+            title: previewTitle(l),
+            url: l.url,
+            icon: l.icon,
+            background: l.background,
+          }))}
+          hasPromo={hasPromo}
+          promoBannerText={promoBannerText}
+          hasLoyalty={hasLoyalty}
+          lang={lang}
+        />
+      </div>
+    </div>
   );
 }

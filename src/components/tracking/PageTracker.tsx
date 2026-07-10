@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { postDemoStep, type DemoStep } from "@/lib/demoTour";
 
 interface Props {
   locationId: number | null;
@@ -21,6 +22,10 @@ function getSessionId(): string {
 }
 
 export default function PageTracker({ locationId, pagePath, pageType }: Props) {
+  useEffect(() => {
+    postDemoStep(pageType as DemoStep);
+  }, [pageType]);
+
   useEffect(() => {
     const sessionId = getSessionId();
     fetch("/api/track", {
