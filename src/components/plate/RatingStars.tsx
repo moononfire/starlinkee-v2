@@ -38,6 +38,15 @@ export default function RatingStars({ scanId, googleReviewLink, lang }: Props) {
     setSelected(rating);
     postDemoStep("rating_selected", { rating });
 
+    // Google blocks its review page from loading inside an iframe
+    // (X-Frame-Options), so when embedded (e.g. the marketing site's live
+    // demo) we need to send it to a new tab instead of navigating in place.
+    // window.open must fire synchronously off the click to avoid popup
+    // blockers, so we open a blank tab now and point it at the review link
+    // once we know the rating actually redirects.
+    const embedded = window.self !== window.top;
+    const popup = embedded ? window.open("", "_blank", "noopener,noreferrer") : null;
+
     const res = await fetch("/api/plate/rating", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -51,16 +60,25 @@ export default function RatingStars({ scanId, googleReviewLink, lang }: Props) {
       const { rating: existingRating } = await res.json();
       setSelected(existingRating);
       setAlreadyRated(true);
+      popup?.close();
       return;
     }
 
-    if (!res.ok) return;
+    if (!res.ok) {
+      popup?.close();
+      return;
+    }
     const { redirectToGoogle } = await res.json();
 
     if (redirectToGoogle && googleReviewLink) {
       postDemoStep("high_rating_redirect", { rating });
-      window.location.href = googleReviewLink;
+      if (popup) {
+        popup.location.href = googleReviewLink;
+      } else {
+        window.location.href = googleReviewLink;
+      }
     } else {
+      popup?.close();
       setShowFeedback(true);
     }
   }
