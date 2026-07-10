@@ -43,11 +43,14 @@ export default function RatingStars({ scanId, googleReviewLink, lang }: Props) {
     // demo) we need to send it to a new tab instead of navigating in place.
     // window.open must fire synchronously off the click to avoid popup
     // blockers, so we open a blank tab now and point it at the review link
-    // once we know the rating actually redirects.
+    // once we know the rating actually redirects. Only ratings of 4-5 can
+    // ever redirect (see /api/plate/rating), so lower ratings never open a
+    // tab at all — otherwise a low rating would briefly flash an empty tab
+    // before it gets closed again.
     // Note: no "noopener" here — that flag makes window.open() return null,
     // which would defeat holding a reference to redirect later.
     const embedded = window.self !== window.top;
-    const popup = embedded ? window.open("", "_blank") : null;
+    const popup = embedded && rating >= 4 ? window.open("", "_blank") : null;
     if (popup) popup.opener = null; // sever the back-reference without nulling window.open's return value
 
     const res = await fetch("/api/plate/rating", {
