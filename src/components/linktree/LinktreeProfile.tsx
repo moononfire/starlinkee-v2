@@ -3,6 +3,7 @@ import type { CustomerLocation, CustomerLocationLink } from "@/lib/types";
 import { t } from "@/lib/translations";
 import { isSafeHttpUrl } from "@/lib/urls";
 import { LinkIconGlyph } from "@/lib/linkIcons";
+import { getTileBackground } from "@/lib/linkBackgrounds";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 interface Props {
@@ -54,7 +55,7 @@ export default function LinktreeProfile({ location, links, slug, scanToken, lang
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-full border border-gray-200 font-medium text-gray-800 hover:bg-gray-50 transition-colors"
+              className={`w-full flex items-center justify-center gap-2 py-3 px-6 rounded-full font-medium hover:opacity-90 transition-opacity ${getTileBackground(link.background).tile}`}
             >
               <LinkIconGlyph icon={link.icon} className="w-4 h-4 shrink-0" />
               {getLinkTitle(link, lang)}

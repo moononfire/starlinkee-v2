@@ -1,5 +1,6 @@
 import type { CustomerLocation, CustomerLocationLink } from "@/lib/types";
 import { isLinkIconKey } from "@/lib/linkIcons";
+import { isTileBackgroundKey } from "@/lib/linkBackgrounds";
 import GoogleLocationEditor from "../../settings/GoogleLocationEditor";
 import LogoUpload from "../../settings/LogoUpload";
 import LinktreeLinksEditor from "../../settings/LinktreeLinksEditor";
@@ -169,10 +170,16 @@ export default function LocationSettings({
               title_de: l.title_de ?? "",
               url: l.url,
               icon: isLinkIconKey(l.icon) ? l.icon : null,
+              background: isTileBackgroundKey(l.background) ? l.background : null,
             }))}
             activeLanguages={location.active_languages}
             saved={saved === "linktree_links"}
             lang={lang}
+            locationName={location.location_name}
+            logoUrl={location.logo_link}
+            hasPromo={location.has_promo_enabled}
+            promoBannerText={location.promo_banner_text}
+            hasLoyalty={location.has_loyalty_enabled}
           />
         </section>
       )}

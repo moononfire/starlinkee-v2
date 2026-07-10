@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import FeedbackForm from "./FeedbackForm";
 import { t } from "@/lib/translations";
+import { postDemoStep } from "@/lib/demoTour";
 
 interface Props {
   scanId: string;
@@ -35,6 +36,7 @@ export default function RatingStars({ scanId, googleReviewLink, lang }: Props) {
     if (submitted || loading) return;
     setLoading(true);
     setSelected(rating);
+    postDemoStep("rating_selected", { rating });
 
     const res = await fetch("/api/plate/rating", {
       method: "POST",
@@ -56,6 +58,7 @@ export default function RatingStars({ scanId, googleReviewLink, lang }: Props) {
     const { redirectToGoogle } = await res.json();
 
     if (redirectToGoogle && googleReviewLink) {
+      postDemoStep("high_rating_redirect", { rating });
       window.location.href = googleReviewLink;
     } else {
       setShowFeedback(true);
