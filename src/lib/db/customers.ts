@@ -10,8 +10,13 @@ interface CustomerInsert {
   email: string;
   phone?: string;
   billing_address?: string;
+  address_line1?: string;
+  address_city?: string;
+  address_postal_code?: string;
   country?: string;
   preferred_language?: "en" | "de" | "pl";
+  activation_token?: string;
+  is_activated?: boolean;
 }
 
 export async function upsertCustomerByEmail(data: CustomerInsert): Promise<number> {
