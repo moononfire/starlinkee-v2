@@ -122,6 +122,9 @@ export interface Customer {
   email: string;
   phone: string | null;
   billing_address: string | null;
+  address_line1: string | null;
+  address_city: string | null;
+  address_postal_code: string | null;
   preferred_language: "en" | "de" | "pl";
   country: string | null;
   activation_token: string | null;
