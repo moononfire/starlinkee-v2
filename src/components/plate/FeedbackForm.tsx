@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { t } from "@/lib/translations";
 import { postDemoStep } from "@/lib/demoTour";
+import ReviewConversation from "./ReviewConversation";
+import type { ReviewMessage } from "@/lib/types";
 
 interface Props {
   scanId: string;
@@ -12,6 +14,7 @@ interface Props {
 export default function FeedbackForm({ scanId, lang }: Props) {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [firstMessage, setFirstMessage] = useState<ReviewMessage | null>(null);
 
   useEffect(() => {
     postDemoStep("low_rating_feedback");
@@ -22,27 +25,45 @@ export default function FeedbackForm({ scanId, lang }: Props) {
     setLoading(true);
 
     const form = new FormData(e.currentTarget);
+    const feedbackMessage = form.get("feedback_message") as string;
     await fetch("/api/review/feedback", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         scanId,
-        feedback_message: form.get("feedback_message"),
+        feedback_message: feedbackMessage,
         user_name: form.get("user_name") || undefined,
         contact_email: form.get("contact_email") || undefined,
         contact_phone: form.get("contact_phone") || undefined,
       }),
     });
 
+    // Optimistic first bubble — the server inserts the same message into
+    // review_messages asynchronously (non-blocking), so we render it
+    // immediately instead of racing the realtime broadcast on mount.
+    setFirstMessage({
+      message_id: -1,
+      review_id: 0,
+      sender: "reporter",
+      body: feedbackMessage,
+      created_at: new Date().toISOString(),
+    });
     setLoading(false);
     setSubmitted(true);
   }
 
   if (submitted) {
     return (
-      <div className="text-center">
-        <p className="text-lg font-semibold text-gray-800">{t("thank_you_short", lang)}</p>
-        <p className="text-gray-500 mt-1">{t("appreciate_feedback", lang)}</p>
+      <div className="w-full flex flex-col items-center gap-4">
+        <div className="text-center">
+          <p className="text-lg font-semibold text-gray-800">{t("thank_you_short", lang)}</p>
+          <p className="text-gray-500 mt-1">{t("appreciate_feedback", lang)}</p>
+        </div>
+        <ReviewConversation
+          scanId={scanId}
+          lang={lang}
+          initialMessages={firstMessage ? [firstMessage] : []}
+        />
       </div>
     );
   }

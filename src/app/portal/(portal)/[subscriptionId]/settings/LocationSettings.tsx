@@ -1,6 +1,7 @@
 import type { CustomerLocation, CustomerLocationLink } from "@/lib/types";
 import { isLinkIconKey } from "@/lib/linkIcons";
 import { isTileBackgroundKey } from "@/lib/linkBackgrounds";
+import { isPageBackgroundKey } from "@/lib/pageBackgrounds";
 import GoogleLocationEditor from "../../settings/GoogleLocationEditor";
 import LogoUpload from "../../settings/LogoUpload";
 import LinktreeLinksEditor from "../../settings/LinktreeLinksEditor";
@@ -172,6 +173,7 @@ export default function LocationSettings({
               icon: isLinkIconKey(l.icon) ? l.icon : null,
               background: isTileBackgroundKey(l.background) ? l.background : null,
             }))}
+            initialPageBackground={isPageBackgroundKey(location.page_background) ? location.page_background : null}
             activeLanguages={location.active_languages}
             saved={saved === "linktree_links"}
             lang={lang}

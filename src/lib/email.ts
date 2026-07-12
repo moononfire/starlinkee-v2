@@ -186,6 +186,55 @@ export async function sendOrderConfirmationToAdmin(data: {
   );
 }
 
+export async function sendQuickPlateCredentialsToAdmin(data: {
+  plateNumber: string;
+  businessName: string;
+  businessAddress?: string;
+  googleReviewLink: string;
+  customerEmail: string;
+  portalPassword: string | null;
+  existingAccount: boolean;
+}) {
+  const html = layout(
+    h1("Quick plate activated") +
+      para(
+        `A plate was quickly activated for a prospective customer via Google Places lookup. It now redirects straight to their Google review page.`
+      ) +
+      dataTable(
+        ["Plate number", data.plateNumber],
+        ["Business", data.businessName],
+        ...(data.businessAddress ? ([["Address", data.businessAddress]] as [string, string][]) : []),
+        ["Google review link", data.googleReviewLink],
+        ["Portal email", data.customerEmail],
+        [
+          "Portal password",
+          data.existingAccount
+            ? "(existing account — unchanged, use previous password or reset)"
+            : (data.portalPassword ?? "—"),
+        ]
+      )
+  );
+  const text = [
+    "Quick plate activated",
+    `Plate number: ${data.plateNumber}`,
+    `Business: ${data.businessName}`,
+    data.businessAddress ? `Address: ${data.businessAddress}` : null,
+    `Google review link: ${data.googleReviewLink}`,
+    `Portal email: ${data.customerEmail}`,
+    `Portal password: ${
+      data.existingAccount ? "(existing account — unchanged)" : data.portalPassword ?? "—"
+    }`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  await sendMail(
+    process.env.EMAIL_ADMIN!,
+    `Quick plate ${data.plateNumber} activated — ${data.businessName}`,
+    html,
+    text
+  );
+}
+
 export async function sendCustomerRegistration(
   to: string,
   language: string,
@@ -372,6 +421,42 @@ export async function sendFeedbackNotification(
   ];
 
   await sendMail(to, s.subject(data.locationName, data.rating), html, textLines.join("\n"));
+}
+
+const replyStrings = {
+  en: {
+    subject: (locationName: string) => `New reply from ${locationName}`,
+    title: (locationName: string) => `${locationName} replied to your feedback`,
+    viewConversationBtn: "View conversation",
+  },
+  de: {
+    subject: (locationName: string) => `Neue Antwort von ${locationName}`,
+    title: (locationName: string) => `${locationName} hat auf Ihr Feedback geantwortet`,
+    viewConversationBtn: "Unterhaltung ansehen",
+  },
+  pl: {
+    subject: (locationName: string) => `Nowa odpowiedź od ${locationName}`,
+    title: (locationName: string) => `${locationName} odpowiedział na Twoją opinię`,
+    viewConversationBtn: "Zobacz rozmowę",
+  },
+} satisfies Record<Lang, object>;
+
+export async function sendReplyNotification(
+  to: string,
+  language: string,
+  data: { locationName: string; message: string; scanUrl: string }
+) {
+  const s = replyStrings[toLang(language)];
+
+  const html = layout(
+    h1(s.title(data.locationName)) +
+      `<blockquote style="margin:0;padding:12px 16px;background:#f4f4f5;border-left:3px solid #d4d4d8;border-radius:0 4px 4px 0;font-size:14px;line-height:1.7;color:#3f3f46;">${data.message}</blockquote>` +
+      `<div style="margin-top:20px;">${btn(data.scanUrl, s.viewConversationBtn)}</div>`
+  );
+
+  const text = `${s.title(data.locationName)}\n\n${data.message}\n\n${data.scanUrl}`;
+
+  await sendMail(to, s.subject(data.locationName), html, text);
 }
 
 export async function sendPromoEmail(

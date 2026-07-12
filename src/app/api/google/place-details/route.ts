@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     "https://maps.googleapis.com/maps/api/place/details/json"
   );
   url.searchParams.set("place_id", placeId);
-  url.searchParams.set("fields", "name,formatted_address,url,place_id");
+  url.searchParams.set("fields", "name,formatted_address,url,website,place_id");
   url.searchParams.set("key", API_KEY);
 
   const res = await fetch(url.toString());
@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
     name: result.name ?? "",
     address: result.formatted_address ?? "",
     google_maps_url: result.url ?? "",
+    website: result.website ?? "",
     google_review_link: reviewLink,
     place_id: result.place_id,
   });

@@ -5,6 +5,8 @@ import { getLocationBySubscriptionId } from "@/lib/db/locations";
 import { getSubscriptionById } from "@/lib/db/subscriptions";
 import { getCustomerById } from "@/lib/db/customers";
 import { sendFeedbackNotification } from "@/lib/email";
+import { insertMessage } from "@/lib/db/review-messages";
+import { broadcastToChannel } from "@/lib/realtime/broadcast";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -19,11 +21,43 @@ export async function POST(request: NextRequest) {
 
     // Send notification email to the venue's support email (non-blocking)
     sendNotification(scanId, feedback_message, user_name, contact_email, contact_phone).catch(() => {});
+
+    // Seed the message thread with the initial feedback and notify any open
+    // portal/scan-page tabs (non-blocking, best-effort — DB write above is
+    // the source of truth).
+    seedThread(scanId, feedback_message).catch(() => {});
   } catch {
     return NextResponse.json({ error: "Failed to save feedback" }, { status: 500 });
   }
 
   return NextResponse.json({ success: true });
+}
+
+async function seedThread(scanId: string, message: string) {
+  const review = await getReviewByScanId(scanId);
+  if (!review) return;
+
+  const created = await insertMessage(review.review_id, "reporter", message);
+  await broadcastToChannel(`review:${scanId}`, "new_message", {
+    message_id: created.message_id,
+    sender: created.sender,
+    body: created.body,
+    created_at: created.created_at,
+  });
+
+  const supabase = (await import("@/lib/supabase/admin")).createAdminClient();
+  const { data: plate } = await supabase
+    .from("plates")
+    .select("subscription_id")
+    .eq("plate_id", review.plate_id)
+    .single();
+  if (!plate?.subscription_id) return;
+
+  await broadcastToChannel(`review-portal:${plate.subscription_id}`, "thread_updated", {
+    review_id: review.review_id,
+    last_message_at: created.created_at,
+    last_message_sender: created.sender,
+  });
 }
 
 async function sendNotification(

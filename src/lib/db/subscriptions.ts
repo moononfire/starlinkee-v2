@@ -8,7 +8,33 @@ export async function getSubscriptionById(id: number): Promise<Subscription | nu
     .select("*")
     .eq("subscription_id", id)
     .single();
-  return data ?? null;
+  if (!data) return null;
+
+  // Lazily flip past-due subscriptions to "inactive" on read — there's no cron
+  // expiring these, so without this an active-but-unpaid subscription would
+  // never surface the renewal screen to the customer.
+  if (
+    data.status === "active" &&
+    data.expiration_datetime &&
+    new Date(data.expiration_datetime) < new Date()
+  ) {
+    await supabase.from("subscriptions").update({ status: "inactive" }).eq("subscription_id", id);
+    data.status = "inactive";
+  }
+
+  return data;
+}
+
+export async function deactivateExpiredSubscriptions(): Promise<number> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("subscriptions")
+    .update({ status: "inactive" })
+    .eq("status", "active")
+    .lt("expiration_datetime", new Date().toISOString())
+    .select("subscription_id");
+  if (error) throw new Error(`Failed to deactivate expired subscriptions: ${error.message}`);
+  return data?.length ?? 0;
 }
 
 export async function setSubscriptionActive(

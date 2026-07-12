@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getPortalSession } from "@/lib/portal-session";
+import { getUnreadThreadCountBySubscriptionId } from "@/lib/db/review-messages";
 import { getLanguage } from "@/lib/language";
 import { t } from "@/lib/translations";
 import SubTabs from "./SubTabs";
@@ -22,6 +23,8 @@ export default async function SubscriptionLayout({
   if (!sub) notFound();
 
   const lang = await getLanguage();
+  const unreadMessageCount =
+    sub.status === "active" ? await getUnreadThreadCountBySubscriptionId(subscriptionId) : 0;
 
   const statusColors: Record<string, string> = {
     active: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
@@ -60,6 +63,7 @@ export default async function SubscriptionLayout({
           subscriptionId={subscriptionId}
           hasPromo={sub.status === "active" && !!sub.location?.has_promo_enabled}
           hasLoyalty={sub.status === "active" && !!sub.location?.has_loyalty_enabled}
+          unreadMessageCount={unreadMessageCount}
           lang={lang}
         />
       )}

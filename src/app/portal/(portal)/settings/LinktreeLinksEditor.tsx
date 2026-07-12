@@ -6,6 +6,7 @@ import { t } from "@/lib/translations";
 import { SUPPORTED_LANGUAGES, type Language } from "@/lib/languages";
 import { LINK_ICON_KEYS, LinkIconGlyph, type LinkIconKey } from "@/lib/linkIcons";
 import { TILE_BACKGROUND_GROUPS, getTileBackground, type TileBackgroundKey } from "@/lib/linkBackgrounds";
+import { PAGE_BACKGROUND_KEYS, getPageBackground, type PageBackgroundKey } from "@/lib/pageBackgrounds";
 import LinktreePreview from "@/components/linktree/LinktreePreview";
 
 interface LinkItem {
@@ -21,6 +22,7 @@ interface Props {
   locationId: number;
   subscriptionId: number;
   initialLinks: LinkItem[];
+  initialPageBackground: PageBackgroundKey | null;
   activeLanguages: Language[];
   saved?: boolean;
   lang: string;
@@ -38,6 +40,7 @@ export default function LinktreeLinksEditor({
   locationId,
   subscriptionId,
   initialLinks,
+  initialPageBackground,
   activeLanguages,
   saved,
   lang,
@@ -48,6 +51,7 @@ export default function LinktreeLinksEditor({
   hasLoyalty,
 }: Props) {
   const [links, setLinks] = useState<LinkItem[]>(initialLinks);
+  const [pageBackground, setPageBackground] = useState<PageBackgroundKey | null>(initialPageBackground);
   const [activeTab, setActiveTab] = useState<Record<number, LinkLang>>({});
   const linkLangs = SUPPORTED_LANGUAGES.filter((l) => activeLanguages.includes(l));
   const defaultLang = linkLangs[0] ?? "pl";
@@ -93,6 +97,25 @@ export default function LinktreeLinksEditor({
       <input type="hidden" name="location_id" value={locationId} />
       <input type="hidden" name="subscription_id" value={subscriptionId} />
       <input type="hidden" name="links_json" value={JSON.stringify(links)} />
+      <input type="hidden" name="page_background" value={pageBackground ?? ""} />
+
+      <div>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{t("portal_page_bg_label", lang)}</p>
+        <div className="flex flex-wrap gap-1.5">
+          {PAGE_BACKGROUND_KEYS.map((bgKey) => (
+            <button
+              key={bgKey}
+              type="button"
+              onClick={() => setPageBackground(bgKey === "default" ? null : bgKey)}
+              aria-label={bgKey}
+              title={bgKey}
+              className={`w-7 h-7 rounded-full ${getPageBackground(bgKey).swatch} ${
+                (pageBackground ?? "default") === bgKey ? "ring-2 ring-offset-1 ring-blue-500" : ""
+              }`}
+            />
+          ))}
+        </div>
+      </div>
 
       <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900 text-blue-700 dark:text-blue-300 text-sm font-medium select-none">
         <span>⭐</span>
@@ -281,6 +304,7 @@ export default function LinktreeLinksEditor({
         <LinktreePreview
           locationName={locationName}
           logoUrl={logoUrl}
+          pageBackground={pageBackground}
           links={links.map((l) => ({
             title: previewTitle(l),
             url: l.url,

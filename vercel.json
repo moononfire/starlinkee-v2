@@ -3,6 +3,9 @@
   "buildCommand": "npm run build",
   "installCommand": "npm install",
   "regions": ["cdg1"],
+  "crons": [
+    { "path": "/api/cron/expire-subscriptions", "schedule": "0 3 * * *" }
+  ],
   "headers": [
     {
       "source": "/api/stripe/webhook",

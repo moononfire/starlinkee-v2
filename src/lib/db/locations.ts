@@ -106,6 +106,7 @@ export async function createLocation(data: {
   support_email?: string;
   logo_path?: string;
   logo_link?: string;
+  logo_is_round?: boolean;
   owner_email?: string;
 }): Promise<CustomerLocation> {
   const supabase = createAdminClient();
@@ -225,6 +226,8 @@ export async function updateLocation(
     support_email?: string | null;
     logo_path?: string | null;
     logo_link?: string | null;
+    logo_is_round?: boolean;
+    page_background?: string | null;
     owner_email?: string | null;
     scan_redirect_mode?: "review" | "linktree";
     redirect_four_star_reviews?: boolean;

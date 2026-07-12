@@ -1,11 +1,13 @@
 import { notFound, redirect } from "next/navigation";
 import { getReviewByScanId } from "@/lib/db/reviews";
+import { listMessagesByReviewId } from "@/lib/db/review-messages";
 import { getPlateByNumber } from "@/lib/db/plates";
 import { getLocationBySubscriptionId } from "@/lib/db/locations";
 import { getSubscriptionById } from "@/lib/db/subscriptions";
 import { t } from "@/lib/translations";
 import RatingStars from "@/components/plate/RatingStars";
 import FeedbackForm from "@/components/plate/FeedbackForm";
+import ReviewConversation from "@/components/plate/ReviewConversation";
 import PageTracker from "@/components/tracking/PageTracker";
 import { getLanguage } from "@/lib/language";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -23,9 +25,14 @@ export default async function ScanPage({ params }: Props) {
   const plate = await getPlateByNumber(number);
   if (!plate || plate.plate_id !== review.plate_id) notFound();
 
-  if (!plate.subscription_id) notFound();
+  // Subscription lapsed after this scan session started (or was never active) —
+  // send the customer to the plate's permanent URL, which already shows the
+  // renewal screen with a payment link tied to this exact subscription.
+  if (!plate.subscription_id) redirect(`/plate/${plate.plate_number}/${plate.secret_key}`);
   const subscription = await getSubscriptionById(plate.subscription_id);
-  if (!subscription || subscription.status !== "active") notFound();
+  if (!subscription || subscription.status !== "active") {
+    redirect(`/plate/${plate.plate_number}/${plate.secret_key}`);
+  }
 
   const location = await getLocationBySubscriptionId(plate.subscription_id);
   if (!location) notFound();
@@ -37,11 +44,15 @@ export default async function ScanPage({ params }: Props) {
   // straight to Google without physically rescanning the plate.
   if (review.rating !== null) {
     if (review.feedback_time !== null) {
+      const messages = await listMessagesByReviewId(review.review_id);
       return (
         <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
-          <div className="max-w-sm w-full flex flex-col items-center gap-2 text-center">
-            <p className="text-lg font-semibold text-gray-800">{t("thank_you_short", lang)}</p>
-            <p className="text-gray-500">{t("appreciate_feedback", lang)}</p>
+          <div className="max-w-sm w-full flex flex-col items-center gap-4">
+            <div className="text-center">
+              <p className="text-lg font-semibold text-gray-800">{t("thank_you_short", lang)}</p>
+              <p className="text-gray-500">{t("appreciate_feedback", lang)}</p>
+            </div>
+            <ReviewConversation scanId={scanId} lang={lang} initialMessages={messages} />
           </div>
         </main>
       );
@@ -66,7 +77,11 @@ export default async function ScanPage({ params }: Props) {
             <img
               src={location.logo_link}
               alt={location.location_name}
-              className="h-24 w-24 object-cover rounded-full"
+              className={
+                location.logo_is_round
+                  ? "h-24 w-24 object-cover rounded-full"
+                  : "max-h-24 w-auto object-contain rounded-lg"
+              }
             />
           )}
 
