@@ -9,6 +9,7 @@ import { isSafeHttpUrl } from "@/lib/urls";
 import { SUPPORTED_LANGUAGES } from "@/lib/language";
 import { isLinkIconKey } from "@/lib/linkIcons";
 import { isTileBackgroundKey } from "@/lib/linkBackgrounds";
+import { isPageBackgroundKey } from "@/lib/pageBackgrounds";
 
 function makeSupabase(cookieStore: Awaited<ReturnType<typeof cookies>>) {
   return createServerClient(
@@ -92,6 +93,7 @@ export async function upsertLinktreeLinks(formData: FormData) {
   const subscriptionId = Number(formData.get("subscription_id"));
   const locationId = Number(formData.get("location_id"));
   const linksJson = formData.get("links_json") as string;
+  const pageBackground = formData.get("page_background") as string | null;
 
   const dest = `/portal/${subscriptionId}`;
   if (!subscriptionId || !locationId || !linksJson) redirect(dest);
@@ -130,6 +132,9 @@ export async function upsertLinktreeLinks(formData: FormData) {
     });
 
   await upsertLocationLinks(locationId, links);
+  await updateLocation(locationId, {
+    page_background: isPageBackgroundKey(pageBackground) ? pageBackground : null,
+  });
   redirect(`${dest}/settings?saved=linktree_links`);
 }
 

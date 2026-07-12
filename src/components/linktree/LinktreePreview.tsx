@@ -2,6 +2,7 @@
 
 import { LinkIconGlyph } from "@/lib/linkIcons";
 import { getTileBackground } from "@/lib/linkBackgrounds";
+import { getPageBackground } from "@/lib/pageBackgrounds";
 import { t } from "@/lib/translations";
 
 interface PreviewLink {
@@ -15,6 +16,7 @@ interface Props {
   locationName: string;
   logoUrl: string | null;
   links: PreviewLink[];
+  pageBackground?: string | null;
   hasPromo: boolean;
   promoBannerText: string | null;
   hasLoyalty: boolean;
@@ -25,6 +27,7 @@ export default function LinktreePreview({
   locationName,
   logoUrl,
   links,
+  pageBackground,
   hasPromo,
   promoBannerText,
   hasLoyalty,
@@ -36,7 +39,7 @@ export default function LinktreePreview({
     <div className="flex flex-col items-center">
       <div className="relative w-[240px] rounded-[2rem] border-[6px] border-gray-900 dark:border-gray-700 bg-gray-900 dark:bg-gray-700 shadow-xl overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-4 bg-gray-900 dark:bg-gray-700 rounded-b-xl z-10" />
-        <div className="bg-white h-[480px] overflow-y-auto rounded-[1.5rem]">
+        <div className={`${getPageBackground(pageBackground).page} h-[480px] overflow-y-auto rounded-[1.5rem]`}>
           <div className="flex flex-col items-center gap-3 p-4 pt-6">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element

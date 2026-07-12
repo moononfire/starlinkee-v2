@@ -39,6 +39,8 @@ export interface CustomerLocation {
   support_email: string | null;
   logo_path: string | null;
   logo_link: string | null;
+  logo_is_round: boolean;
+  page_background: string | null;
   linktree_slug: string | null;
   linktree_visits: number;
   has_linktree_access: boolean;
@@ -80,8 +82,18 @@ export interface Review {
   ip_address: string | null;
   user_agent: string | null;
   device_id: string | null;
+  owner_last_read_at: string | null;
+  reporter_last_read_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface ReviewMessage {
+  message_id: number;
+  review_id: number;
+  sender: "reporter" | "owner";
+  body: string;
+  created_at: string;
 }
 
 export interface LoyaltyCard {

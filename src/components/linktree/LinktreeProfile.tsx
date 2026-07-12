@@ -4,6 +4,7 @@ import { t } from "@/lib/translations";
 import { isSafeHttpUrl } from "@/lib/urls";
 import { LinkIconGlyph } from "@/lib/linkIcons";
 import { getTileBackground } from "@/lib/linkBackgrounds";
+import { getPageBackground } from "@/lib/pageBackgrounds";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 interface Props {
@@ -23,7 +24,7 @@ function getLinkTitle(link: CustomerLocationLink, lang: string): string {
 
 export default function LinktreeProfile({ location, links, slug, scanToken, lang }: Props) {
   return (
-    <main className="min-h-screen flex flex-col items-center p-6 bg-white">
+    <main className={`min-h-screen flex flex-col items-center p-6 ${getPageBackground(location.page_background).page}`}>
       <div className="flex justify-end w-full max-w-sm mb-3">
         <LanguageSwitcher currentLang={lang} scopeKey={slug} availableLanguages={location.active_languages} />
       </div>

@@ -11,6 +11,16 @@ export async function getPlateByNumber(plateNumber: string): Promise<Plate | nul
   return data ?? null;
 }
 
+export async function getPlateById(plateId: number): Promise<Plate | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("plates")
+    .select("*")
+    .eq("plate_id", plateId)
+    .single();
+  return data ?? null;
+}
+
 export async function incrementPlateVisits(plateId: number): Promise<void> {
   const supabase = createAdminClient();
   await supabase.rpc("increment_plate_visits", { p_plate_id: plateId });

@@ -8,11 +8,13 @@ export default function SubTabs({
   subscriptionId,
   hasPromo,
   hasLoyalty,
+  unreadMessageCount = 0,
   lang,
 }: {
   subscriptionId: number;
   hasPromo: boolean;
   hasLoyalty: boolean;
+  unreadMessageCount?: number;
   lang: string;
 }) {
   const pathname = usePathname();
@@ -21,6 +23,7 @@ export default function SubTabs({
   const tabs = [
     { href: base, label: t("portal_tab_overview", lang), exact: true },
     { href: `${base}/reviews`, label: t("portal_tab_reviews", lang) },
+    { href: `${base}/messages`, label: t("portal_tab_messages", lang), badge: unreadMessageCount },
     ...(hasPromo
       ? [{ href: `${base}/promo`, label: t("portal_tab_promo", lang) }]
       : []),
@@ -47,6 +50,11 @@ export default function SubTabs({
             }`}
           >
             {tab.label}
+            {"badge" in tab && tab.badge ? (
+              <span className="ml-1.5 inline-block bg-blue-600 text-white text-xs rounded-full px-1.5 min-w-[16px] text-center align-middle">
+                {tab.badge}
+              </span>
+            ) : null}
           </Link>
         );
       })}

@@ -13,6 +13,7 @@ const groups = [
       { href: "/admin/places", label: "Places" },
       { href: "/admin/subscriptions", label: "Subskrypcje" },
       { href: "/admin/plates", label: "Płytki" },
+      { href: "/admin/plates/quick-activate", label: "Szybka aktywacja" },
       { href: "/admin/reviews", label: "Recenzje" },
       { href: "/admin/analytics", label: "Analityka" },
     ],
