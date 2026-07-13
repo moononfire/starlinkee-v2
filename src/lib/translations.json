@@ -158,6 +158,7 @@
     "collect_promo_btn": "Collect promotion",
 
     "loyalty_app_prompt": "Your loyalty card lives in the Starlinkee app. Open the app to sign in with your phone number and collect stamps.",
+    "opening_app": "Opening the Starlinkee app...",
     "open_in_app_button": "Open in the Starlinkee app",
     "download_app_link": "Don't have the app yet? Download it",
 
@@ -552,6 +553,7 @@
     "collect_promo_btn": "Promotion abholen",
 
     "loyalty_app_prompt": "Ihre Treuekarte befindet sich in der Starlinkee-App. Öffnen Sie die App, um sich mit Ihrer Telefonnummer anzumelden und Stempel zu sammeln.",
+    "opening_app": "Starlinkee-App wird geöffnet...",
     "open_in_app_button": "In der Starlinkee-App öffnen",
     "download_app_link": "Sie haben die App noch nicht? Jetzt herunterladen",
 
@@ -945,6 +947,7 @@
     "collect_promo_btn": "Odbierz promocję",
 
     "loyalty_app_prompt": "Twoja karta lojalnościowa jest teraz w aplikacji Starlinkee. Otwórz aplikację, zaloguj się numerem telefonu i zbieraj pieczątki.",
+    "opening_app": "Otwieram aplikację Starlinkee...",
     "open_in_app_button": "Otwórz w aplikacji Starlinkee",
     "download_app_link": "Nie masz jeszcze aplikacji? Pobierz ją",
 

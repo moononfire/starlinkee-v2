@@ -40,6 +40,7 @@ function buildIosAppLink(slug: string, scanToken: string | undefined, maxStamps:
 
 export default function LoyaltyCard({ slug, scanToken, maxStamps, lang }: Props) {
   const [openAppHref, setOpenAppHref] = useState(appFallbackUrl(lang));
+  const [autoOpening, setAutoOpening] = useState(false);
   const autoOpenedRef = useRef(false);
 
   useEffect(() => {
@@ -59,13 +60,16 @@ export default function LoyaltyCard({ slug, scanToken, maxStamps, lang }: Props)
     // only auto-open on Android and leave the button as the iOS path.
     if (isAndroid && scanToken && !autoOpenedRef.current) {
       autoOpenedRef.current = true;
+      setAutoOpening(true);
       window.location.href = href;
     }
   }, [slug, scanToken, maxStamps, lang]);
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-gray-600 text-center">{t("loyalty_app_prompt", lang)}</p>
+      <p className="text-sm text-gray-600 text-center">
+        {autoOpening ? t("opening_app", lang) : t("loyalty_app_prompt", lang)}
+      </p>
       <a
         href={openAppHref}
         className="bg-black text-white rounded-lg px-4 py-3 text-sm font-medium text-center"
