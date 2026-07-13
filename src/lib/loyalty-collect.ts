@@ -11,7 +11,7 @@ export type CollectStampResult =
 
 export async function collectLoyaltyStamp(
   locationId: number,
-  phone: string,
+  customerUserId: string,
   scanToken: unknown
 ): Promise<CollectStampResult> {
   // Require proof of a real, recent NFC tap — otherwise the loyalty link
@@ -24,10 +24,10 @@ export async function collectLoyaltyStamp(
   const location = await getLocationById(locationId);
   const maxStamps = location?.loyalty_stamps_required ?? 10;
 
-  let card = await getLoyaltyCard(locationId, phone);
+  let card = await getLoyaltyCard(locationId, customerUserId);
 
   if (!card) {
-    card = await createLoyaltyCard(locationId, phone);
+    card = await createLoyaltyCard(locationId, customerUserId);
     return { ok: true, stamps: card.stamps_count, rewardReady: card.stamps_count >= maxStamps };
   }
 
@@ -51,11 +51,11 @@ export async function collectLoyaltyStamp(
 
 export type ClaimRewardResult = { ok: true; stamps: number } | { ok: false; status: 400; error: string };
 
-export async function claimLoyaltyReward(locationId: number, phone: string): Promise<ClaimRewardResult> {
+export async function claimLoyaltyReward(locationId: number, customerUserId: string): Promise<ClaimRewardResult> {
   const location = await getLocationById(locationId);
   const maxStamps = location?.loyalty_stamps_required ?? 10;
 
-  const card = await getLoyaltyCard(locationId, phone);
+  const card = await getLoyaltyCard(locationId, customerUserId);
   if (!card || card.stamps_count < maxStamps) {
     return { ok: false, status: 400, error: "No reward available" };
   }

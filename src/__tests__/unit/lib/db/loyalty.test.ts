@@ -6,15 +6,9 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => supabaseMock,
 }));
 
-import {
-  getLoyaltyCard,
-  createLoyaltyCard,
-  incrementStamp,
-  resetLoyaltyCard,
-  upsertOtp,
-  getOtp,
-  deleteOtp,
-} from "@/lib/db/loyalty";
+import { getLoyaltyCard, createLoyaltyCard, incrementStamp, resetLoyaltyCard } from "@/lib/db/loyalty";
+
+const USER_ID = "11111111-1111-1111-1111-111111111111";
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -25,18 +19,18 @@ describe("getLoyaltyCard()", () => {
         eq: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: null }) })) })),
       })),
     });
-    const result = await getLoyaltyCard(1, "+48600000000");
+    const result = await getLoyaltyCard(1, USER_ID);
     expect(result).toBeNull();
   });
 
   it("returns card when found", async () => {
-    const card = { id: 5, location_id: 1, phone: "+48600000000", stamps_count: 3, last_stamp_at: null };
+    const card = { id: 5, location_id: 1, customer_user_id: USER_ID, stamps_count: 3, last_stamp_at: null };
     supabaseMock.from.mockReturnValue({
       select: vi.fn(() => ({
         eq: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: card }) })) })),
       })),
     });
-    const result = await getLoyaltyCard(1, "+48600000000");
+    const result = await getLoyaltyCard(1, USER_ID);
     expect(result).toEqual(card);
   });
 });
@@ -48,17 +42,17 @@ describe("createLoyaltyCard()", () => {
         select: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: null, error: { message: "unique constraint" } }) })),
       })),
     });
-    await expect(createLoyaltyCard(1, "+48600000000")).rejects.toThrow("Failed to create loyalty card");
+    await expect(createLoyaltyCard(1, USER_ID)).rejects.toThrow("Failed to create loyalty card");
   });
 
   it("returns created card", async () => {
-    const card = { id: 1, location_id: 1, phone: "+48600000000", stamps_count: 1, last_stamp_at: new Date().toISOString() };
+    const card = { id: 1, location_id: 1, customer_user_id: USER_ID, stamps_count: 1, last_stamp_at: new Date().toISOString() };
     supabaseMock.from.mockReturnValue({
       insert: vi.fn(() => ({
         select: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: card, error: null }) })),
       })),
     });
-    const result = await createLoyaltyCard(1, "+48600000000");
+    const result = await createLoyaltyCard(1, USER_ID);
     expect(result.stamps_count).toBe(1);
   });
 });
@@ -104,41 +98,5 @@ describe("resetLoyaltyCard()", () => {
       update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: { message: "fail" } }) })),
     });
     await expect(resetLoyaltyCard(1)).rejects.toThrow("Failed to reset loyalty card");
-  });
-});
-
-describe("upsertOtp()", () => {
-  it("throws on error", async () => {
-    supabaseMock.from.mockReturnValue({
-      upsert: vi.fn().mockResolvedValue({ error: { message: "conflict" } }),
-    });
-    await expect(upsertOtp(1, "+48600000000", "1234", new Date())).rejects.toThrow("Failed to upsert OTP");
-  });
-
-  it("resolves on success", async () => {
-    supabaseMock.from.mockReturnValue({
-      upsert: vi.fn().mockResolvedValue({ error: null }),
-    });
-    await expect(upsertOtp(1, "+48600000000", "5678", new Date())).resolves.toBeUndefined();
-  });
-});
-
-describe("getOtp()", () => {
-  it("returns null when not found", async () => {
-    supabaseMock.from.mockReturnValue({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: null }) })) })),
-      })),
-    });
-    const result = await getOtp(1, "+48600000000");
-    expect(result).toBeNull();
-  });
-});
-
-describe("deleteOtp()", () => {
-  it("calls delete without throwing", async () => {
-    const eqFn = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({}) }));
-    supabaseMock.from.mockReturnValue({ delete: vi.fn(() => ({ eq: eqFn })) });
-    await expect(deleteOtp(1, "+48600000000")).resolves.toBeUndefined();
   });
 });

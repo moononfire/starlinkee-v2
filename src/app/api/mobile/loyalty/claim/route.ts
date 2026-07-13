@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const result = await claimLoyaltyReward(session.locationId, session.phone);
+  const result = await claimLoyaltyReward(session.locationId, session.customerUserId);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }

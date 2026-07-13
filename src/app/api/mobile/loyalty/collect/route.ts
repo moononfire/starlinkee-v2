@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
 
   const { scanToken } = await request.json().catch(() => ({ scanToken: undefined }));
 
-  const result = await collectLoyaltyStamp(session.locationId, session.phone, scanToken);
+  const result = await collectLoyaltyStamp(session.locationId, session.customerUserId, scanToken);
   if (!result.ok) {
     const body: Record<string, unknown> = { error: result.error };
     if (result.error === "cooldown") body.remaining_seconds = result.remainingSeconds;

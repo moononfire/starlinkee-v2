@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { t } from "@/lib/translations";
+import { createClient } from "@/lib/supabase/client";
 
 interface Props {
   slug: string;
+  locationId: number;
   scanToken?: string;
   initialStamps: number | null;
   isAuthenticated: boolean;
@@ -12,7 +14,7 @@ interface Props {
   lang: string;
 }
 
-type Screen = "phone" | "otp" | "card";
+type Screen = "signin" | "card";
 
 const ANDROID_PACKAGE = "com.starlinkee.app";
 // TODO: switch to the Play Store listing once the app is published there —
@@ -57,52 +59,44 @@ function OpenInAppButton({ slug, scanToken, maxStamps, lang }: { slug: string; s
   );
 }
 
-export default function LoyaltyCard({ slug, scanToken, initialStamps, isAuthenticated, maxStamps, lang }: Props) {
-  const [screen, setScreen] = useState<Screen>(isAuthenticated ? "card" : "phone");
-  const [phone, setPhone] = useState("");
-  const [code, setCode] = useState("");
+export default function LoyaltyCard({ slug, locationId, scanToken, initialStamps, isAuthenticated, maxStamps, lang }: Props) {
+  const [screen, setScreen] = useState<Screen>(isAuthenticated ? "card" : "signin");
   const [stamps, setStamps] = useState(initialStamps ?? 0);
   const [rewardReady, setRewardReady] = useState((initialStamps ?? 0) >= maxStamps);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldownSeconds, setCooldownSeconds] = useState<number | null>(null);
   const [claimed, setClaimed] = useState(false);
+  const collectedRef = useRef(false);
 
-  async function requestOtp() {
-    if (!phone) return;
+  // A valid scanToken means we just arrived here from a real physical NFC
+  // tap (via sign-in redirect or an already-logged-in repeat visit) — collect
+  // the stamp immediately, no extra "confirm" click needed.
+  useEffect(() => {
+    if (screen !== "card" || !scanToken || collectedRef.current) return;
+    collectedRef.current = true;
+    collectStamp();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen, scanToken]);
+
+  async function signInWithGoogle() {
     setLoading(true);
     setError(null);
-    const res = await fetch("/api/loyalty/request-otp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, slug }),
+    const params = new URLSearchParams({ slug, locationId: String(locationId) });
+    if (scanToken) params.set("scanToken", scanToken);
+    const supabase = createClient();
+    const { data, error: signInError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/l/${slug}/loyalty/auth/callback?${params.toString()}`,
+      },
     });
-    setLoading(false);
-    if (!res.ok) {
-      setError(t("otp_failed", lang));
+    if (signInError || !data.url) {
+      setLoading(false);
+      setError(t("error_try_again", lang));
       return;
     }
-    setScreen("otp");
-  }
-
-  async function verifyOtp() {
-    if (!code) return;
-    setLoading(true);
-    setError(null);
-    const res = await fetch("/api/loyalty/verify-otp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, code, slug }),
-    });
-    setLoading(false);
-    if (!res.ok) {
-      setError(t("invalid_code", lang));
-      return;
-    }
-    const data = await res.json();
-    setStamps(data.stamps ?? 0);
-    setRewardReady(data.reward_ready ?? false);
-    setScreen("card");
+    window.location.href = data.url;
   }
 
   async function collectStamp() {
@@ -146,57 +140,18 @@ export default function LoyaltyCard({ slug, scanToken, initialStamps, isAuthenti
 
   const MAX = maxStamps;
 
-  if (screen === "phone") {
+  if (screen === "signin") {
     return (
       <div className="flex flex-col gap-4">
         <OpenInAppButton slug={slug} scanToken={scanToken} maxStamps={maxStamps} lang={lang} />
-        <p className="text-sm text-gray-600">{t("loyalty_phone_prompt", lang)}</p>
-        <input
-          type="tel"
-          placeholder="+48 600 000 000"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          className="border border-gray-300 rounded-lg px-4 py-2 text-sm w-full text-black bg-white placeholder-gray-500"
-        />
+        <p className="text-sm text-gray-600">{t("loyalty_google_prompt", lang)}</p>
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <button
-          onClick={requestOtp}
-          disabled={loading || !phone}
+          onClick={signInWithGoogle}
+          disabled={loading}
           className="bg-black text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
-          {loading ? t("sending", lang) : t("send_sms_code", lang)}
-        </button>
-      </div>
-    );
-  }
-
-  if (screen === "otp") {
-    return (
-      <div className="flex flex-col gap-4">
-        <OpenInAppButton slug={slug} scanToken={scanToken} maxStamps={maxStamps} lang={lang} />
-        <p className="text-sm text-gray-600">{t("otp_prompt", lang).replace("{phone}", phone)}</p>
-        <input
-          type="text"
-          inputMode="numeric"
-          maxLength={4}
-          placeholder="1234"
-          value={code}
-          onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-          className="border border-gray-300 rounded-lg px-4 py-2 text-sm w-full tracking-widest text-center text-lg text-black bg-white placeholder-gray-500"
-        />
-        {error && <p className="text-red-500 text-sm">{error}</p>}
-        <button
-          onClick={verifyOtp}
-          disabled={loading || code.length < 4}
-          className="bg-black text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
-        >
-          {loading ? t("verifying", lang) : t("confirm", lang)}
-        </button>
-        <button
-          onClick={() => setScreen("phone")}
-          className="text-sm text-gray-500 underline"
-        >
-          {t("change_number", lang)}
+          {loading ? t("sending", lang) : t("sign_in_with_google", lang)}
         </button>
       </div>
     );
@@ -231,7 +186,7 @@ export default function LoyaltyCard({ slug, scanToken, initialStamps, isAuthenti
         {stamps} / {MAX} {t("stamps_label", lang)}
       </p>
 
-      {rewardReady ? (
+      {rewardReady && (
         <button
           onClick={claimReward}
           disabled={loading}
@@ -239,14 +194,10 @@ export default function LoyaltyCard({ slug, scanToken, initialStamps, isAuthenti
         >
           {loading ? t("processing", lang) : `${t("claim_reward", lang)} 🎁`}
         </button>
-      ) : (
-        <button
-          onClick={collectStamp}
-          disabled={loading || !!cooldownSeconds}
-          className="bg-black text-white rounded-lg px-4 py-3 font-medium disabled:opacity-50"
-        >
-          {loading ? t("collecting", lang) : t("collect_stamp", lang)}
-        </button>
+      )}
+
+      {loading && !rewardReady && (
+        <p className="text-sm text-gray-500 text-center">{t("collecting", lang)}</p>
       )}
 
       {cooldownSeconds && (

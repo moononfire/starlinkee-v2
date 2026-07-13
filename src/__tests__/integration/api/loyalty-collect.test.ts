@@ -28,7 +28,7 @@ vi.mock("@/lib/db/scan-tokens", () => ({ validateScanToken: mockValidateScanToke
 import { POST } from "@/app/api/loyalty/collect/route";
 import type { NextRequest } from "next/server";
 
-const session = { phone: "+48600000000", locationId: 1 };
+const session = { customerUserId: "11111111-1111-1111-1111-111111111111", locationId: 1 };
 
 function requestWithToken(scanToken: string | undefined = "valid-token") {
   return { json: async () => ({ scanToken }) } as unknown as NextRequest;
@@ -83,7 +83,7 @@ describe("POST /api/loyalty/collect", () => {
     const body = await res.json();
     expect(body.stamps).toBe(1);
     expect(body.reward_ready).toBe(false);
-    expect(mockCreateLoyaltyCard).toHaveBeenCalledWith(1, "+48600000000");
+    expect(mockCreateLoyaltyCard).toHaveBeenCalledWith(1, "11111111-1111-1111-1111-111111111111");
   });
 
   it("returns reward_ready=true when stamps already at 10", async () => {

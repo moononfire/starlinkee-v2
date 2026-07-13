@@ -4,13 +4,13 @@ import { collectLoyaltyStamp } from "@/lib/loyalty-collect";
 
 export async function POST(request: NextRequest) {
   const session = await getLoyaltySession();
-  if (!session.phone || !session.locationId) {
+  if (!session.customerUserId || !session.locationId) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   const { scanToken } = await request.json().catch(() => ({ scanToken: undefined }));
 
-  const result = await collectLoyaltyStamp(session.locationId, session.phone, scanToken);
+  const result = await collectLoyaltyStamp(session.locationId, session.customerUserId, scanToken);
   if (!result.ok) {
     const body: Record<string, unknown> = { error: result.error };
     if (result.error === "cooldown") body.remaining_seconds = result.remainingSeconds;

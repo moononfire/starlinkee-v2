@@ -27,11 +27,11 @@ export default async function LoyaltyPage({ params, searchParams }: Props) {
     getPlatesBySubscriptionId(location.subscription_id),
   ]);
   const isAuthenticated =
-    !!session.phone && session.locationId === location.location_id;
+    !!session.customerUserId && session.locationId === location.location_id;
 
   let initialStamps: number | null = null;
   if (isAuthenticated) {
-    const card = await getLoyaltyCard(location.location_id, session.phone!);
+    const card = await getLoyaltyCard(location.location_id, session.customerUserId!);
     initialStamps = card?.stamps_count ?? 0;
   }
 
@@ -73,6 +73,7 @@ export default async function LoyaltyPage({ params, searchParams }: Props) {
 
           <LoyaltyCard
             slug={slug}
+            locationId={location.location_id}
             scanToken={scan}
             initialStamps={initialStamps}
             isAuthenticated={isAuthenticated}
