@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { t } from "@/lib/translations";
 
 interface Props {
@@ -40,13 +40,26 @@ function buildIosAppLink(slug: string, scanToken: string | undefined, maxStamps:
 
 export default function LoyaltyCard({ slug, scanToken, maxStamps, lang }: Props) {
   const [openAppHref, setOpenAppHref] = useState(appFallbackUrl(lang));
+  const autoOpenedRef = useRef(false);
 
   useEffect(() => {
     const ua = navigator.userAgent;
-    if (/Android/i.test(ua)) {
-      setOpenAppHref(buildAndroidAppLink(slug, scanToken, maxStamps, lang));
-    } else if (/iPhone|iPad|iPod/i.test(ua)) {
-      setOpenAppHref(buildIosAppLink(slug, scanToken, maxStamps));
+    const isAndroid = /Android/i.test(ua);
+    const href = isAndroid
+      ? buildAndroidAppLink(slug, scanToken, maxStamps, lang)
+      : /iPhone|iPad|iPod/i.test(ua)
+        ? buildIosAppLink(slug, scanToken, maxStamps)
+        : appFallbackUrl(lang);
+    setOpenAppHref(href);
+
+    // A scanToken means we just arrived from a real NFC tap — jump straight
+    // into the app instead of making the customer tap the button. Android's
+    // intent:// links fall back gracefully to the download page when the
+    // app isn't installed; iOS custom schemes don't (they show an error), so
+    // only auto-open on Android and leave the button as the iOS path.
+    if (isAndroid && scanToken && !autoOpenedRef.current) {
+      autoOpenedRef.current = true;
+      window.location.href = href;
     }
   }, [slug, scanToken, maxStamps, lang]);
 
