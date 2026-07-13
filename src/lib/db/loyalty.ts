@@ -1,6 +1,48 @@
 import { createAdminClient } from "../supabase/admin";
 import type { LoyaltyCard, LoyaltyOtp } from "../types";
 
+export interface LoyaltyCardWithLocation {
+  location_id: number;
+  location_name: string;
+  linktree_slug: string | null;
+  logo_link: string | null;
+  stamps_count: number;
+  max_stamps: number;
+  last_stamp_at: string | null;
+}
+
+export async function getLoyaltyCardsForPhone(phone: string): Promise<LoyaltyCardWithLocation[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("loyalty_cards")
+    .select(
+      "stamps_count, last_stamp_at, customer_locations(location_id, location_name, linktree_slug, logo_link, loyalty_stamps_required)"
+    )
+    .eq("phone", phone);
+  if (error) throw new Error(`Failed to fetch loyalty cards: ${error.message}`);
+
+  return (data ?? [])
+    .filter((row) => row.customer_locations)
+    .map((row) => {
+      const location = row.customer_locations as unknown as {
+        location_id: number;
+        location_name: string;
+        linktree_slug: string | null;
+        logo_link: string | null;
+        loyalty_stamps_required: number | null;
+      };
+      return {
+        location_id: location.location_id,
+        location_name: location.location_name,
+        linktree_slug: location.linktree_slug,
+        logo_link: location.logo_link,
+        stamps_count: row.stamps_count,
+        max_stamps: location.loyalty_stamps_required ?? 10,
+        last_stamp_at: row.last_stamp_at,
+      };
+    });
+}
+
 export async function getLoyaltyCard(locationId: number, phone: string): Promise<LoyaltyCard | null> {
   const supabase = createAdminClient();
   const { data } = await supabase
