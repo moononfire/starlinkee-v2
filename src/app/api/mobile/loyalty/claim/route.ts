@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
-import { getLoyaltySession } from "@/lib/session";
+import { NextRequest, NextResponse } from "next/server";
+import { getBearerToken, verifyMobileToken } from "@/lib/mobile-session";
 import { claimLoyaltyReward } from "@/lib/loyalty-collect";
 
-export async function POST() {
-  const session = await getLoyaltySession();
-  if (!session.phone || !session.locationId) {
+export async function POST(request: NextRequest) {
+  const token = getBearerToken(request);
+  const session = token ? await verifyMobileToken(token) : null;
+  if (!session) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 

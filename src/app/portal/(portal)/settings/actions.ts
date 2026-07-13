@@ -25,6 +25,39 @@ function makeSupabase(cookieStore: Awaited<ReturnType<typeof cookies>>) {
   );
 }
 
+export async function updatePortalPassword(formData: FormData) {
+  const cookieStore = await cookies();
+  const supabase = makeSupabase(cookieStore);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) redirect("/portal/login");
+
+  const subscriptionId = Number(formData.get("subscription_id"));
+  const password = formData.get("password") as string;
+  const passwordConfirm = formData.get("password_confirm") as string;
+
+  if (!subscriptionId) redirect("/portal");
+
+  const dest = `/portal/${subscriptionId}/settings`;
+
+  if (!password || password !== passwordConfirm) {
+    redirect(`${dest}?passwordError=mismatch`);
+  }
+
+  if (password.length < 8) {
+    redirect(`${dest}?passwordError=short`);
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    redirect(`${dest}?passwordError=failed`);
+  }
+
+  redirect(`${dest}?saved=password`);
+}
+
 export async function updateScanRedirectMode(formData: FormData) {
   const cookieStore = await cookies();
   const supabase = makeSupabase(cookieStore);

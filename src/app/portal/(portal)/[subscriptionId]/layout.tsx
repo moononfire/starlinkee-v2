@@ -61,8 +61,8 @@ export default async function SubscriptionLayout({
       {sub.status !== "pending" && (
         <SubTabs
           subscriptionId={subscriptionId}
-          hasPromo={sub.status === "active" && !!sub.location?.has_promo_enabled}
-          hasLoyalty={sub.status === "active" && !!sub.location?.has_loyalty_enabled}
+          hasPromo={sub.status === "active"}
+          hasLoyalty={sub.status === "active"}
           unreadMessageCount={unreadMessageCount}
           lang={lang}
         />

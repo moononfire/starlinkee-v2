@@ -9,6 +9,7 @@ import {
   updateScanRedirectMode,
   updateLinktreeSlug,
   updateFourStarRedirect,
+  updatePortalPassword,
 } from "../../settings/actions";
 import {
   updateLocationName,
@@ -29,6 +30,7 @@ export default function LocationSettings({
   location,
   locationLinks,
   linktreeError,
+  passwordError,
   saved,
   lang,
 }: {
@@ -36,6 +38,7 @@ export default function LocationSettings({
   location: CustomerLocation;
   locationLinks: CustomerLocationLink[];
   linktreeError?: string;
+  passwordError?: string;
   saved?: string;
   lang: string;
 }) {
@@ -150,6 +153,54 @@ export default function LocationSettings({
         </form>
       </section>
 
+      {/* Tryb skanowania */}
+      {location.has_linktree_access && (
+        <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
+          <div className="flex items-center justify-between gap-3 mb-1">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              {t("portal_scan_mode_title", lang)}
+            </h3>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            {t("portal_scan_mode_desc", lang)}
+          </p>
+          <form action={updateScanRedirectMode} className="space-y-3">
+            <input type="hidden" name="location_id" value={location.location_id} />
+            <label className="flex items-start gap-3 cursor-pointer">
+              <AutoSaveRadio
+                name="scan_redirect_mode"
+                value="review"
+                defaultChecked={location.scan_redirect_mode === "review"}
+              />
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {t("portal_scan_mode_review_title", lang)}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {t("portal_scan_mode_review_desc", lang)}
+                </p>
+              </div>
+            </label>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <AutoSaveRadio
+                name="scan_redirect_mode"
+                value="linktree"
+                defaultChecked={location.scan_redirect_mode === "linktree"}
+              />
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {t("portal_scan_mode_linktree_title", lang)}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {t("portal_scan_mode_linktree_desc", lang)}
+                </p>
+              </div>
+            </label>
+            <AutoSavePendingHint lang={lang} />
+          </form>
+        </section>
+      )}
+
       {/* Linki Linktree */}
       {location.has_linktree_access && (
         <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
@@ -226,54 +277,6 @@ export default function LocationSettings({
         </section>
       )}
 
-      {/* Tryb skanowania */}
-      {location.has_linktree_access && location.linktree_slug && (
-        <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-          <div className="flex items-center justify-between gap-3 mb-1">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-              {t("portal_scan_mode_title", lang)}
-            </h3>
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            {t("portal_scan_mode_desc", lang)}
-          </p>
-          <form action={updateScanRedirectMode} className="space-y-3">
-            <input type="hidden" name="location_id" value={location.location_id} />
-            <label className="flex items-start gap-3 cursor-pointer">
-              <AutoSaveRadio
-                name="scan_redirect_mode"
-                value="review"
-                defaultChecked={location.scan_redirect_mode === "review"}
-              />
-              <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {t("portal_scan_mode_review_title", lang)}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {t("portal_scan_mode_review_desc", lang)}
-                </p>
-              </div>
-            </label>
-            <label className="flex items-start gap-3 cursor-pointer">
-              <AutoSaveRadio
-                name="scan_redirect_mode"
-                value="linktree"
-                defaultChecked={location.scan_redirect_mode === "linktree"}
-              />
-              <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {t("portal_scan_mode_linktree_title", lang)}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {t("portal_scan_mode_linktree_desc", lang)}
-                </p>
-              </div>
-            </label>
-            <AutoSavePendingHint lang={lang} />
-          </form>
-        </section>
-      )}
-
       {/* Przekierowanie dla oceny 4 gwiazdek */}
       <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
@@ -302,6 +305,57 @@ export default function LocationSettings({
           <div className="mt-2">
             <AutoSavePendingHint lang={lang} />
           </div>
+        </form>
+      </section>
+
+      {/* Hasło */}
+      <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+          {t("portal_password_title", lang)}
+        </h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          {t("portal_password_desc", lang)}
+        </p>
+        <form action={updatePortalPassword} className="space-y-3">
+          <input type="hidden" name="subscription_id" value={subscriptionId} />
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              name="password"
+              required
+              type="password"
+              minLength={8}
+              autoComplete="new-password"
+              placeholder={t("portal_password_new", lang)}
+              className="flex-1 min-w-0 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <input
+              name="password_confirm"
+              required
+              type="password"
+              minLength={8}
+              autoComplete="new-password"
+              placeholder={t("portal_password_confirm", lang)}
+              className="flex-1 min-w-0 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <SubmitButton lang={lang} className="shrink-0">
+              {t("portal_save", lang)}
+            </SubmitButton>
+          </div>
+          {passwordError === "mismatch" && (
+            <p className="text-xs text-red-600 dark:text-red-400">
+              {t("portal_password_mismatch", lang)}
+            </p>
+          )}
+          {passwordError === "short" && (
+            <p className="text-xs text-red-600 dark:text-red-400">
+              {t("portal_password_too_short", lang)}
+            </p>
+          )}
+          {passwordError === "failed" && (
+            <p className="text-xs text-red-600 dark:text-red-400">
+              {t("portal_password_failed", lang)}
+            </p>
+          )}
         </form>
       </section>
     </div>

@@ -3,7 +3,7 @@ import { requestLoyaltyOtp } from "@/lib/loyalty-auth";
 import { clientIp } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
-  const { phone, slug } = await request.json();
+  const { phone, slug } = await request.json().catch(() => ({}));
 
   const result = await requestLoyaltyOtp(phone, slug, clientIp(request));
   if (!result.ok) {

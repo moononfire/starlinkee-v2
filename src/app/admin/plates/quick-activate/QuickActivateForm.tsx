@@ -516,6 +516,7 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            autoComplete="off"
             placeholder="np. adres znaleziony na stronie firmy"
             className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
