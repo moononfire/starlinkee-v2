@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { t } from "@/lib/translations";
 
 interface Props {
@@ -14,11 +14,47 @@ interface Props {
 
 type Screen = "phone" | "otp" | "card";
 
+const ANDROID_PACKAGE = "com.starlinkee.app";
+// TODO: switch to the Play Store listing once the app is published there —
+// https://play.google.com/store/apps/details?id=com.starlinkee.app
+const APP_FALLBACK_URL = "https://starlinkee.com/pl/pobierz-aplikacje";
+
 function formatRemaining(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   if (h > 0) return `${h}h ${m}m`;
   return `${m}m`;
+}
+
+// Android-only: launches the native app via its custom scheme if installed,
+// otherwise Chrome falls back to APP_FALLBACK_URL automatically.
+function buildAndroidAppLink(slug: string, scanToken: string | undefined, maxStamps: number): string {
+  const params = new URLSearchParams({ maxStamps: String(maxStamps) });
+  if (scanToken) params.set("scanToken", scanToken);
+  return (
+    `intent://loyalty/${slug}?${params.toString()}` +
+    `#Intent;scheme=starlinkee;package=${ANDROID_PACKAGE};` +
+    `S.browser_fallback_url=${encodeURIComponent(APP_FALLBACK_URL)};end`
+  );
+}
+
+function OpenInAppButton({ slug, scanToken, maxStamps, lang }: { slug: string; scanToken?: string; maxStamps: number; lang: string }) {
+  const [isAndroid, setIsAndroid] = useState(false);
+
+  useEffect(() => {
+    setIsAndroid(/Android/i.test(navigator.userAgent));
+  }, []);
+
+  if (!isAndroid) return null;
+
+  return (
+    <a
+      href={buildAndroidAppLink(slug, scanToken, maxStamps)}
+      className="block text-center border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium text-gray-700"
+    >
+      {t("open_in_app_button", lang)}
+    </a>
+  );
 }
 
 export default function LoyaltyCard({ slug, scanToken, initialStamps, isAuthenticated, maxStamps, lang }: Props) {
@@ -113,6 +149,7 @@ export default function LoyaltyCard({ slug, scanToken, initialStamps, isAuthenti
   if (screen === "phone") {
     return (
       <div className="flex flex-col gap-4">
+        <OpenInAppButton slug={slug} scanToken={scanToken} maxStamps={maxStamps} lang={lang} />
         <p className="text-sm text-gray-600">{t("loyalty_phone_prompt", lang)}</p>
         <input
           type="tel"
@@ -136,6 +173,7 @@ export default function LoyaltyCard({ slug, scanToken, initialStamps, isAuthenti
   if (screen === "otp") {
     return (
       <div className="flex flex-col gap-4">
+        <OpenInAppButton slug={slug} scanToken={scanToken} maxStamps={maxStamps} lang={lang} />
         <p className="text-sm text-gray-600">{t("otp_prompt", lang).replace("{phone}", phone)}</p>
         <input
           type="text"
@@ -166,6 +204,8 @@ export default function LoyaltyCard({ slug, scanToken, initialStamps, isAuthenti
 
   return (
     <div className="flex flex-col gap-6">
+      <OpenInAppButton slug={slug} scanToken={scanToken} maxStamps={maxStamps} lang={lang} />
+
       {claimed && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-800">
           {t("reward_claimed", lang)}

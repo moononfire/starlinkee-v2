@@ -21,6 +21,7 @@ interface Props {
   promoBannerText: string | null;
   hasLoyalty: boolean;
   lang: string;
+  contentLang?: string;
 }
 
 export default function LinktreePreview({
@@ -32,8 +33,10 @@ export default function LinktreePreview({
   promoBannerText,
   hasLoyalty,
   lang,
+  contentLang,
 }: Props) {
-  const visibleLinks = links.filter((l) => l.url.trim().length > 0 && l.title.trim().length > 0);
+  const previewLang = contentLang ?? lang;
+  const visibleLinks = links.filter((l) => l.title.trim().length > 0);
 
   return (
     <div className="flex flex-col items-center">
@@ -56,12 +59,8 @@ export default function LinktreePreview({
 
             <div className="w-full flex flex-col gap-2">
               <div className="w-full text-center py-2 px-3 rounded-full bg-blue-600 font-semibold text-white text-[11px]">
-                ⭐ {t("leave_review", lang)}
+                ⭐ {t("leave_review", previewLang)}
               </div>
-
-              {visibleLinks.length === 0 && (
-                <p className="text-[10px] text-gray-300 text-center py-2">···</p>
-              )}
 
               {visibleLinks.map((link, i) => (
                 <div
@@ -77,7 +76,7 @@ export default function LinktreePreview({
             {hasPromo && (
               <div className="w-full mt-1">
                 <div className="block w-full text-center py-2 px-3 rounded-full bg-amber-400 font-semibold text-gray-900 text-[11px]">
-                  {promoBannerText || t("collect_promo_default", lang)}
+                  {promoBannerText || t("collect_promo_default", previewLang)}
                 </div>
               </div>
             )}
@@ -85,7 +84,7 @@ export default function LinktreePreview({
             {hasLoyalty && (
               <div className="w-full">
                 <div className="block w-full text-center py-2 px-3 rounded-full bg-gray-900 font-semibold text-white text-[11px]">
-                  {t("loyalty_card_link", lang)}
+                  {t("loyalty_card_link", previewLang)}
                 </div>
               </div>
             )}

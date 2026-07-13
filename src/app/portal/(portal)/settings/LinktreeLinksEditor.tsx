@@ -35,6 +35,7 @@ interface Props {
 
 const MAX_LINKS = 7;
 type LinkLang = (typeof SUPPORTED_LANGUAGES)[number];
+type LinkTab = "all" | LinkLang;
 
 export default function LinktreeLinksEditor({
   locationId,
@@ -52,9 +53,10 @@ export default function LinktreeLinksEditor({
 }: Props) {
   const [links, setLinks] = useState<LinkItem[]>(initialLinks);
   const [pageBackground, setPageBackground] = useState<PageBackgroundKey | null>(initialPageBackground);
-  const [activeTab, setActiveTab] = useState<Record<number, LinkLang>>({});
+  const [activeTab, setActiveTab] = useState<Record<number, LinkTab>>({});
   const linkLangs = SUPPORTED_LANGUAGES.filter((l) => activeLanguages.includes(l));
   const defaultLang = linkLangs[0] ?? "pl";
+  const [previewLang, setPreviewLang] = useState<LinkLang>(defaultLang);
 
   const previewTitle = (link: LinkItem) => {
     for (const l of linkLangs) {
@@ -76,6 +78,14 @@ export default function LinktreeLinksEditor({
   const update = (idx: number, field: keyof LinkItem, value: string) => {
     const next = [...links];
     next[idx] = { ...next[idx], [field]: value };
+    setLinks(next);
+  };
+
+  const updateAllLangs = (idx: number, value: string) => {
+    const next = [...links];
+    const patch: Partial<LinkItem> = {};
+    for (const l of linkLangs) patch[`title_${l}` as const] = value;
+    next[idx] = { ...next[idx], ...patch };
     setLinks(next);
   };
 
@@ -130,13 +140,24 @@ export default function LinktreeLinksEditor({
       )}
 
       {links.map((link, idx) => {
-        const tab = activeTab[idx] ?? defaultLang;
-        const fieldKey = `title_${tab}` as const;
+        const tab = activeTab[idx] ?? "all";
+        const fieldKey = `title_${tab === "all" ? defaultLang : tab}` as const;
 
         return (
           <div key={idx} className="rounded-lg border border-gray-200 dark:border-gray-600 p-3 space-y-2">
             <div className="flex items-center justify-between gap-2">
               <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab((prev) => ({ ...prev, [idx]: "all" }))}
+                  className={`relative px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                    tab === "all"
+                      ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900"
+                      : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
+                  }`}
+                >
+                  {t("portal_link_lang_all", lang)}
+                </button>
                 {linkLangs.map((l) => {
                   const filled = link[`title_${l}` as const].trim().length > 0;
                   const isActive = tab === l;
@@ -144,7 +165,10 @@ export default function LinktreeLinksEditor({
                     <button
                       key={l}
                       type="button"
-                      onClick={() => setActiveTab((prev) => ({ ...prev, [idx]: l }))}
+                      onClick={() => {
+                        setActiveTab((prev) => ({ ...prev, [idx]: l }));
+                        setPreviewLang(l);
+                      }}
                       className={`relative px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
                         isActive
                           ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900"
@@ -177,7 +201,7 @@ export default function LinktreeLinksEditor({
               type="text"
               placeholder={t("portal_link_name_placeholder", lang)}
               value={link[fieldKey]}
-              onChange={(e) => update(idx, fieldKey, e.target.value)}
+              onChange={(e) => (tab === "all" ? updateAllLangs(idx, e.target.value) : update(idx, fieldKey, e.target.value))}
               className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               maxLength={60}
             />
@@ -315,6 +339,7 @@ export default function LinktreeLinksEditor({
           promoBannerText={promoBannerText}
           hasLoyalty={hasLoyalty}
           lang={lang}
+          contentLang={previewLang}
         />
       </div>
     </div>

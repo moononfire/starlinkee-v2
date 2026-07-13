@@ -36,6 +36,33 @@ async function verifyOwnership(
   return true;
 }
 
+export async function updateLoyaltyEnabled(formData: FormData) {
+  const cookieStore = await cookies();
+  const supabase = makeSupabase(cookieStore);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) redirect("/portal/login");
+
+  const customer = await getCustomerByEmail(user.email);
+  if (!customer) redirect("/portal/login");
+
+  const subscriptionId = Number(formData.get("subscription_id"));
+  const locationId = Number(formData.get("location_id"));
+  const enabled = formData.get("has_loyalty_enabled") === "on";
+
+  const dest = `/portal/${subscriptionId}/loyalty`;
+  if (!subscriptionId || !locationId) redirect(dest);
+
+  const ok = await verifyOwnership(customer.customer_id, subscriptionId, locationId);
+  if (!ok) redirect(`/portal/${subscriptionId}`);
+
+  await updateLocation(locationId, { has_loyalty_enabled: enabled });
+
+  redirect(`${dest}?saved=1`);
+}
+
 export async function updateLoyaltySettings(formData: FormData) {
   const cookieStore = await cookies();
   const supabase = makeSupabase(cookieStore);

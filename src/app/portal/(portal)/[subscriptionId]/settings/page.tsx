@@ -9,12 +9,12 @@ import LocationSettings from "./LocationSettings";
 
 interface Props {
   params: Promise<{ subscriptionId: string }>;
-  searchParams: Promise<{ saved?: string; linktreeError?: string }>;
+  searchParams: Promise<{ saved?: string; linktreeError?: string; passwordError?: string }>;
 }
 
 export default async function SubscriptionSettingsPage({ params, searchParams }: Props) {
   const { subscriptionId: rawId } = await params;
-  const { saved, linktreeError } = await searchParams;
+  const { saved, linktreeError, passwordError } = await searchParams;
   const subscriptionId = Number(rawId);
   if (!subscriptionId) notFound();
 
@@ -70,6 +70,7 @@ export default async function SubscriptionSettingsPage({ params, searchParams }:
         location={sub.location}
         locationLinks={locationLinks}
         linktreeError={linktreeError}
+        passwordError={passwordError}
         saved={saved}
         lang={lang}
       />

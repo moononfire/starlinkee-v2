@@ -4,7 +4,11 @@ import { getLanguage } from "@/lib/language";
 import { t } from "@/lib/translations";
 import SavedToast from "../../SavedToast";
 import SubmitButton from "../../SubmitButton";
-import { updateLoyaltySettings } from "./actions";
+import { updateLoyaltySettings, updateLoyaltyEnabled } from "./actions";
+import {
+  AutoSaveToggle,
+  AutoSavePendingHint,
+} from "../../settings/AutoSaveControls";
 
 interface Props {
   params: Promise<{ subscriptionId: string }>;
@@ -25,7 +29,7 @@ export default async function LoyaltyPortalPage({ params, searchParams }: Props)
   const sub = subscriptions.find((s) => s.subscription_id === subscriptionId);
   if (!sub) notFound();
 
-  if (!sub.location?.has_loyalty_enabled) {
+  if (!sub.location) {
     redirect(`/portal/${subscriptionId}`);
   }
 
@@ -42,7 +46,35 @@ export default async function LoyaltyPortalPage({ params, searchParams }: Props)
     <div className="space-y-4">
       <SavedToast show={saved === "1"} lang={lang} />
 
-      <form action={updateLoyaltySettings} className="space-y-4">
+      <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
+        <form action={updateLoyaltyEnabled}>
+          <input type="hidden" name="subscription_id" value={subscriptionId} />
+          <input type="hidden" name="location_id" value={location.location_id} />
+          <label className="flex items-start gap-3 cursor-pointer">
+            <AutoSaveToggle
+              name="has_loyalty_enabled"
+              defaultChecked={location.has_loyalty_enabled}
+              ariaLabel={t("portal_loyalty_enabled_title", lang)}
+            />
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {t("portal_loyalty_enabled_title", lang)}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t("portal_loyalty_enabled_desc", lang)}
+              </p>
+            </div>
+          </label>
+          <div className="mt-2">
+            <AutoSavePendingHint lang={lang} />
+          </div>
+        </form>
+      </section>
+
+      <form
+        action={updateLoyaltySettings}
+        className={`space-y-4 ${location.has_loyalty_enabled ? "" : "opacity-50 pointer-events-none select-none"}`}
+      >
         <input type="hidden" name="subscription_id" value={subscriptionId} />
         <input type="hidden" name="location_id" value={location.location_id} />
 
