@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import { t } from "@/lib/translations";
-import { createClient } from "@/lib/supabase/client";
+import { createLoyaltyClient } from "@/lib/supabase/loyalty-client";
 
 interface Props {
   slug: string;
   locationId: number;
   scanToken?: string;
+  authFailed?: boolean;
   initialStamps: number | null;
   isAuthenticated: boolean;
   maxStamps: number;
@@ -59,12 +60,12 @@ function OpenInAppButton({ slug, scanToken, maxStamps, lang }: { slug: string; s
   );
 }
 
-export default function LoyaltyCard({ slug, locationId, scanToken, initialStamps, isAuthenticated, maxStamps, lang }: Props) {
+export default function LoyaltyCard({ slug, locationId, scanToken, authFailed, initialStamps, isAuthenticated, maxStamps, lang }: Props) {
   const [screen, setScreen] = useState<Screen>(isAuthenticated ? "card" : "signin");
   const [stamps, setStamps] = useState(initialStamps ?? 0);
   const [rewardReady, setRewardReady] = useState((initialStamps ?? 0) >= maxStamps);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(authFailed ? t("error_try_again", lang) : null);
   const [cooldownSeconds, setCooldownSeconds] = useState<number | null>(null);
   const [claimed, setClaimed] = useState(false);
   const collectedRef = useRef(false);
@@ -84,7 +85,7 @@ export default function LoyaltyCard({ slug, locationId, scanToken, initialStamps
     setError(null);
     const params = new URLSearchParams({ slug, locationId: String(locationId) });
     if (scanToken) params.set("scanToken", scanToken);
-    const supabase = createClient();
+    const supabase = createLoyaltyClient();
     const { data, error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
