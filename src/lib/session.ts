@@ -2,7 +2,8 @@ import { getIronSession, SessionOptions } from "iron-session";
 import { cookies } from "next/headers";
 
 export interface LoyaltySessionData {
-  phone?: string;
+  customerUserId?: string;
+  email?: string;
   locationId?: number;
 }
 
@@ -13,7 +14,9 @@ const sessionOptions: SessionOptions = {
     secure: process.env.NODE_ENV === "production",
     httpOnly: true,
     sameSite: "lax",
-    maxAge: 60 * 10, // 10 minutes — force phone/SMS re-verification on every visit
+    // Login is a one-time Google Sign-In, not a re-verified-per-visit code —
+    // keep the customer signed in indefinitely (until they explicitly log out).
+    maxAge: 60 * 60 * 24 * 365 * 10,
   },
 };
 
@@ -22,9 +25,10 @@ export async function getLoyaltySession() {
   return getIronSession<LoyaltySessionData>(cookieStore, sessionOptions);
 }
 
-export async function setLoyaltySession(phone: string, locationId: number): Promise<void> {
+export async function setLoyaltySession(customerUserId: string, email: string, locationId: number): Promise<void> {
   const session = await getLoyaltySession();
-  session.phone = phone;
+  session.customerUserId = customerUserId;
+  session.email = email;
   session.locationId = locationId;
   await session.save();
 }

@@ -19,7 +19,7 @@ import { POST } from "@/app/api/loyalty/claim/route";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockGetLoyaltySession.mockResolvedValue({ phone: "+48600000000", locationId: 1 });
+  mockGetLoyaltySession.mockResolvedValue({ customerUserId: "11111111-1111-1111-1111-111111111111", locationId: 1 });
   mockResetLoyaltyCard.mockResolvedValue(undefined);
   mockGetLocationById.mockResolvedValue({ location_id: 1, loyalty_stamps_required: 10 });
 });
@@ -55,10 +55,10 @@ describe("POST /api/loyalty/claim", () => {
     expect(mockResetLoyaltyCard).toHaveBeenCalledWith(5);
   });
 
-  it("queries card with correct locationId and phone from session", async () => {
+  it("queries card with correct locationId and customerUserId from session", async () => {
     mockGetLoyaltyCard.mockResolvedValue({ id: 1, stamps_count: 10 });
     await POST();
-    expect(mockGetLoyaltyCard).toHaveBeenCalledWith(1, "+48600000000");
+    expect(mockGetLoyaltyCard).toHaveBeenCalledWith(1, "11111111-1111-1111-1111-111111111111");
   });
 
   it("uses location's loyalty_stamps_required as the threshold", async () => {

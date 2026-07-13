@@ -1,12 +1,15 @@
 import { sealData, unsealData } from "iron-session";
 
 export interface MobileLoyaltySession {
-  phone: string;
+  customerUserId: string;
+  email: string;
   locationId: number;
 }
 
-const TTL_SECONDS = 60 * 10; // 10 minutes — matches the web cookie session lifetime,
-// forcing phone/SMS re-verification on every visit for the same reason.
+// Login is a one-time Google Sign-In, not a re-verified-per-visit code —
+// ttl: 0 means the sealed token never expires (iron-session convention),
+// matching the long-lived web cookie session.
+const TTL_SECONDS = 0;
 
 export async function signMobileToken(session: MobileLoyaltySession): Promise<string> {
   return sealData(session, { password: process.env.SESSION_SECRET!, ttl: TTL_SECONDS });
@@ -18,7 +21,7 @@ export async function verifyMobileToken(token: string): Promise<MobileLoyaltySes
       password: process.env.SESSION_SECRET!,
       ttl: TTL_SECONDS,
     });
-    if (!data.phone || !data.locationId) return null;
+    if (!data.customerUserId || !data.locationId) return null;
     return data;
   } catch {
     return null;

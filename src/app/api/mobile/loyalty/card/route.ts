@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
   const location = await getLocationById(session.locationId);
   const maxStamps = location?.loyalty_stamps_required ?? 10;
-  const card = await getLoyaltyCard(session.locationId, session.phone);
+  const card = await getLoyaltyCard(session.locationId, session.customerUserId);
   const stamps = card?.stamps_count ?? 0;
 
   return NextResponse.json({ stamps, reward_ready: stamps >= maxStamps, max_stamps: maxStamps });

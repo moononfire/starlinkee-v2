@@ -4,11 +4,11 @@ import { claimLoyaltyReward } from "@/lib/loyalty-collect";
 
 export async function POST() {
   const session = await getLoyaltySession();
-  if (!session.phone || !session.locationId) {
+  if (!session.customerUserId || !session.locationId) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const result = await claimLoyaltyReward(session.locationId, session.phone);
+  const result = await claimLoyaltyReward(session.locationId, session.customerUserId);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }

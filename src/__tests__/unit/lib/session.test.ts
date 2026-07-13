@@ -7,7 +7,8 @@ const { mockSave, mockDestroy, mockSession } = vi.hoisted(() => {
     mockSave,
     mockDestroy,
     mockSession: {
-      phone: undefined as string | undefined,
+      customerUserId: undefined as string | undefined,
+      email: undefined as string | undefined,
       locationId: undefined as number | undefined,
       save: mockSave,
       destroy: mockDestroy,
@@ -27,7 +28,8 @@ import { getLoyaltySession, setLoyaltySession, clearLoyaltySession } from "@/lib
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockSession.phone = undefined;
+  mockSession.customerUserId = undefined;
+  mockSession.email = undefined;
   mockSession.locationId = undefined;
 });
 
@@ -39,10 +41,11 @@ describe("getLoyaltySession()", () => {
 });
 
 describe("setLoyaltySession()", () => {
-  it("sets phone and locationId on the session and calls save", async () => {
-    await setLoyaltySession("+48600000000", 42);
+  it("sets customerUserId, email and locationId on the session and calls save", async () => {
+    await setLoyaltySession("11111111-1111-1111-1111-111111111111", "jan@example.com", 42);
 
-    expect(mockSession.phone).toBe("+48600000000");
+    expect(mockSession.customerUserId).toBe("11111111-1111-1111-1111-111111111111");
+    expect(mockSession.email).toBe("jan@example.com");
     expect(mockSession.locationId).toBe(42);
     expect(mockSave).toHaveBeenCalledOnce();
   });
