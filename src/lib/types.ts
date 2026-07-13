@@ -99,10 +99,15 @@ export interface ReviewMessage {
 export interface LoyaltyCard {
   id: number;
   location_id: number;
-  phone: string | null;
-  customer_user_id: string;
+  phone: string;
   stamps_count: number;
   last_stamp_at: string | null;
+}
+
+export interface LoyaltyOtp {
+  phone: string;
+  otp_code: string;
+  expires_at: string;
 }
 
 export interface CustomerLocationLink {

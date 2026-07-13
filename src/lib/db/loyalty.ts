@@ -1,22 +1,22 @@
 import { createAdminClient } from "../supabase/admin";
-import type { LoyaltyCard } from "../types";
+import type { LoyaltyCard, LoyaltyOtp } from "../types";
 
-export async function getLoyaltyCard(locationId: number, customerUserId: string): Promise<LoyaltyCard | null> {
+export async function getLoyaltyCard(locationId: number, phone: string): Promise<LoyaltyCard | null> {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("loyalty_cards")
     .select("*")
     .eq("location_id", locationId)
-    .eq("customer_user_id", customerUserId)
+    .eq("phone", phone)
     .single();
   return data ?? null;
 }
 
-export async function createLoyaltyCard(locationId: number, customerUserId: string): Promise<LoyaltyCard> {
+export async function createLoyaltyCard(locationId: number, phone: string): Promise<LoyaltyCard> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("loyalty_cards")
-    .insert({ location_id: locationId, customer_user_id: customerUserId, stamps_count: 1, last_stamp_at: new Date().toISOString() })
+    .insert({ location_id: locationId, phone, stamps_count: 1, last_stamp_at: new Date().toISOString() })
     .select()
     .single();
   if (error) throw new Error(`Failed to create loyalty card: ${error.message}`);
@@ -50,4 +50,37 @@ export async function resetLoyaltyCard(cardId: number): Promise<void> {
     .update({ stamps_count: 0, last_stamp_at: null })
     .eq("id", cardId);
   if (error) throw new Error(`Failed to reset loyalty card: ${error.message}`);
+}
+
+export async function upsertOtp(phone: string, code: string, expiresAt: Date): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("loyalty_otp").upsert({
+    phone,
+    otp_code: code,
+    expires_at: expiresAt.toISOString(),
+  });
+  if (error) throw new Error(`Failed to upsert OTP: ${error.message}`);
+}
+
+export async function getOtp(phone: string): Promise<LoyaltyOtp | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase.from("loyalty_otp").select("*").eq("phone", phone).single();
+  return data ?? null;
+}
+
+export async function deleteOtp(phone: string): Promise<void> {
+  const supabase = createAdminClient();
+  await supabase.from("loyalty_otp").delete().eq("phone", phone);
+}
+
+// Google Sign-In isn't an enforced identity — phone is — so this just keeps
+// a record of which email(s) a phone number has shown up with. A phone can
+// pick up more than one email over time if signed in with a different
+// Google account later.
+export async function linkLoyaltyEmail(phone: string, email: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("loyalty_account_emails")
+    .upsert({ phone, email }, { onConflict: "phone,email", ignoreDuplicates: true });
+  if (error) throw new Error(`Failed to link loyalty email: ${error.message}`);
 }
