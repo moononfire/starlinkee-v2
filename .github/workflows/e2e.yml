@@ -49,8 +49,8 @@ jobs:
       - name: Export Supabase local keys
         run: |
           supabase status -o env > /tmp/supabase.env
-          ANON=$(grep '^ANON_KEY=' /tmp/supabase.env | cut -d= -f2-)
-          SRK=$(grep '^SERVICE_ROLE_KEY=' /tmp/supabase.env | cut -d= -f2-)
+          ANON=$(grep '^ANON_KEY=' /tmp/supabase.env | cut -d= -f2- | tr -d '"')
+          SRK=$(grep '^SERVICE_ROLE_KEY=' /tmp/supabase.env | cut -d= -f2- | tr -d '"')
           echo "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON" >> $GITHUB_ENV
           echo "SUPABASE_SERVICE_ROLE_KEY=$SRK" >> $GITHUB_ENV
