@@ -9,9 +9,11 @@ const {
   mockCreateShipment,
   mockCreateSubscription,
   mockSendOrderConfirmationToAdmin,
-  mockSetActivationToken,
   mockGetCustomerByEmail,
-  mockSendPortalActivation,
+  mockSendPortalCredentials,
+  mockListUsers,
+  mockCreateUser,
+  mockGenerateRandomPassword,
 } = vi.hoisted(() => ({
   mockUpsertCustomerByEmail: vi.fn(),
   mockGetCustomerById: vi.fn(),
@@ -20,9 +22,11 @@ const {
   mockCreateShipment: vi.fn(),
   mockCreateSubscription: vi.fn(),
   mockSendOrderConfirmationToAdmin: vi.fn(),
-  mockSetActivationToken: vi.fn(),
   mockGetCustomerByEmail: vi.fn(),
-  mockSendPortalActivation: vi.fn(),
+  mockSendPortalCredentials: vi.fn(),
+  mockListUsers: vi.fn(),
+  mockCreateUser: vi.fn(),
+  mockGenerateRandomPassword: vi.fn(),
 }));
 
 vi.mock("@/lib/db/customers", () => ({
@@ -30,7 +34,6 @@ vi.mock("@/lib/db/customers", () => ({
   getCustomerById: mockGetCustomerById,
 }));
 vi.mock("@/lib/db/portal", () => ({
-  setActivationToken: mockSetActivationToken,
   getCustomerByEmail: mockGetCustomerByEmail,
 }));
 vi.mock("@/lib/db/orders", () => ({
@@ -41,7 +44,20 @@ vi.mock("@/lib/db/orders", () => ({
 vi.mock("@/lib/db/subscriptions", () => ({ createSubscription: mockCreateSubscription }));
 vi.mock("@/lib/email", () => ({
   sendOrderConfirmationToAdmin: mockSendOrderConfirmationToAdmin,
-  sendPortalActivation: mockSendPortalActivation,
+  sendPortalCredentials: mockSendPortalCredentials,
+}));
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => ({
+    auth: {
+      admin: {
+        listUsers: mockListUsers,
+        createUser: mockCreateUser,
+      },
+    },
+  }),
+}));
+vi.mock("@/lib/password", () => ({
+  generateRandomPassword: mockGenerateRandomPassword,
 }));
 
 import { processInvoicePaymentSucceeded } from "@/lib/services/stripe";
@@ -80,9 +96,11 @@ beforeEach(() => {
   mockCreateShipment.mockResolvedValue(undefined);
   mockCreateSubscription.mockResolvedValue({ subscription_id: 50 });
   mockSendOrderConfirmationToAdmin.mockResolvedValue(undefined);
-  mockSetActivationToken.mockResolvedValue(undefined);
   mockGetCustomerByEmail.mockResolvedValue(null);
-  mockSendPortalActivation.mockResolvedValue(undefined);
+  mockSendPortalCredentials.mockResolvedValue(undefined);
+  mockListUsers.mockResolvedValue({ data: { users: [] } });
+  mockCreateUser.mockResolvedValue({ error: null });
+  mockGenerateRandomPassword.mockReturnValue("generated-password");
 });
 
 describe("processInvoicePaymentSucceeded()", () => {
@@ -158,6 +176,39 @@ describe("processInvoicePaymentSucceeded()", () => {
     expect(mockSendOrderConfirmationToAdmin).toHaveBeenCalledOnce();
     expect(mockSendOrderConfirmationToAdmin).toHaveBeenCalledWith(
       expect.objectContaining({ orderId: 100, customerEmail: "test@example.com" })
+    );
+  });
+
+  it("creates a portal account with a generated password and emails the credentials when none exists", async () => {
+    mockListUsers.mockResolvedValue({ data: { users: [] } });
+
+    await processInvoicePaymentSucceeded(makeInvoice());
+
+    expect(mockCreateUser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: "test@example.com",
+        password: "generated-password",
+        email_confirm: true,
+      })
+    );
+    expect(mockSendPortalCredentials).toHaveBeenCalledOnce();
+    expect(mockSendPortalCredentials).toHaveBeenCalledWith(
+      "test@example.com",
+      "en",
+      expect.objectContaining({ password: "generated-password" })
+    );
+  });
+
+  it("skips account creation and sends a passwordless email when the account already exists", async () => {
+    mockListUsers.mockResolvedValue({ data: { users: [{ email: "test@example.com" }] } });
+
+    await processInvoicePaymentSucceeded(makeInvoice());
+
+    expect(mockCreateUser).not.toHaveBeenCalled();
+    expect(mockSendPortalCredentials).toHaveBeenCalledWith(
+      "test@example.com",
+      "en",
+      expect.objectContaining({ password: null })
     );
   });
 });

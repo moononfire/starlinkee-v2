@@ -11,40 +11,6 @@ export async function getCustomerByEmail(email: string): Promise<Customer | null
   return data ?? null;
 }
 
-export async function getCustomerByActivationToken(
-  token: string
-): Promise<Customer | null> {
-  const supabase = createAdminClient();
-  const { data } = await supabase
-    .from("customers")
-    .select("*")
-    .eq("activation_token", token)
-    .eq("is_activated", false)
-    .single();
-  return data ?? null;
-}
-
-export async function markCustomerActivated(customerId: number): Promise<void> {
-  const supabase = createAdminClient();
-  const { error } = await supabase
-    .from("customers")
-    .update({ is_activated: true, activation_token: null })
-    .eq("customer_id", customerId);
-  if (error) throw new Error(`Failed to mark customer activated: ${error.message}`);
-}
-
-export async function setActivationToken(
-  customerId: number,
-  token: string
-): Promise<void> {
-  const supabase = createAdminClient();
-  const { error } = await supabase
-    .from("customers")
-    .update({ activation_token: token })
-    .eq("customer_id", customerId);
-  if (error) throw new Error(`Failed to set activation token: ${error.message}`);
-}
-
 export interface PortalSubscription extends Subscription {
   location: CustomerLocation | null;
   plates: Plate[];
