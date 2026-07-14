@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import type { Review } from "@/lib/types";
 import { t } from "@/lib/translations";
 
@@ -192,6 +193,7 @@ function Stars({ rating }: { rating: number }) {
 }
 
 interface Props {
+  subscriptionId: number;
   reviews: ReviewWithPlate[];
   totalCount: number;
   avgRating: number | null;
@@ -200,7 +202,7 @@ interface Props {
   lang: string;
 }
 
-export default function ReviewsAnalytics({ reviews, totalCount, avgRating, byStars, initialStars, lang }: Props) {
+export default function ReviewsAnalytics({ subscriptionId, reviews, totalCount, avgRating, byStars, initialStars, lang }: Props) {
   const [range, setRange] = useState<Range>("30d");
   const [starFilter, setStarFilter] = useState<Set<StarFilter>>(
     initialStars && [1, 2, 3, 4, 5].includes(initialStars)
@@ -370,7 +372,17 @@ export default function ReviewsAnalytics({ reviews, totalCount, avgRating, bySta
                     {review.rating ? <Stars rating={review.rating} /> : "—"}
                   </td>
                   <td className="px-5 py-3 text-gray-600 dark:text-gray-300 max-w-xs truncate hidden sm:table-cell">
-                    {review.feedback_message ?? "—"}
+                    {review.feedback_message ? (
+                      <Link
+                        href={`/portal/${subscriptionId}/messages?review=${review.review_id}`}
+                        className="hover:underline hover:text-blue-600 dark:hover:text-blue-400"
+                        title={t("portal_open_in_messages", lang)}
+                      >
+                        {review.feedback_message}
+                      </Link>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                 </tr>
               ))}

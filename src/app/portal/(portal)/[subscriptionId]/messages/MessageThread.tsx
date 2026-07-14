@@ -16,6 +16,7 @@ export default function MessageThread({ thread, lang, onSent }: Props) {
   const [messages, setMessages] = useState<ReviewMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [smsQuotaExceeded, setSmsQuotaExceeded] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,9 +55,10 @@ export default function MessageThread({ thread, lang, onSent }: Props) {
     });
 
     if (res.ok) {
-      const { message } = await res.json();
+      const { message, smsQuotaExceeded } = await res.json();
       setMessages((prev) => [...prev, message]);
       setDraft("");
+      setSmsQuotaExceeded(!!smsQuotaExceeded);
       onSent(thread.review_id, message.created_at);
     }
     setSending(false);
@@ -79,6 +81,12 @@ export default function MessageThread({ thread, lang, onSent }: Props) {
         ))}
         <div ref={bottomRef} />
       </div>
+
+      {smsQuotaExceeded && (
+        <p className="px-3 pt-2 text-xs text-amber-600 dark:text-amber-400">
+          {t("portal_messages_sms_quota_exceeded", lang)}
+        </p>
+      )}
 
       <form onSubmit={handleSend} className="border-t border-gray-200 dark:border-gray-700 p-3 flex gap-2">
         <textarea
