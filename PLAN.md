@@ -2,7 +2,7 @@
 
 ## Co to jest
 
-Starlinkee to SaaS B2B dla lokali gastronomicznych. Klient kupuje fizyczną płytkę NFC/QR, kładzie ją na stole. Gość restauracji skanuje smartfonem → trafia na stronę oceny Google lub zostawia feedback bezpośrednio do właściciela.
+Starlinkee to SaaS B2B dla lokali gastronomicznych. Klient kupuje fizyczną płytkę NFC/QR, kładzie ją na stole. Gość restauracji skanuje smartfonem → trafia na stronę oceny Google lub zostawia feedback bezpośrednio do właściciela..
 
 **Obecny stack:** PHP 8.x (własny MVC) + MySQL + serwer shared hosting  
 **Nowy stack:** Next.js 16 + TypeScript + Supabase (PostgreSQL + Storage) + Vercel
