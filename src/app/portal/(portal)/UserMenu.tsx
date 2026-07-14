@@ -7,10 +7,14 @@ import { t } from "@/lib/translations";
 export default function UserMenu({
   name,
   email,
+  logoLink,
+  logoIsRound,
   lang,
 }: {
   name: string;
   email: string;
+  logoLink?: string | null;
+  logoIsRound?: boolean;
   lang: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -43,9 +47,20 @@ export default function UserMenu({
         aria-haspopup="menu"
         className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
       >
-        <span className="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-semibold flex items-center justify-center uppercase">
-          {name.charAt(0)}
-        </span>
+        {logoLink ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={logoLink}
+            alt={name}
+            className={`w-7 h-7 object-cover border border-gray-200 dark:border-gray-700 ${
+              logoIsRound ? "rounded-full" : "rounded-md"
+            }`}
+          />
+        ) : (
+          <span className="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-semibold flex items-center justify-center uppercase">
+            {name.charAt(0)}
+          </span>
+        )}
         <span className="hidden sm:inline max-w-[10rem] truncate">{name}</span>
         <svg
           className={`w-3.5 h-3.5 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}

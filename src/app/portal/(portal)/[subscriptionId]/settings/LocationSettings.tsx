@@ -4,6 +4,7 @@ import { isTileBackgroundKey } from "@/lib/linkBackgrounds";
 import { isPageBackgroundKey } from "@/lib/pageBackgrounds";
 import GoogleLocationEditor from "../../settings/GoogleLocationEditor";
 import LogoUpload from "../../settings/LogoUpload";
+import ThemeSettings from "../../settings/ThemeSettings";
 import LinktreeLinksEditor from "../../settings/LinktreeLinksEditor";
 import {
   updateScanRedirectMode,
@@ -44,6 +45,17 @@ export default function LocationSettings({
 }) {
   return (
     <div className="space-y-4">
+      {/* Wygląd */}
+      <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+          {t("portal_theme_title", lang)}
+        </h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          {t("portal_theme_desc", lang)}
+        </p>
+        <ThemeSettings lang={lang} />
+      </section>
+
       {/* Nazwa lokalu */}
       <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">

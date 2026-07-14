@@ -36,6 +36,7 @@ export default async function ReviewsPage({ params, searchParams }: Props) {
 
   return (
     <ReviewsAnalytics
+      subscriptionId={subscriptionId}
       reviews={reviews}
       totalCount={totalCount}
       avgRating={avgRating}
