@@ -56,8 +56,6 @@ export default async function PortalLayout({
   // Przy jednym lokalu przełącznik nic nie wnosi — chowamy go.
   const showSidebar = sidebarSubs.length > 1;
 
-  const headerLocation = subscriptions[0]?.location;
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Top nav */}
@@ -71,8 +69,6 @@ export default async function PortalLayout({
             <UserMenu
               name={customer.customer_name}
               email={customer.email}
-              logoLink={headerLocation?.logo_link ?? null}
-              logoIsRound={headerLocation?.logo_is_round ?? true}
               lang={lang}
             />
           </div>

@@ -102,6 +102,9 @@ export interface LoyaltyCard {
   phone: string;
   stamps_count: number;
   last_stamp_at: string | null;
+  redeem_code: string | null;
+  redeem_requested_at: string | null;
+  redeem_used_at: string | null;
 }
 
 export interface LoyaltyOtp {

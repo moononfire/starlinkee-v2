@@ -1,14 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const { mockGetLeadByToken, mockMarkLeadAsUsed } = vi.hoisted(() => ({
-  mockGetLeadByToken: vi.fn(),
-  mockMarkLeadAsUsed: vi.fn(),
-}));
+const { mockGetLeadByToken, mockGetLeadByCouponCode, mockMarkLeadAsUsed, mockGetLoyaltyCardByRedeemCode, mockConfirmRedemption } =
+  vi.hoisted(() => ({
+    mockGetLeadByToken: vi.fn(),
+    mockGetLeadByCouponCode: vi.fn(),
+    mockMarkLeadAsUsed: vi.fn(),
+    mockGetLoyaltyCardByRedeemCode: vi.fn(),
+    mockConfirmRedemption: vi.fn(),
+  }));
 
 vi.mock("@/lib/db/leads", () => ({
   getLeadByToken: mockGetLeadByToken,
+  getLeadByCouponCode: mockGetLeadByCouponCode,
   markLeadAsUsed: mockMarkLeadAsUsed,
+  CLAIM_WINDOW_MS: 15 * 60 * 1000,
+}));
+
+vi.mock("@/lib/db/loyalty", () => ({
+  getLoyaltyCardByRedeemCode: mockGetLoyaltyCardByRedeemCode,
+  confirmRedemption: mockConfirmRedemption,
 }));
 
 import { POST } from "@/app/api/promo/activate/route";
@@ -24,6 +35,9 @@ function makeRequest(body: unknown) {
 beforeEach(() => {
   vi.clearAllMocks();
   mockMarkLeadAsUsed.mockResolvedValue(undefined);
+  mockConfirmRedemption.mockResolvedValue(undefined);
+  mockGetLeadByCouponCode.mockResolvedValue(null);
+  mockGetLoyaltyCardByRedeemCode.mockResolvedValue(null);
 });
 
 describe("POST /api/promo/activate", () => {
@@ -57,5 +71,44 @@ describe("POST /api/promo/activate", () => {
     mockGetLeadByToken.mockResolvedValue(null);
     await POST(makeRequest({ token: "bad" }));
     expect(mockMarkLeadAsUsed).not.toHaveBeenCalled();
+  });
+
+  it("returns 410 when the promo code's 15-minute window lapsed", async () => {
+    mockGetLeadByToken.mockResolvedValue({
+      id: 5,
+      is_used: false,
+      claimed_at: new Date(Date.now() - 16 * 60 * 1000).toISOString(),
+    });
+    const res = await POST(makeRequest({ token: "stale-token" }));
+    expect(res.status).toBe(410);
+    expect(mockMarkLeadAsUsed).not.toHaveBeenCalled();
+  });
+
+  it("confirms a loyalty redemption when given a matching code", async () => {
+    mockGetLoyaltyCardByRedeemCode.mockResolvedValue({
+      id: 9,
+      redeem_used_at: null,
+      redeem_requested_at: new Date().toISOString(),
+    });
+    const res = await POST(makeRequest({ code: "abcd1234" }));
+    expect(res.status).toBe(200);
+    expect(mockConfirmRedemption).toHaveBeenCalledWith(9);
+  });
+
+  it("returns 410 when the loyalty code's 15-minute window lapsed", async () => {
+    mockGetLoyaltyCardByRedeemCode.mockResolvedValue({
+      id: 9,
+      redeem_used_at: null,
+      redeem_requested_at: new Date(Date.now() - 16 * 60 * 1000).toISOString(),
+    });
+    const res = await POST(makeRequest({ code: "ABCD1234" }));
+    expect(res.status).toBe(410);
+    expect(mockConfirmRedemption).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 when the loyalty code was already used", async () => {
+    mockGetLoyaltyCardByRedeemCode.mockResolvedValue({ id: 9, redeem_used_at: new Date().toISOString() });
+    const res = await POST(makeRequest({ code: "ABCD1234" }));
+    expect(res.status).toBe(409);
   });
 });

@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockVerifyMobileToken, mockGetLocationBySlug, mockGetLocationById, mockGetLoyaltyCard, mockResetLoyaltyCard } =
+const { mockVerifyMobileToken, mockGetLocationBySlug, mockGetLocationById, mockGetLoyaltyCard, mockSetRedeemCode } =
   vi.hoisted(() => ({
     mockVerifyMobileToken: vi.fn(),
     mockGetLocationBySlug: vi.fn(),
     mockGetLocationById: vi.fn(),
     mockGetLoyaltyCard: vi.fn(),
-    mockResetLoyaltyCard: vi.fn(),
+    mockSetRedeemCode: vi.fn(),
   }));
 
 vi.mock("@/lib/mobile-session", () => ({
@@ -19,7 +19,10 @@ vi.mock("@/lib/db/locations", () => ({
 }));
 vi.mock("@/lib/db/loyalty", () => ({
   getLoyaltyCard: mockGetLoyaltyCard,
-  resetLoyaltyCard: mockResetLoyaltyCard,
+  setRedeemCode: mockSetRedeemCode,
+}));
+vi.mock("@/lib/db/leads", () => ({
+  generateCouponCode: () => "ABCD1234",
 }));
 
 import { POST } from "@/app/api/mobile/loyalty/claim/route";
@@ -34,7 +37,7 @@ beforeEach(() => {
   mockVerifyMobileToken.mockResolvedValue({ phone: "+48600000000" });
   mockGetLocationBySlug.mockResolvedValue({ location_id: 1, has_loyalty_enabled: true, loyalty_stamps_required: 10 });
   mockGetLocationById.mockResolvedValue({ location_id: 1, has_loyalty_enabled: true, loyalty_stamps_required: 10 });
-  mockResetLoyaltyCard.mockResolvedValue(undefined);
+  mockSetRedeemCode.mockResolvedValue(undefined);
 });
 
 describe("POST /api/mobile/loyalty/claim", () => {
@@ -64,14 +67,30 @@ describe("POST /api/mobile/loyalty/claim", () => {
     expect(body.error).toBe("No reward available");
   });
 
-  it("returns 200 and resets card when stamps >= 10", async () => {
+  it("returns 200 with a redeem code when stamps >= 10", async () => {
     mockGetLoyaltyCard.mockResolvedValue({ id: 5, stamps_count: 10 });
     const res = await POST(request());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
-    expect(body.stamps).toBe(0);
-    expect(mockResetLoyaltyCard).toHaveBeenCalledWith(5);
+    expect(body.code).toBe("ABCD1234");
+    expect(body.expires_at).toBeTruthy();
+    expect(mockSetRedeemCode).toHaveBeenCalledWith(5, "ABCD1234", expect.any(String));
+  });
+
+  it("reuses an existing unexpired redeem code instead of generating a new one", async () => {
+    const requestedAt = new Date().toISOString();
+    mockGetLoyaltyCard.mockResolvedValue({
+      id: 5,
+      stamps_count: 10,
+      redeem_code: "EXIST999",
+      redeem_requested_at: requestedAt,
+      redeem_used_at: null,
+    });
+    const res = await POST(request());
+    const body = await res.json();
+    expect(body.code).toBe("EXIST999");
+    expect(mockSetRedeemCode).not.toHaveBeenCalled();
   });
 
   it("queries card with correct locationId and phone from session", async () => {
