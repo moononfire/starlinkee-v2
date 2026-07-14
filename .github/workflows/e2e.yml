@@ -1,9 +1,29 @@
 name: E2E Tests
 
 on:
-  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [master]
 
 jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit/integration tests
+        run: npm run test
+
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 30
