@@ -1,9 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const { mockUpdateRating } = vi.hoisted(() => ({ mockUpdateRating: vi.fn() }));
+const { mockUpdateRating, mockGetRedirectFourStarReviews } = vi.hoisted(() => ({
+  mockUpdateRating: vi.fn(),
+  mockGetRedirectFourStarReviews: vi.fn(),
+}));
 
-vi.mock("@/lib/db/reviews", () => ({ updateRating: mockUpdateRating }));
+vi.mock("@/lib/db/reviews", () => ({
+  updateRating: mockUpdateRating,
+  getRedirectFourStarReviews: mockGetRedirectFourStarReviews,
+}));
 
 import { POST } from "@/app/api/plate/rating/route";
 
@@ -18,6 +24,8 @@ function makeRequest(body: unknown) {
 beforeEach(() => {
   mockUpdateRating.mockReset();
   mockUpdateRating.mockResolvedValue(undefined);
+  mockGetRedirectFourStarReviews.mockReset();
+  mockGetRedirectFourStarReviews.mockResolvedValue(true);
 });
 
 describe("POST /api/plate/rating", () => {
