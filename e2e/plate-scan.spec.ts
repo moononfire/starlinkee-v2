@@ -42,9 +42,9 @@ test.describe('Active plate', () => {
     await expect(textarea).toBeVisible();
 
     await textarea.fill('Test feedback message from E2E');
-    await page.getByRole('button', { name: 'Send feedback' }).click();
+    await page.getByRole('button', { name: 'Wyślij opinię' }).click();
 
-    await expect(page.getByText('Thank you!')).toBeVisible();
+    await expect(page.getByText('Dziękujemy!')).toBeVisible();
   });
 });
 
@@ -53,8 +53,8 @@ test.describe('Active plate', () => {
 test.describe('Pending plate (setup)', () => {
   test('shows PlateSetupForm', async ({ page }) => {
     await page.goto('/plate/PENDNG/testsecretpending');
-    await expect(page.getByRole('heading', { name: 'Set up your plate' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Activate plate' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Skonfiguruj swoją płytkę' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Aktywuj płytkę' })).toBeVisible();
   });
 });
 
