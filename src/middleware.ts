@@ -56,7 +56,6 @@ export async function middleware(request: NextRequest) {
   const isAdminLoginPage = pathname === "/login";
   const isPortalPublic =
     pathname === "/portal/login" ||
-    pathname === "/portal/activate" ||
     pathname === "/portal/forgot-password" ||
     pathname === "/portal/reset-password" ||
     pathname.startsWith("/portal/auth");

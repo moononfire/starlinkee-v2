@@ -85,13 +85,43 @@ export async function incrementStamp(cardId: number): Promise<LoyaltyCard> {
   return data;
 }
 
-export async function resetLoyaltyCard(cardId: number): Promise<void> {
+export async function getLoyaltyCardByRedeemCode(code: string): Promise<LoyaltyCard | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("loyalty_cards")
+    .select("*")
+    .eq("redeem_code", code)
+    .single();
+  return data ?? null;
+}
+
+export async function setRedeemCode(cardId: number, code: string, requestedAt: string): Promise<void> {
   const supabase = createAdminClient();
   const { error } = await supabase
     .from("loyalty_cards")
-    .update({ stamps_count: 0, last_stamp_at: null })
+    .update({ redeem_code: code, redeem_requested_at: requestedAt, redeem_used_at: null })
     .eq("id", cardId);
-  if (error) throw new Error(`Failed to reset loyalty card: ${error.message}`);
+  if (error) throw new Error(`Failed to set redeem code: ${error.message}`);
+}
+
+// The 15-minute window lapsed without staff confirmation — stamps were never
+// touched, so reverting just means clearing the stale code.
+export async function clearRedeemCode(cardId: number): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("loyalty_cards")
+    .update({ redeem_code: null, redeem_requested_at: null })
+    .eq("id", cardId);
+  if (error) throw new Error(`Failed to clear redeem code: ${error.message}`);
+}
+
+export async function confirmRedemption(cardId: number): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("loyalty_cards")
+    .update({ stamps_count: 0, last_stamp_at: null, redeem_used_at: new Date().toISOString() })
+    .eq("id", cardId);
+  if (error) throw new Error(`Failed to confirm redemption: ${error.message}`);
 }
 
 export async function upsertOtp(phone: string, code: string, expiresAt: Date): Promise<void> {

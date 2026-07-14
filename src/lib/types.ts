@@ -102,6 +102,9 @@ export interface LoyaltyCard {
   phone: string;
   stamps_count: number;
   last_stamp_at: string | null;
+  redeem_code: string | null;
+  redeem_requested_at: string | null;
+  redeem_used_at: string | null;
 }
 
 export interface LoyaltyOtp {
@@ -138,7 +141,6 @@ export interface Customer {
   address_postal_code: string | null;
   preferred_language: "en" | "de" | "pl";
   country: string | null;
-  activation_token: string | null;
   is_activated: boolean;
   sms_credits_used: number;
   sms_credits_reset_at: string;

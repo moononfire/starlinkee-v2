@@ -24,10 +24,38 @@ function extractCode(raw: string): string {
 
 interface VerifyResult {
   valid: boolean;
+  kind: "promo" | "loyalty";
   locationName: string;
+  logoLink: string | null;
   promoText: string;
   isUsed: boolean;
   usedAt: string | null;
+  expired: boolean;
+  expiresAt: string | null;
+}
+
+function useCountdown(expiresAt: string | null): number | null {
+  const [remaining, setRemaining] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!expiresAt) {
+      setRemaining(null);
+      return;
+    }
+    const target = new Date(expiresAt).getTime();
+    const tick = () => setRemaining(Math.max(0, Math.round((target - Date.now()) / 1000)));
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [expiresAt]);
+
+  return remaining;
+}
+
+function formatCountdown(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 interface Props {
@@ -169,6 +197,10 @@ export default function VerifyClient({ initialCode, lang }: Props) {
       setResult((prev) => (prev ? { ...prev, isUsed: true, usedAt: new Date().toISOString() } : prev));
       return;
     }
+    if (res.status === 410) {
+      setResult((prev) => (prev ? { ...prev, expired: true } : prev));
+      return;
+    }
     if (!res.ok) {
       setError(t("activate_failed", lang));
       return;
@@ -176,6 +208,9 @@ export default function VerifyClient({ initialCode, lang }: Props) {
 
     setResult((prev) => (prev ? { ...prev, isUsed: true, usedAt: new Date().toISOString() } : prev));
   }
+
+  const countdown = useCountdown(result && !result.isUsed && !result.expired ? result.expiresAt : null);
+  const timedOut = countdown === 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -226,17 +261,44 @@ export default function VerifyClient({ initialCode, lang }: Props) {
 
       {result && !result.isUsed && (
         <div className="flex flex-col gap-4">
-          <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
+          <div
+            className={`border rounded-xl p-6 text-center ${
+              result.expired || timedOut ? "bg-amber-50 border-amber-200" : "bg-green-50 border-green-200"
+            }`}
+          >
+            {result.logoLink && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={result.logoLink}
+                alt={result.locationName}
+                className="w-14 h-14 rounded-full object-cover mx-auto mb-3 border border-white shadow-sm"
+              />
+            )}
+            <p className="text-xs uppercase tracking-wide text-gray-400 font-medium mb-1">
+              {t(result.kind === "loyalty" ? "verify_reward_loyalty" : "verify_reward_promo", lang)}
+            </p>
             <p className="text-green-800 font-semibold text-lg">{result.locationName}</p>
             {result.promoText && (
               <p className="text-green-700 text-sm mt-2">{result.promoText}</p>
             )}
-            <p className="text-green-600 text-xs mt-3 font-medium">{t("coupon_valid", lang)}</p>
+
+            {result.expired || timedOut ? (
+              <p className="text-amber-700 text-sm mt-3 font-medium">{t("verify_code_expired", lang)}</p>
+            ) : (
+              <>
+                <p className="text-green-600 text-xs mt-3 font-medium">{t("coupon_valid", lang)}</p>
+                {countdown !== null && (
+                  <p className="text-gray-500 text-xs mt-2">
+                    {t("verify_time_left", lang)}: <span className="font-mono font-semibold">{formatCountdown(countdown)}</span>
+                  </p>
+                )}
+              </>
+            )}
           </div>
 
           <button
             onClick={handleActivate}
-            disabled={activating}
+            disabled={activating || result.expired || timedOut}
             className="bg-black text-white rounded-lg px-4 py-3 font-medium disabled:opacity-50"
           >
             {activating ? t("processing", lang) : t("mark_as_used", lang)}

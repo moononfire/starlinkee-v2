@@ -4,13 +4,15 @@ import { createOrder, createOrderItem, createShipment } from "../db/orders";
 import { createSubscription, setSubscriptionActive } from "../db/subscriptions";
 import {
   sendOrderConfirmationToAdmin,
-  sendPortalActivation,
+  sendPortalCredentials,
   sendRenewalConfirmation,
   sendRenewalConfirmationToAdmin,
 } from "../email";
-import { setActivationToken, getCustomerByEmail } from "../db/portal";
+import { getCustomerByEmail } from "../db/portal";
 import { getCustomerById } from "../db/customers";
 import { assignPlateToSubscription } from "../db/plates";
+import { createAdminClient } from "../supabase/admin";
+import { generateRandomPassword } from "../password";
 
 // Product IDs match the seeded products table
 const SUBSCRIPTION_PRODUCT_ID = 1; // 1_YEAR_SUB
@@ -194,6 +196,7 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
     country: invoice.customer_address?.country ?? undefined,
     phone: invoice.customer_phone ?? undefined,
     preferred_language: countryLanguage,
+    is_activated: true,
   });
 
   // 2. Create order — paid + fulfilled immediately per business rules
@@ -251,19 +254,37 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
     country: shipping?.address?.country ?? undefined,
   });
 
-  // 6. Generate activation token and send portal activation email
-  const activationToken = crypto.randomUUID();
-  await setActivationToken(customerId, activationToken);
-
+  // 6. Create the portal account immediately (or reuse an existing one) and
+  // email the customer their login credentials directly — no separate
+  // "click to activate" step.
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://starlinkee.com";
-  const activationUrl = `${appUrl}/portal/activate?token=${activationToken}`;
+  const loginUrl = `${appUrl}/portal/login`;
   const customer = await getCustomerById(customerId);
   const language = customer?.preferred_language ?? countryLanguage;
 
-  sendPortalActivation(email, language, {
+  const supabaseAdmin = createAdminClient();
+  const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+  const existingAccount = existingUsers?.users?.some((u) => u.email === email) ?? false;
+
+  let portalPassword: string | null = null;
+  if (!existingAccount) {
+    portalPassword = generateRandomPassword();
+    const { error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password: portalPassword,
+      email_confirm: true,
+    });
+    if (createError) {
+      console.error("[stripe] Failed to create portal user:", createError);
+      portalPassword = null;
+    }
+  }
+
+  sendPortalCredentials(email, language, {
     customerName: invoice.customer_name ?? email,
-    activationUrl,
-  }).catch((err) => console.error("[stripe] activation email failed:", err));
+    loginUrl,
+    password: portalPassword,
+  }).catch((err) => console.error("[stripe] credentials email failed:", err));
 
   // 7. Notify admin (non-blocking — failure must not abort the webhook)
   sendOrderConfirmationToAdmin({

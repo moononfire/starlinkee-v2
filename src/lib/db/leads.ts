@@ -78,7 +78,7 @@ export async function getLeadsByLocationId(locationId: number): Promise<Location
   return data ?? [];
 }
 
-const CLAIM_WINDOW_MS = 15 * 60 * 1000;
+export const CLAIM_WINDOW_MS = 15 * 60 * 1000;
 
 export async function claimLead(token: string): Promise<{ claimedAt: string; isUsed: boolean } | null> {
   const supabase = createAdminClient();

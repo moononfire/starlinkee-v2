@@ -7,14 +7,10 @@ import { t } from "@/lib/translations";
 export default function UserMenu({
   name,
   email,
-  logoLink,
-  logoIsRound,
   lang,
 }: {
   name: string;
   email: string;
-  logoLink?: string | null;
-  logoIsRound?: boolean;
   lang: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -47,21 +43,20 @@ export default function UserMenu({
         aria-haspopup="menu"
         className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
       >
-        {logoLink ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={logoLink}
-            alt={name}
-            className={`w-7 h-7 object-cover border border-gray-200 dark:border-gray-700 ${
-              logoIsRound ? "rounded-full" : "rounded-md"
-            }`}
+        <svg
+          className="w-5 h-5 text-gray-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.964 0a9 9 0 1 0-11.964 0m11.964 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
           />
-        ) : (
-          <span className="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-semibold flex items-center justify-center uppercase">
-            {name.charAt(0)}
-          </span>
-        )}
-        <span className="hidden sm:inline max-w-[10rem] truncate">{name}</span>
+        </svg>
+        <span className="max-w-[10rem] truncate">{name}</span>
         <svg
           className={`w-3.5 h-3.5 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
           fill="none"
