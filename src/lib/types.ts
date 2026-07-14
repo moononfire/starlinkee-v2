@@ -141,7 +141,6 @@ export interface Customer {
   address_postal_code: string | null;
   preferred_language: "en" | "de" | "pl";
   country: string | null;
-  activation_token: string | null;
   is_activated: boolean;
   sms_credits_used: number;
   sms_credits_reset_at: string;

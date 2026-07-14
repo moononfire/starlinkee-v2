@@ -477,45 +477,59 @@ export async function sendPromoEmail(
   );
 }
 
-const activationStrings = {
+const portalCredentialsStrings = {
   en: {
-    subject: "Activate your Starlinkee account",
+    subject: "Your Starlinkee account is ready",
     greeting: (name: string) => `Hello ${name},`,
-    body: () =>
-      "Your Starlinkee purchase is complete! Click the button below to set up your account password and access your customer portal.",
-    btnLabel: "Activate Account",
-    footer: "If you did not make this purchase, you can ignore this email.",
+    bodyNew: () =>
+      "Your Starlinkee purchase is complete! We've created your customer portal account. Use the credentials below to log in — we recommend changing your password after your first login.",
+    bodyExisting: () =>
+      "Your Starlinkee purchase is complete! You already have a customer portal account, so you can log in with your existing email and password.",
+    emailLabel: "Email",
+    passwordLabel: "Password",
+    btnLabel: "Log in to portal",
+    footer: "If you did not make this purchase, please contact us.",
   },
   de: {
-    subject: "Aktivieren Sie Ihr Starlinkee-Konto",
+    subject: "Ihr Starlinkee-Konto ist bereit",
     greeting: (name: string) => `Hallo ${name},`,
-    body: () =>
-      "Ihr Starlinkee-Kauf ist abgeschlossen! Klicken Sie auf die Schaltfläche unten, um Ihr Kontopasswort festzulegen und auf Ihr Kundenportal zuzugreifen.",
-    btnLabel: "Konto aktivieren",
-    footer:
-      "Wenn Sie diesen Kauf nicht getätigt haben, können Sie diese E-Mail ignorieren.",
+    bodyNew: () =>
+      "Ihr Starlinkee-Kauf ist abgeschlossen! Wir haben Ihr Kundenportal-Konto erstellt. Nutzen Sie die untenstehenden Zugangsdaten zum Einloggen — wir empfehlen, Ihr Passwort nach dem ersten Login zu ändern.",
+    bodyExisting: () =>
+      "Ihr Starlinkee-Kauf ist abgeschlossen! Sie haben bereits ein Kundenportal-Konto und können sich mit Ihrer bestehenden E-Mail-Adresse und Ihrem Passwort anmelden.",
+    emailLabel: "E-Mail",
+    passwordLabel: "Passwort",
+    btnLabel: "Zum Portal-Login",
+    footer: "Wenn Sie diesen Kauf nicht getätigt haben, kontaktieren Sie uns bitte.",
   },
   pl: {
-    subject: "Aktywuj swoje konto Starlinkee",
+    subject: "Twoje konto Starlinkee jest gotowe",
     greeting: (name: string) => `Cześć ${name},`,
-    body: () =>
-      "Twój zakup Starlinkee został zrealizowany! Kliknij poniższy przycisk, aby ustawić hasło i uzyskać dostęp do panelu klienta.",
-    btnLabel: "Aktywuj konto",
-    footer:
-      "Jeśli nie dokonywałeś tego zakupu, możesz zignorować tę wiadomość.",
+    bodyNew: () =>
+      "Twój zakup Starlinkee został zrealizowany! Utworzyliśmy dla Ciebie konto w panelu klienta. Użyj poniższych danych, aby się zalogować — zalecamy zmianę hasła po pierwszym logowaniu.",
+    bodyExisting: () =>
+      "Twój zakup Starlinkee został zrealizowany! Masz już konto w panelu klienta, więc możesz zalogować się dotychczasowym adresem email i hasłem.",
+    emailLabel: "Email",
+    passwordLabel: "Hasło",
+    btnLabel: "Zaloguj się do panelu",
+    footer: "Jeśli nie dokonywałeś tego zakupu, skontaktuj się z nami.",
   },
 } satisfies Record<Lang, object>;
 
-export async function sendPortalActivation(
+export async function sendPortalCredentials(
   to: string,
   language: string,
-  data: { customerName: string; activationUrl: string }
+  data: { customerName: string; loginUrl: string; password: string | null }
 ) {
-  const s = activationStrings[toLang(language)];
+  const s = portalCredentialsStrings[toLang(language)];
+  const isNew = data.password !== null;
   const html = layout(
     h1(s.greeting(data.customerName)) +
-      para(s.body()) +
-      btn(data.activationUrl, s.btnLabel) +
+      para(isNew ? s.bodyNew() : s.bodyExisting()) +
+      (isNew
+        ? dataTable([s.emailLabel, to], [s.passwordLabel, data.password!])
+        : "") +
+      `<div style="margin-top:20px;">${btn(data.loginUrl, s.btnLabel)}</div>` +
       divider() +
       para(s.footer)
   );
@@ -526,8 +540,10 @@ export async function sendPortalActivation(
     [
       s.greeting(data.customerName),
       "",
-      s.body(),
-      `${s.btnLabel}: ${data.activationUrl}`,
+      isNew ? s.bodyNew() : s.bodyExisting(),
+      ...(isNew ? ["", `${s.emailLabel}: ${to}`, `${s.passwordLabel}: ${data.password}`] : []),
+      "",
+      `${s.btnLabel}: ${data.loginUrl}`,
       "",
       s.footer,
     ].join("\n")
