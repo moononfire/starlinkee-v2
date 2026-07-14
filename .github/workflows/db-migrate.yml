@@ -1,0 +1,32 @@
+name: DB Migrate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [master]
+
+jobs:
+  push-preview:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.105.0
+      - name: Push migrations to preview database
+        run: supabase db push --db-url "${{ secrets.PREVIEW_DB_URL }}" --include-all --yes
+
+  push-prod:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.105.0
+      - name: Push migrations to production database
+        run: supabase db push --db-url "${{ secrets.PROD_DB_URL }}" --include-all --yes

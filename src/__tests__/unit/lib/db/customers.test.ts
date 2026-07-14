@@ -27,6 +27,9 @@ describe("upsertCustomerByEmail()", () => {
           single: vi.fn().mockResolvedValue({ data: { customer_id: 42 } }),
         })),
       })),
+      update: vi.fn(() => ({
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      })),
     });
 
     const result = await upsertCustomerByEmail(customerData);

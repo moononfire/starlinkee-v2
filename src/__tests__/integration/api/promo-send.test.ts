@@ -7,19 +7,25 @@ const {
   mockCreateLead,
   mockSendSms,
   mockSendPromoEmail,
+  mockValidateScanToken,
+  mockGenerateCouponCode,
 } = vi.hoisted(() => ({
   mockGetLocationBySlug: vi.fn(),
   mockCheckLeadExists: vi.fn(),
   mockCreateLead: vi.fn(),
   mockSendSms: vi.fn(),
   mockSendPromoEmail: vi.fn(),
+  mockValidateScanToken: vi.fn(),
+  mockGenerateCouponCode: vi.fn(),
 }));
 
 vi.mock("@/lib/db/locations", () => ({ getLocationBySlug: mockGetLocationBySlug }));
 vi.mock("@/lib/db/leads", () => ({
   checkLeadExists: mockCheckLeadExists,
   createLead: mockCreateLead,
+  generateCouponCode: mockGenerateCouponCode,
 }));
+vi.mock("@/lib/db/scan-tokens", () => ({ validateScanToken: mockValidateScanToken }));
 vi.mock("@/lib/sms", () => ({ sendSms: mockSendSms }));
 vi.mock("@/lib/email", () => ({ sendPromoEmail: mockSendPromoEmail }));
 
@@ -41,7 +47,12 @@ function makeRequest(body: unknown) {
   });
 }
 
-const validBody = { phone: "+48600000000", slug: "good-eats", agreed: true };
+const validBody = {
+  phone: "+48600000000",
+  slug: "good-eats",
+  agreed: true,
+  scanToken: "scan-token-1",
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -51,6 +62,8 @@ beforeEach(() => {
   mockCreateLead.mockResolvedValue({ id: 1, claim_token: "tok" });
   mockSendSms.mockResolvedValue(undefined);
   mockSendPromoEmail.mockResolvedValue(undefined);
+  mockValidateScanToken.mockResolvedValue({ valid: true, locationId: location.location_id });
+  mockGenerateCouponCode.mockReturnValue("COUPON1");
 });
 
 describe("POST /api/promo/send", () => {

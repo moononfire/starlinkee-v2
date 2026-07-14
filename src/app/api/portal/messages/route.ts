@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { insertMessage, listThreadsBySubscriptionId, markOwnerRead } from "@/lib/db/review-messages";
 import { broadcastToChannel } from "@/lib/realtime/broadcast";
 import { sendReplyNotification } from "@/lib/email";
+import { sendSms } from "@/lib/sms";
+import { consumeSmsCredit } from "@/lib/sms-quota";
 
 export async function GET(request: NextRequest) {
   const { customer, subscriptions } = await getPortalSession();
@@ -45,15 +47,27 @@ export async function POST(request: NextRequest) {
     last_message_sender: created.sender,
   }).catch(() => {});
 
+  let smsQuotaExceeded = false;
+
   if (review.contact_email) {
     sendReplyNotification(review.contact_email, customer.preferred_language, {
       locationName: review.location_name ?? "",
       message: created.body,
       scanUrl: buildScanUrl(review.plate_number, review.scan_id),
     }).catch(() => {});
+  } else if (review.contact_phone) {
+    const hasCredit = await consumeSmsCredit(customer.customer_id);
+    if (hasCredit) {
+      const text = review.location_name
+        ? `${review.location_name}: ${created.body}`
+        : created.body;
+      sendSms(review.contact_phone, text).catch(() => {});
+    } else {
+      smsQuotaExceeded = true;
+    }
   }
 
-  return NextResponse.json({ message: created });
+  return NextResponse.json({ message: created, smsQuotaExceeded });
 }
 
 export async function PATCH(request: NextRequest) {
@@ -74,6 +88,7 @@ interface OwnerReviewRow {
   review_id: number;
   scan_id: string;
   contact_email: string | null;
+  contact_phone: string | null;
   plates: {
     plate_number: string;
     subscription_id: number;
@@ -86,7 +101,7 @@ async function getReviewForOwner(reviewId: number, ownedSubscriptionIds: number[
   const { data } = await supabase
     .from("reviews")
     .select(
-      "review_id, scan_id, contact_email, plates!inner(plate_number, subscription_id, subscriptions(customer_locations(location_name)))"
+      "review_id, scan_id, contact_email, contact_phone, plates!inner(plate_number, subscription_id, subscriptions(customer_locations(location_name)))"
     )
     .eq("review_id", reviewId)
     .returns<OwnerReviewRow[]>()
@@ -100,6 +115,7 @@ async function getReviewForOwner(reviewId: number, ownedSubscriptionIds: number[
     review_id: data.review_id,
     scan_id: data.scan_id,
     contact_email: data.contact_email,
+    contact_phone: data.contact_phone,
     subscription_id: data.plates.subscription_id,
     plate_number: data.plates.plate_number,
     location_name: data.plates.subscriptions?.customer_locations?.location_name ?? null,

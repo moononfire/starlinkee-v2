@@ -45,6 +45,16 @@ export default async function SubscriptionLayout({
 
   return (
     <div className="space-y-4">
+      {sub.location?.logo_link && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={sub.location.logo_link}
+          alt={sub.location.location_name}
+          className={`h-14 w-14 object-cover border border-gray-200 dark:border-gray-700 ${
+            sub.location.logo_is_round ? "rounded-full" : "rounded-xl"
+          }`}
+        />
+      )}
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
           {title}
