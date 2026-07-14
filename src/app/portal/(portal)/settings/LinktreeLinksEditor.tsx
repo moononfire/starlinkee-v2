@@ -54,6 +54,7 @@ export default function LinktreeLinksEditor({
   const [links, setLinks] = useState<LinkItem[]>(initialLinks);
   const [pageBackground, setPageBackground] = useState<PageBackgroundKey | null>(initialPageBackground);
   const [activeTab, setActiveTab] = useState<Record<number, LinkTab>>({});
+  const [expandedStyleIdx, setExpandedStyleIdx] = useState<number | null>(null);
   const linkLangs = SUPPORTED_LANGUAGES.filter((l) => activeLanguages.includes(l));
   const defaultLang = linkLangs[0] ?? "pl";
   const [previewLang, setPreviewLang] = useState<LinkLang>(defaultLang);
@@ -73,6 +74,7 @@ export default function LinktreeLinksEditor({
 
   const removeLink = (idx: number) => {
     setLinks(links.filter((_, i) => i !== idx));
+    setExpandedStyleIdx(null);
   };
 
   const update = (idx: number, field: keyof LinkItem, value: string) => {
@@ -214,74 +216,105 @@ export default function LinktreeLinksEditor({
             />
 
             <div>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{t("portal_link_icon_label", lang)}</p>
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setIcon(idx, null)}
-                  aria-label={t("portal_link_icon_none", lang)}
-                  title={t("portal_link_icon_none", lang)}
-                  className={`w-8 h-8 flex items-center justify-center rounded-lg border text-[10px] font-medium transition-colors ${
-                    link.icon === null
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300"
-                      : "border-gray-200 dark:border-gray-600 text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  }`}
+              <button
+                type="button"
+                onClick={() => setExpandedStyleIdx((prev) => (prev === idx ? null : idx))}
+                aria-expanded={expandedStyleIdx === idx}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+              >
+                <span
+                  className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-gray-700 ${getTileBackground(link.background).swatch}`}
                 >
-                  {t("portal_link_icon_none_short", lang)}
-                </button>
-                {LINK_ICON_KEYS.map((iconKey) => (
-                  <button
-                    key={iconKey}
-                    type="button"
-                    onClick={() => setIcon(idx, iconKey)}
-                    aria-label={iconKey}
-                    title={iconKey}
-                    className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${
-                      link.icon === iconKey
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300"
-                        : "border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
-                    }`}
-                  >
-                    <LinkIconGlyph icon={iconKey} className="w-4 h-4" />
-                  </button>
-                ))}
-              </div>
-            </div>
+                  <LinkIconGlyph icon={link.icon} className="w-3.5 h-3.5" />
+                </span>
+                <span className="flex-1 text-left text-xs text-gray-500 dark:text-gray-400">
+                  {t("portal_link_style_label", lang)}
+                </span>
+                <svg
+                  className={`w-3.5 h-3.5 text-gray-400 transition-transform ${expandedStyleIdx === idx ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                </svg>
+              </button>
 
-            <div>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{t("portal_link_bg_label", lang)}</p>
-              <div className="flex flex-col gap-1.5">
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setBackground(idx, null)}
-                    aria-label={t("portal_link_icon_none", lang)}
-                    title={t("portal_link_icon_none", lang)}
-                    className={`w-7 h-7 rounded-full ${getTileBackground(null).swatch} ${
-                      link.background === null ? "ring-2 ring-offset-1 ring-blue-500" : ""
-                    }`}
-                  />
-                </div>
-                {TILE_BACKGROUND_GROUPS.map((group) => (
-                  <div key={group.key} className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] text-gray-400 dark:text-gray-500 w-14 shrink-0">
-                      {t(`portal_link_bg_group_${group.key}`, lang)}
-                    </span>
-                    {group.keys.map((bgKey) => (
+              {expandedStyleIdx === idx && (
+                <div className="mt-2 space-y-3 pl-1">
+                  <div>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{t("portal_link_icon_label", lang)}</p>
+                    <div className="flex flex-wrap gap-1.5">
                       <button
-                        key={bgKey}
                         type="button"
-                        onClick={() => setBackground(idx, bgKey)}
-                        aria-label={bgKey}
-                        title={bgKey}
-                        className={`w-7 h-7 rounded-full ${getTileBackground(bgKey).swatch} ${
-                          link.background === bgKey ? "ring-2 ring-offset-1 ring-blue-500" : ""
+                        onClick={() => setIcon(idx, null)}
+                        aria-label={t("portal_link_icon_none", lang)}
+                        title={t("portal_link_icon_none", lang)}
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg border text-[10px] font-medium transition-colors ${
+                          link.icon === null
+                            ? "border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300"
+                            : "border-gray-200 dark:border-gray-600 text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
                         }`}
-                      />
-                    ))}
+                      >
+                        {t("portal_link_icon_none_short", lang)}
+                      </button>
+                      {LINK_ICON_KEYS.map((iconKey) => (
+                        <button
+                          key={iconKey}
+                          type="button"
+                          onClick={() => setIcon(idx, iconKey)}
+                          aria-label={iconKey}
+                          title={iconKey}
+                          className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${
+                            link.icon === iconKey
+                              ? "border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300"
+                              : "border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          }`}
+                        >
+                          <LinkIconGlyph icon={iconKey} className="w-4 h-4" />
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
+
+                  <div>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{t("portal_link_bg_label", lang)}</p>
+                    <div className="flex flex-col gap-1.5">
+                      {TILE_BACKGROUND_GROUPS.map((group, groupIdx) => (
+                        <div key={group.key} className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500 w-14 shrink-0">
+                            {t(`portal_link_bg_group_${group.key}`, lang)}
+                          </span>
+                          {groupIdx === 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setBackground(idx, null)}
+                              aria-label={t("portal_link_icon_none", lang)}
+                              title={t("portal_link_icon_none", lang)}
+                              className={`w-7 h-7 rounded-full ${getTileBackground(null).swatch} ${
+                                link.background === null ? "ring-2 ring-offset-1 ring-blue-500" : ""
+                              }`}
+                            />
+                          )}
+                          {group.keys.map((bgKey) => (
+                            <button
+                              key={bgKey}
+                              type="button"
+                              onClick={() => setBackground(idx, bgKey)}
+                              aria-label={bgKey}
+                              title={bgKey}
+                              className={`w-7 h-7 rounded-full ${getTileBackground(bgKey).swatch} ${
+                                link.background === bgKey ? "ring-2 ring-offset-1 ring-blue-500" : ""
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         );
