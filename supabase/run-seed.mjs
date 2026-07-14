@@ -10,7 +10,7 @@ const env = Object.fromEntries(
     .split("\n")
     .filter((l) => l.includes("=") && !l.startsWith("#"))
     .map((l) => l.split("=").map((s) => s.trim()))
-    .map(([k, ...v]) => [k, v.join("=")])
+    .map(([k, ...v]) => [k, v.join("=").replace(/^["']|["']$/g, "")])
 );
 
 const supabase = createClient(

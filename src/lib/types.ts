@@ -140,6 +140,8 @@ export interface Customer {
   country: string | null;
   activation_token: string | null;
   is_activated: boolean;
+  sms_credits_used: number;
+  sms_credits_reset_at: string;
   created_at: string;
   updated_at: string;
 }
