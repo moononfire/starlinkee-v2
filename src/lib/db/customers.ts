@@ -15,7 +15,6 @@ interface CustomerInsert {
   address_postal_code?: string;
   country?: string;
   preferred_language?: "en" | "de" | "pl";
-  activation_token?: string;
   is_activated?: boolean;
 }
 

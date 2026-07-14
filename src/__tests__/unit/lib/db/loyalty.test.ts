@@ -10,7 +10,10 @@ import {
   getLoyaltyCard,
   createLoyaltyCard,
   incrementStamp,
-  resetLoyaltyCard,
+  getLoyaltyCardByRedeemCode,
+  setRedeemCode,
+  clearRedeemCode,
+  confirmRedemption,
   upsertOtp,
   getOtp,
   deleteOtp,
@@ -91,19 +94,70 @@ describe("incrementStamp()", () => {
   });
 });
 
-describe("resetLoyaltyCard()", () => {
+describe("getLoyaltyCardByRedeemCode()", () => {
+  it("returns null when not found", async () => {
+    supabaseMock.from.mockReturnValue({
+      select: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: null }) })) })),
+    });
+    const result = await getLoyaltyCardByRedeemCode("ABCD1234");
+    expect(result).toBeNull();
+  });
+
+  it("returns card when found", async () => {
+    const card = { id: 5, redeem_code: "ABCD1234" };
+    supabaseMock.from.mockReturnValue({
+      select: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: card }) })) })),
+    });
+    const result = await getLoyaltyCardByRedeemCode("ABCD1234");
+    expect(result).toEqual(card);
+  });
+});
+
+describe("setRedeemCode()", () => {
   it("resolves on success", async () => {
     supabaseMock.from.mockReturnValue({
       update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) })),
     });
-    await expect(resetLoyaltyCard(1)).resolves.toBeUndefined();
+    await expect(setRedeemCode(1, "ABCD1234", new Date().toISOString())).resolves.toBeUndefined();
   });
 
   it("throws on error", async () => {
     supabaseMock.from.mockReturnValue({
       update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: { message: "fail" } }) })),
     });
-    await expect(resetLoyaltyCard(1)).rejects.toThrow("Failed to reset loyalty card");
+    await expect(setRedeemCode(1, "ABCD1234", new Date().toISOString())).rejects.toThrow("Failed to set redeem code");
+  });
+});
+
+describe("clearRedeemCode()", () => {
+  it("resolves on success", async () => {
+    supabaseMock.from.mockReturnValue({
+      update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) })),
+    });
+    await expect(clearRedeemCode(1)).resolves.toBeUndefined();
+  });
+
+  it("throws on error", async () => {
+    supabaseMock.from.mockReturnValue({
+      update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: { message: "fail" } }) })),
+    });
+    await expect(clearRedeemCode(1)).rejects.toThrow("Failed to clear redeem code");
+  });
+});
+
+describe("confirmRedemption()", () => {
+  it("resolves on success", async () => {
+    supabaseMock.from.mockReturnValue({
+      update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) })),
+    });
+    await expect(confirmRedemption(1)).resolves.toBeUndefined();
+  });
+
+  it("throws on error", async () => {
+    supabaseMock.from.mockReturnValue({
+      update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: { message: "fail" } }) })),
+    });
+    await expect(confirmRedemption(1)).rejects.toThrow("Failed to confirm redemption");
   });
 });
 

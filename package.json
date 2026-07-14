@@ -13,8 +13,6 @@
     "test:e2e": "playwright test",
     "db:push": "node scripts/db-push.mjs dev",
     "db:push:dev": "node scripts/db-push.mjs dev",
-    "db:push:preview": "node scripts/db-push.mjs preview",
-    "db:push:prod": "node scripts/db-push.mjs prod",
     "db:seed": "node supabase/run-seed.mjs"
   },
   "dependencies": {
