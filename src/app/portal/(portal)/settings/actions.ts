@@ -3,8 +3,10 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { getCustomerByEmail, getCustomerSubscriptions } from "@/lib/db/portal";
 import { updateLocation, setLinktreeSlug } from "@/lib/db/locations";
+import type { ActionResult } from "../action-result";
 
 function makeSupabase(cookieStore: Awaited<ReturnType<typeof cookies>>) {
   return createServerClient(
@@ -25,7 +27,7 @@ function makeSupabase(cookieStore: Awaited<ReturnType<typeof cookies>>) {
   );
 }
 
-export async function updatePortalPassword(formData: FormData) {
+export async function updatePortalPassword(formData: FormData): Promise<ActionResult> {
   const cookieStore = await cookies();
   const supabase = makeSupabase(cookieStore);
 
@@ -38,27 +40,25 @@ export async function updatePortalPassword(formData: FormData) {
   const password = formData.get("password") as string;
   const passwordConfirm = formData.get("password_confirm") as string;
 
-  if (!subscriptionId) redirect("/portal");
-
-  const dest = `/portal/${subscriptionId}/settings`;
+  if (!subscriptionId) return { ok: false, error: "failed" };
 
   if (!password || password !== passwordConfirm) {
-    redirect(`${dest}?passwordError=mismatch`);
+    return { ok: false, error: "mismatch" };
   }
 
   if (password.length < 8) {
-    redirect(`${dest}?passwordError=short`);
+    return { ok: false, error: "short" };
   }
 
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
-    redirect(`${dest}?passwordError=failed`);
+    return { ok: false, error: "failed" };
   }
 
-  redirect(`${dest}?saved=password`);
+  return { ok: true };
 }
 
-export async function updateScanRedirectMode(formData: FormData) {
+export async function updateScanRedirectMode(formData: FormData): Promise<ActionResult> {
   const cookieStore = await cookies();
   const supabase = makeSupabase(cookieStore);
 
@@ -74,22 +74,23 @@ export async function updateScanRedirectMode(formData: FormData) {
   const mode = formData.get("scan_redirect_mode") as string;
 
   if (!locationId || !["review", "linktree"].includes(mode)) {
-    redirect("/portal/settings");
+    return { ok: false, error: "failed" };
   }
 
   const subscriptions = await getCustomerSubscriptions(customer.customer_id);
   const matchingSub = subscriptions.find(
     (s) => s.location?.location_id === locationId
   );
-  if (!matchingSub) redirect("/portal/settings");
+  if (!matchingSub) return { ok: false, error: "failed" };
 
   await updateLocation(locationId, {
     scan_redirect_mode: mode as "review" | "linktree",
   });
-  redirect(`/portal/${matchingSub.subscription_id}/settings?saved=scan_mode`);
+  revalidatePath(`/portal/${matchingSub.subscription_id}`, "layout");
+  return { ok: true };
 }
 
-export async function updateFourStarRedirect(formData: FormData) {
+export async function updateFourStarRedirect(formData: FormData): Promise<ActionResult> {
   const cookieStore = await cookies();
   const supabase = makeSupabase(cookieStore);
 
@@ -104,23 +105,22 @@ export async function updateFourStarRedirect(formData: FormData) {
   const locationId = Number(formData.get("location_id"));
   const redirectFourStar = formData.get("redirect_four_star_reviews") === "on";
 
-  if (!locationId) {
-    redirect("/portal/settings");
-  }
+  if (!locationId) return { ok: false, error: "failed" };
 
   const subscriptions = await getCustomerSubscriptions(customer.customer_id);
   const matchingSub = subscriptions.find(
     (s) => s.location?.location_id === locationId
   );
-  if (!matchingSub) redirect("/portal/settings");
+  if (!matchingSub) return { ok: false, error: "failed" };
 
   await updateLocation(locationId, {
     redirect_four_star_reviews: redirectFourStar,
   });
-  redirect(`/portal/${matchingSub.subscription_id}/settings?saved=four_star`);
+  revalidatePath(`/portal/${matchingSub.subscription_id}`, "layout");
+  return { ok: true };
 }
 
-export async function updateLinktreeSlug(formData: FormData) {
+export async function updateLinktreeSlug(formData: FormData): Promise<ActionResult> {
   const cookieStore = await cookies();
   const supabase = makeSupabase(cookieStore);
 
@@ -136,29 +136,28 @@ export async function updateLinktreeSlug(formData: FormData) {
   const subscriptionId = Number(formData.get("subscription_id"));
   const slug = ((formData.get("linktree_slug") as string) ?? "").trim().toLowerCase();
 
-  if (!locationId || !subscriptionId) {
-    redirect("/portal/settings");
-  }
+  if (!locationId || !subscriptionId) return { ok: false, error: "invalid" };
 
   const subscriptions = await getCustomerSubscriptions(customer.customer_id);
   const matchingSub = subscriptions.find(
     (s) => s.location?.location_id === locationId
   );
-  if (!matchingSub) redirect("/portal/settings");
+  if (!matchingSub) return { ok: false, error: "invalid" };
 
   if (!/^[a-z0-9-]{3,40}$/.test(slug) || slug.startsWith("-") || slug.endsWith("-")) {
-    redirect(`/portal/${subscriptionId}/settings?linktreeError=invalid`);
+    return { ok: false, error: "invalid" };
   }
 
   const result = await setLinktreeSlug(locationId, slug);
   if (!result.ok) {
-    redirect(`/portal/${subscriptionId}/settings?linktreeError=taken`);
+    return { ok: false, error: "taken" };
   }
 
-  redirect(`/portal/${subscriptionId}/settings?saved=linktree_slug`);
+  revalidatePath(`/portal/${subscriptionId}`, "layout");
+  return { ok: true };
 }
 
-export async function updateGoogleLocation(formData: FormData) {
+export async function updateGoogleLocation(formData: FormData): Promise<ActionResult> {
   const cookieStore = await cookies();
   const supabase = makeSupabase(cookieStore);
 
@@ -177,14 +176,14 @@ export async function updateGoogleLocation(formData: FormData) {
   const googlePlacesId = formData.get("google_places_id") as string;
 
   if (!locationId || !googlePlacesId || !googleReviewLink) {
-    redirect("/portal/settings");
+    return { ok: false, error: "failed" };
   }
 
   const subscriptions = await getCustomerSubscriptions(customer.customer_id);
   const matchingSub = subscriptions.find(
     (s) => s.location?.location_id === locationId
   );
-  if (!matchingSub) redirect("/portal/settings");
+  if (!matchingSub) return { ok: false, error: "failed" };
 
   await updateLocation(locationId, {
     google_business_name: googleBusinessName,
@@ -192,5 +191,6 @@ export async function updateGoogleLocation(formData: FormData) {
     google_review_link: googleReviewLink,
     google_places_id: googlePlacesId,
   });
-  redirect(`/portal/${matchingSub.subscription_id}/settings?saved=google_location`);
+  revalidatePath(`/portal/${matchingSub.subscription_id}`, "layout");
+  return { ok: true };
 }

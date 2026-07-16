@@ -1,17 +1,18 @@
 import { notFound, redirect } from "next/navigation";
 import { getPortalSession } from "@/lib/portal-session";
 import { getAllReviewsBySubscription } from "@/lib/db/portal";
+import { getPlatesBySubscriptionId } from "@/lib/db/plates";
 import ReviewsAnalytics from "./ReviewsAnalytics";
 import { getLanguage } from "@/lib/language";
 
 interface Props {
   params: Promise<{ subscriptionId: string }>;
-  searchParams: Promise<{ stars?: string }>;
+  searchParams: Promise<{ stars?: string; scrollTo?: string }>;
 }
 
 export default async function ReviewsPage({ params, searchParams }: Props) {
   const { subscriptionId: rawId } = await params;
-  const { stars } = await searchParams;
+  const { stars, scrollTo } = await searchParams;
   const subscriptionId = Number(rawId);
   if (!subscriptionId) notFound();
 
@@ -22,7 +23,14 @@ export default async function ReviewsPage({ params, searchParams }: Props) {
   if (!sub) notFound();
 
   const lang = await getLanguage();
-  const reviews = await getAllReviewsBySubscription(subscriptionId);
+  const [reviews, plates] = await Promise.all([
+    getAllReviewsBySubscription(subscriptionId),
+    getPlatesBySubscriptionId(subscriptionId),
+  ]);
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://starlinkee.com";
+  const plate = plates[0];
+  const plateScanUrl = plate ? `${appUrl}/plate/${plate.plate_number}/${plate.secret_key}` : null;
 
   const totalCount = reviews.length;
   const avgRating = totalCount > 0
@@ -37,11 +45,14 @@ export default async function ReviewsPage({ params, searchParams }: Props) {
   return (
     <ReviewsAnalytics
       subscriptionId={subscriptionId}
+      location={sub.location}
+      plateScanUrl={plateScanUrl}
       reviews={reviews}
       totalCount={totalCount}
       avgRating={avgRating}
       byStars={byStars}
       initialStars={stars ? Number(stars) : undefined}
+      scrollTo={scrollTo}
       lang={lang}
     />
   );

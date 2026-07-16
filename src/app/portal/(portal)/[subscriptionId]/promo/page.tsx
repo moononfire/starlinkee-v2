@@ -4,7 +4,7 @@ import { getLeadsByLocationId } from "@/lib/db/leads";
 import { updatePromoSettings, updatePromoEnabled } from "./actions";
 import PromoPreviewEditor from "./PromoPreviewEditor";
 import PromoContactsTable from "./PromoContactsTable";
-import SavedToast from "../../SavedToast";
+import SavableForm from "../../SavableForm";
 import { getLanguage } from "@/lib/language";
 import { t } from "@/lib/translations";
 import {
@@ -14,12 +14,10 @@ import {
 
 interface Props {
   params: Promise<{ subscriptionId: string }>;
-  searchParams: Promise<{ saved?: string }>;
 }
 
-export default async function PromoPortalPage({ params, searchParams }: Props) {
+export default async function PromoPortalPage({ params }: Props) {
   const { subscriptionId: rawId } = await params;
-  const { saved } = await searchParams;
   const subscriptionId = Number(rawId);
   if (!subscriptionId) notFound();
 
@@ -40,10 +38,8 @@ export default async function PromoPortalPage({ params, searchParams }: Props) {
 
   return (
     <div className="space-y-6">
-      <SavedToast show={saved === "1"} lang={lang} />
-
       <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-        <form action={updatePromoEnabled}>
+        <SavableForm action={updatePromoEnabled} lang={lang}>
           <input type="hidden" name="subscription_id" value={subscriptionId} />
           <input type="hidden" name="location_id" value={location.location_id} />
           <label className="flex items-start gap-3 cursor-pointer">
@@ -64,11 +60,11 @@ export default async function PromoPortalPage({ params, searchParams }: Props) {
           <div className="mt-2">
             <AutoSavePendingHint lang={lang} />
           </div>
-        </form>
+        </SavableForm>
       </section>
 
       <div className={location.has_promo_enabled ? undefined : "opacity-50 pointer-events-none select-none"}>
-        <form action={updatePromoSettings}>
+        <SavableForm action={updatePromoSettings} lang={lang}>
           <input type="hidden" name="subscription_id" value={subscriptionId} />
           <input type="hidden" name="location_id" value={location.location_id} />
           <PromoPreviewEditor
@@ -92,7 +88,7 @@ export default async function PromoPortalPage({ params, searchParams }: Props) {
             activeLanguages={location.active_languages}
             lang={lang}
           />
-        </form>
+        </SavableForm>
 
         <PromoContactsTable leads={leads} lang={lang} />
       </div>

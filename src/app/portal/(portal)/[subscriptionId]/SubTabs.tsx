@@ -8,12 +8,14 @@ export default function SubTabs({
   subscriptionId,
   hasPromo,
   hasLoyalty,
+  hasLinktree,
   unreadMessageCount = 0,
   lang,
 }: {
   subscriptionId: number;
   hasPromo: boolean;
   hasLoyalty: boolean;
+  hasLinktree: boolean;
   unreadMessageCount?: number;
   lang: string;
 }) {
@@ -30,11 +32,14 @@ export default function SubTabs({
     ...(hasLoyalty
       ? [{ href: `${base}/loyalty`, label: t("portal_tab_loyalty", lang) }]
       : []),
+    ...(hasLinktree
+      ? [{ href: `${base}/linktree`, label: t("portal_tab_linktree", lang) }]
+      : []),
     { href: `${base}/settings`, label: t("portal_tab_settings", lang) },
   ];
 
   return (
-    <nav className="flex gap-1 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+    <nav className="flex flex-nowrap gap-1 border-b border-gray-200 dark:border-gray-700 overflow-x-auto sm:flex-wrap sm:overflow-visible [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {tabs.map((tab) => {
         const isActive = tab.exact
           ? pathname === tab.href

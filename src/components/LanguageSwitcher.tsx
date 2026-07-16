@@ -1,49 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { LanguageFlag } from "./flags";
 
 const languages = [
   { code: "en", label: "EN" },
   { code: "de", label: "DE" },
   { code: "pl", label: "PL" },
 ] as const;
-
-function FlagPL() {
-  return (
-    <svg viewBox="0 0 32 24" className="w-6 h-[18px] rounded-sm shadow-sm">
-      <rect width="32" height="12" fill="#fff" />
-      <rect y="12" width="32" height="12" fill="#dc143c" />
-    </svg>
-  );
-}
-
-function FlagDE() {
-  return (
-    <svg viewBox="0 0 32 24" className="w-6 h-[18px] rounded-sm shadow-sm">
-      <rect width="32" height="8" fill="#000" />
-      <rect y="8" width="32" height="8" fill="#dd0000" />
-      <rect y="16" width="32" height="8" fill="#ffcc00" />
-    </svg>
-  );
-}
-
-function FlagGB() {
-  return (
-    <svg viewBox="0 0 60 30" className="w-6 h-[18px] rounded-sm shadow-sm">
-      <rect width="60" height="30" fill="#012169" />
-      <path d="M0 0L60 30M60 0L0 30" stroke="#fff" strokeWidth="6" />
-      <path d="M0 0L60 30M60 0L0 30" stroke="#C8102E" strokeWidth="4" />
-      <path d="M30 0V30M0 15H60" stroke="#fff" strokeWidth="10" />
-      <path d="M30 0V30M0 15H60" stroke="#C8102E" strokeWidth="6" />
-    </svg>
-  );
-}
-
-const flagMap: Record<string, () => React.JSX.Element> = {
-  en: FlagGB,
-  de: FlagDE,
-  pl: FlagPL,
-};
 
 interface Props {
   currentLang: string;
@@ -67,7 +31,6 @@ export default function LanguageSwitcher({ currentLang, scopeKey, availableLangu
   return (
     <div className="flex items-center gap-1.5">
       {visibleLanguages.map(({ code, label }) => {
-        const Flag = flagMap[code];
         const isActive = currentLang === code;
         return (
           <button
@@ -80,7 +43,7 @@ export default function LanguageSwitcher({ currentLang, scopeKey, availableLangu
             }`}
             aria-label={`Switch to ${label}`}
           >
-            <Flag />
+            <LanguageFlag lang={code} />
             <span>{label}</span>
           </button>
         );

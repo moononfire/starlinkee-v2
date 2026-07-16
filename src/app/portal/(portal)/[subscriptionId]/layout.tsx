@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
 import { getPortalSession } from "@/lib/portal-session";
 import { getUnreadThreadCountBySubscriptionId } from "@/lib/db/review-messages";
 import { getLanguage } from "@/lib/language";
@@ -45,15 +46,29 @@ export default async function SubscriptionLayout({
 
   return (
     <div className="space-y-4">
-      {sub.location?.logo_link && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={sub.location.logo_link}
-          alt={sub.location.location_name}
-          className={`h-14 w-14 object-cover border border-gray-200 dark:border-gray-700 ${
-            sub.location.logo_is_round ? "rounded-full" : "rounded-xl"
-          }`}
-        />
+      {sub.location && (
+        sub.location.logo_link ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={sub.location.logo_link}
+            alt={sub.location.location_name}
+            className={`h-14 w-14 object-cover border border-gray-200 dark:border-gray-700 ${
+              sub.location.logo_is_round ? "rounded-full" : "rounded-xl"
+            }`}
+          />
+        ) : (
+          <Link
+            href={`/portal/${subscriptionId}/reviews?scrollTo=logo`}
+            className="flex flex-col items-center gap-1 w-fit"
+          >
+            <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 hover:underline whitespace-nowrap">
+              &lt;{t("portal_no_logo", lang)}&gt;
+            </span>
+            <span className="h-14 w-14 rounded-full border-2 border-dashed border-amber-400 dark:border-amber-600 flex items-center justify-center text-amber-500 text-lg hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors">
+              ?
+            </span>
+          </Link>
+        )
       )}
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
@@ -73,6 +88,7 @@ export default async function SubscriptionLayout({
           subscriptionId={subscriptionId}
           hasPromo={sub.status === "active"}
           hasLoyalty={sub.status === "active"}
+          hasLinktree={sub.status === "active" && !!sub.location?.has_linktree_access}
           unreadMessageCount={unreadMessageCount}
           lang={lang}
         />
