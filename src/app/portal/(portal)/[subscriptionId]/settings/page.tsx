@@ -1,20 +1,15 @@
 import { notFound, redirect } from "next/navigation";
 import { getPortalSession } from "@/lib/portal-session";
-import { getLocationLinksByLocationId, ensureLinktreeSlug } from "@/lib/db/locations";
-import type { CustomerLocationLink } from "@/lib/types";
 import { getLanguage } from "@/lib/language";
 import { t } from "@/lib/translations";
-import SavedToast from "../../SavedToast";
 import LocationSettings from "./LocationSettings";
 
 interface Props {
   params: Promise<{ subscriptionId: string }>;
-  searchParams: Promise<{ saved?: string; linktreeError?: string; passwordError?: string }>;
 }
 
-export default async function SubscriptionSettingsPage({ params, searchParams }: Props) {
+export default async function SubscriptionSettingsPage({ params }: Props) {
   const { subscriptionId: rawId } = await params;
-  const { saved, linktreeError, passwordError } = await searchParams;
   const subscriptionId = Number(rawId);
   if (!subscriptionId) notFound();
 
@@ -31,19 +26,6 @@ export default async function SubscriptionSettingsPage({ params, searchParams }:
 
   const lang = await getLanguage();
 
-  const [locationLinks, ensuredSlug] = await Promise.all([
-    sub.location.has_linktree_access
-      ? getLocationLinksByLocationId(sub.location.location_id)
-      : Promise.resolve<CustomerLocationLink[]>([]),
-    sub.location.has_linktree_access && !sub.location.linktree_slug
-      ? ensureLinktreeSlug(sub.location.location_id, sub.location.location_name)
-      : Promise.resolve(sub.location.linktree_slug ?? null),
-  ]);
-
-  if (sub.location.has_linktree_access) {
-    sub.location.linktree_slug = ensuredSlug;
-  }
-
   if (sub.status === "inactive") {
     return (
       <div className="space-y-4">
@@ -54,7 +36,6 @@ export default async function SubscriptionSettingsPage({ params, searchParams }:
           <LocationSettings
             subscriptionId={subscriptionId}
             location={sub.location}
-            locationLinks={locationLinks}
             lang={lang}
           />
         </div>
@@ -64,14 +45,9 @@ export default async function SubscriptionSettingsPage({ params, searchParams }:
 
   return (
     <div className="space-y-4">
-      <SavedToast show={!!saved} lang={lang} />
       <LocationSettings
         subscriptionId={subscriptionId}
         location={sub.location}
-        locationLinks={locationLinks}
-        linktreeError={linktreeError}
-        passwordError={passwordError}
-        saved={saved}
         lang={lang}
       />
     </div>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { upsertLinktreeLinks } from "./[subscriptionId]/actions";
+import { initialActionResult, type ActionResult } from "../action-result";
 import { t } from "@/lib/translations";
 import { SUPPORTED_LANGUAGES, type Language } from "@/lib/languages";
 import { LINK_ICON_KEYS, LinkIconGlyph, type LinkIconKey } from "@/lib/linkIcons";
@@ -24,7 +25,6 @@ interface Props {
   initialLinks: LinkItem[];
   initialPageBackground: PageBackgroundKey | null;
   activeLanguages: Language[];
-  saved?: boolean;
   lang: string;
   locationName: string;
   logoUrl: string | null;
@@ -43,7 +43,6 @@ export default function LinktreeLinksEditor({
   initialLinks,
   initialPageBackground,
   activeLanguages,
-  saved,
   lang,
   locationName,
   logoUrl,
@@ -58,6 +57,19 @@ export default function LinktreeLinksEditor({
   const linkLangs = SUPPORTED_LANGUAGES.filter((l) => activeLanguages.includes(l));
   const defaultLang = linkLangs[0] ?? "pl";
   const [previewLang, setPreviewLang] = useState<LinkLang>(defaultLang);
+
+  const [state, formAction, isPending] = useActionState(
+    async (_prev: ActionResult, formData: FormData) => upsertLinktreeLinks(formData),
+    initialActionResult
+  );
+  const [showSaved, setShowSaved] = useState(false);
+
+  useEffect(() => {
+    if (!state.ok) return;
+    setShowSaved(true);
+    const timer = setTimeout(() => setShowSaved(false), 2500);
+    return () => clearTimeout(timer);
+  }, [state]);
 
   const previewTitle = (link: LinkItem) => {
     for (const l of linkLangs) {
@@ -105,7 +117,7 @@ export default function LinktreeLinksEditor({
 
   return (
     <div className="lg:flex lg:items-start lg:gap-6">
-    <form action={upsertLinktreeLinks} className="space-y-2 lg:flex-1 lg:min-w-0">
+    <form action={formAction} className="space-y-2 lg:flex-1 lg:min-w-0">
       <input type="hidden" name="location_id" value={locationId} />
       <input type="hidden" name="subscription_id" value={subscriptionId} />
       <input type="hidden" name="links_json" value={JSON.stringify(links)} />
@@ -341,11 +353,12 @@ export default function LinktreeLinksEditor({
         <div className="flex items-center gap-3">
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+            disabled={isPending}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {t("portal_save", lang)}
+            {isPending ? t("portal_saving", lang) : t("portal_save", lang)}
           </button>
-          {saved && (
+          {showSaved && (
             <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400 shrink-0">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />

@@ -23,12 +23,16 @@ export async function listReviews(search?: string): Promise<ReviewWithLocation[]
 
   const { data, error } = await query;
   if (error) throw new Error(`Failed to list reviews: ${error.message}`);
-  return (data ?? []).map((row: any) => ({
-    ...row,
-    plate_number: row.plates?.plate_number ?? "?",
-    location_id: row.plates?.subscriptions?.customer_locations?.location_id ?? null,
-    location_name: row.plates?.subscriptions?.customer_locations?.location_name ?? null,
-  }));
+  return (data ?? []).map((row: any) => {
+    const customerLocations = row.plates?.subscriptions?.customer_locations;
+    const location = Array.isArray(customerLocations) ? customerLocations[0] : customerLocations;
+    return {
+      ...row,
+      plate_number: row.plates?.plate_number ?? "?",
+      location_id: location?.location_id ?? null,
+      location_name: location?.location_name ?? null,
+    };
+  });
 }
 
 interface ScanDeviceInfo {
@@ -109,7 +113,9 @@ export async function getRedirectFourStarReviews(scanId: string): Promise<boolea
     .eq("scan_id", scanId)
     .single();
   const row = data as any;
-  return row?.plates?.subscriptions?.customer_locations?.redirect_four_star_reviews ?? true;
+  const customerLocations = row?.plates?.subscriptions?.customer_locations;
+  const location = Array.isArray(customerLocations) ? customerLocations[0] : customerLocations;
+  return location?.redirect_four_star_reviews ?? true;
 }
 
 export async function updateFeedback(

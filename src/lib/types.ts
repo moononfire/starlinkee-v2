@@ -50,6 +50,9 @@ export interface CustomerLocation {
   loyalty_card_text: string | null;
   loyalty_card_text_en: string | null;
   loyalty_card_text_de: string | null;
+  loyalty_reward_text: string | null;
+  loyalty_reward_text_en: string | null;
+  loyalty_reward_text_de: string | null;
   promo_description: string | null;
   promo_description_en: string | null;
   promo_description_de: string | null;

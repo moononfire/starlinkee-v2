@@ -21,7 +21,6 @@ interface Props {
   locationName: string;
   currentBusinessName: string | null;
   currentBusinessAddress: string | null;
-  saved?: boolean;
   lang: string;
 }
 
@@ -30,7 +29,6 @@ export default function GoogleLocationEditor({
   locationName,
   currentBusinessName,
   currentBusinessAddress,
-  saved,
   lang,
 }: Props) {
   const [editing, setEditing] = useState(false);
@@ -40,6 +38,7 @@ export default function GoogleLocationEditor({
   const [selectedPlace, setSelectedPlace] = useState<PlaceDetails | null>(null);
   const [loadingPlace, setLoadingPlace] = useState(false);
   const [pending, setPending] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -99,9 +98,13 @@ export default function GoogleLocationEditor({
     formData.set("google_business_address", selectedPlace.address);
     formData.set("google_review_link", selectedPlace.google_review_link);
     formData.set("google_places_id", selectedPlace.place_id);
-    await updateGoogleLocation(formData);
+    const result = await updateGoogleLocation(formData);
     setPending(false);
     setEditing(false);
+    if (result.ok) {
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 2500);
+    }
   }
 
   return (
@@ -123,7 +126,7 @@ export default function GoogleLocationEditor({
             )}
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            {saved && (
+            {justSaved && (
               <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400">
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />

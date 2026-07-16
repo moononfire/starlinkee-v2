@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { getCustomerByEmail, getCustomerSubscriptions } from "@/lib/db/portal";
 import { updateLocation, upsertLocationLinks } from "@/lib/db/locations";
 import { isSafeHttpUrl } from "@/lib/urls";
@@ -10,6 +11,7 @@ import { SUPPORTED_LANGUAGES } from "@/lib/language";
 import { isLinkIconKey } from "@/lib/linkIcons";
 import { isTileBackgroundKey } from "@/lib/linkBackgrounds";
 import { isPageBackgroundKey } from "@/lib/pageBackgrounds";
+import type { ActionResult } from "../../action-result";
 
 function makeSupabase(cookieStore: Awaited<ReturnType<typeof cookies>>) {
   return createServerClient(
@@ -52,7 +54,7 @@ async function getOwnedLocation(
   return sub.location;
 }
 
-export async function updateLocationName(formData: FormData) {
+export async function updateLocationName(formData: FormData): Promise<ActionResult> {
   const cookieStore = await cookies();
   const supabase = makeSupabase(cookieStore);
 
@@ -68,17 +70,17 @@ export async function updateLocationName(formData: FormData) {
   const locationId = Number(formData.get("location_id"));
   const locationName = (formData.get("location_name") as string)?.trim();
 
-  const dest = `/portal/${subscriptionId}`;
-  if (!subscriptionId || !locationId || !locationName) redirect(dest);
+  if (!subscriptionId || !locationId || !locationName) return { ok: false, error: "failed" };
 
   const ok = await verifyOwnership(customer.customer_id, subscriptionId, locationId);
-  if (!ok) redirect(dest);
+  if (!ok) return { ok: false, error: "failed" };
 
   await updateLocation(locationId, { location_name: locationName });
-  redirect(`${dest}/settings?saved=location_name`);
+  revalidatePath(`/portal/${subscriptionId}`, "layout");
+  return { ok: true };
 }
 
-export async function upsertLinktreeLinks(formData: FormData) {
+export async function upsertLinktreeLinks(formData: FormData): Promise<ActionResult> {
   const cookieStore = await cookies();
   const supabase = makeSupabase(cookieStore);
 
@@ -95,11 +97,10 @@ export async function upsertLinktreeLinks(formData: FormData) {
   const linksJson = formData.get("links_json") as string;
   const pageBackground = formData.get("page_background") as string | null;
 
-  const dest = `/portal/${subscriptionId}`;
-  if (!subscriptionId || !locationId || !linksJson) redirect(dest);
+  if (!subscriptionId || !locationId || !linksJson) return { ok: false, error: "failed" };
 
   const location = await getOwnedLocation(customer.customer_id, subscriptionId, locationId);
-  if (!location) redirect(dest);
+  if (!location) return { ok: false, error: "failed" };
 
   const primaryLang = SUPPORTED_LANGUAGES.find((l) => location.active_languages.includes(l)) ?? "pl";
   const primaryField = `title_${primaryLang}` as const;
@@ -109,7 +110,7 @@ export async function upsertLinktreeLinks(formData: FormData) {
     rawLinks = JSON.parse(linksJson);
     if (!Array.isArray(rawLinks)) throw new Error();
   } catch {
-    redirect(dest);
+    return { ok: false, error: "failed" };
   }
 
   const links = rawLinks
@@ -135,10 +136,11 @@ export async function upsertLinktreeLinks(formData: FormData) {
   await updateLocation(locationId, {
     page_background: isPageBackgroundKey(pageBackground) ? pageBackground : null,
   });
-  redirect(`${dest}/settings?saved=linktree_links`);
+  revalidatePath(`/portal/${subscriptionId}`, "layout");
+  return { ok: true };
 }
 
-export async function updateSupportEmail(formData: FormData) {
+export async function updateSupportEmail(formData: FormData): Promise<ActionResult> {
   const cookieStore = await cookies();
   const supabase = makeSupabase(cookieStore);
 
@@ -154,20 +156,20 @@ export async function updateSupportEmail(formData: FormData) {
   const locationId = Number(formData.get("location_id"));
   const supportEmail = (formData.get("support_email") as string)?.trim();
 
-  const dest = `/portal/${subscriptionId}`;
-  if (!subscriptionId || !locationId || !supportEmail) redirect(dest);
+  if (!subscriptionId || !locationId || !supportEmail) return { ok: false, error: "failed" };
 
   const ok = await verifyOwnership(customer.customer_id, subscriptionId, locationId);
-  if (!ok) redirect(dest);
+  if (!ok) return { ok: false, error: "failed" };
 
   await updateLocation(locationId, {
     support_email: supportEmail,
     owner_email: supportEmail,
   });
-  redirect(`${dest}/settings?saved=support_email`);
+  revalidatePath(`/portal/${subscriptionId}`, "layout");
+  return { ok: true };
 }
 
-export async function updateActiveLanguages(formData: FormData) {
+export async function updateActiveLanguages(formData: FormData): Promise<ActionResult> {
   const cookieStore = await cookies();
   const supabase = makeSupabase(cookieStore);
 
@@ -182,18 +184,18 @@ export async function updateActiveLanguages(formData: FormData) {
   const subscriptionId = Number(formData.get("subscription_id"));
   const locationId = Number(formData.get("location_id"));
 
-  const dest = `/portal/${subscriptionId}`;
-  if (!subscriptionId || !locationId) redirect(dest);
+  if (!subscriptionId || !locationId) return { ok: false, error: "failed" };
 
   const ok = await verifyOwnership(customer.customer_id, subscriptionId, locationId);
-  if (!ok) redirect(dest);
+  if (!ok) return { ok: false, error: "failed" };
 
   const selected = SUPPORTED_LANGUAGES.filter((l) => formData.get(`lang_${l}`) === "on");
   if (selected.length === 0) {
     // Minimum jeden aktywny język musi zostać — odrzucamy zmianę.
-    redirect(`${dest}/settings`);
+    return { ok: false, error: "min_one" };
   }
 
   await updateLocation(locationId, { active_languages: selected });
-  redirect(`${dest}/settings?saved=active_languages`);
+  revalidatePath(`/portal/${subscriptionId}`, "layout");
+  return { ok: true };
 }
