@@ -3,8 +3,10 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { getCustomerByEmail, getCustomerSubscriptions } from "@/lib/db/portal";
 import { updateLocation } from "@/lib/db/locations";
+import type { ActionResult } from "../../action-result";
 
 function makeSupabase(cookieStore: Awaited<ReturnType<typeof cookies>>) {
   return createServerClient(
@@ -36,7 +38,7 @@ async function verifyOwnership(
   return true;
 }
 
-export async function updatePromoEnabled(formData: FormData) {
+export async function updatePromoEnabled(formData: FormData): Promise<ActionResult> {
   const cookieStore = await cookies();
   const supabase = makeSupabase(cookieStore);
 
@@ -52,18 +54,18 @@ export async function updatePromoEnabled(formData: FormData) {
   const locationId = Number(formData.get("location_id"));
   const enabled = formData.get("has_promo_enabled") === "on";
 
-  const dest = `/portal/${subscriptionId}/promo`;
-  if (!subscriptionId || !locationId) redirect(dest);
+  if (!subscriptionId || !locationId) return { ok: false, error: "failed" };
 
   const ok = await verifyOwnership(customer.customer_id, subscriptionId, locationId);
-  if (!ok) redirect(`/portal/${subscriptionId}`);
+  if (!ok) return { ok: false, error: "failed" };
 
   await updateLocation(locationId, { has_promo_enabled: enabled });
 
-  redirect(`${dest}?saved=1`);
+  revalidatePath(`/portal/${subscriptionId}`, "layout");
+  return { ok: true };
 }
 
-export async function updatePromoSettings(formData: FormData) {
+export async function updatePromoSettings(formData: FormData): Promise<ActionResult> {
   const cookieStore = await cookies();
   const supabase = makeSupabase(cookieStore);
 
@@ -79,11 +81,10 @@ export async function updatePromoSettings(formData: FormData) {
   const locationId = Number(formData.get("location_id"));
   const field = (name: string) => (formData.get(name) as string)?.trim() || null;
 
-  const dest = `/portal/${subscriptionId}/promo`;
-  if (!subscriptionId || !locationId) redirect(dest);
+  if (!subscriptionId || !locationId) return { ok: false, error: "failed" };
 
   const ok = await verifyOwnership(customer.customer_id, subscriptionId, locationId);
-  if (!ok) redirect(`/portal/${subscriptionId}`);
+  if (!ok) return { ok: false, error: "failed" };
 
   await updateLocation(locationId, {
     promo_description: field("promo_description"),
@@ -97,5 +98,6 @@ export async function updatePromoSettings(formData: FormData) {
     promo_sms_text_de: field("promo_sms_text_de"),
   });
 
-  redirect(`${dest}?saved=1`);
+  revalidatePath(`/portal/${subscriptionId}`, "layout");
+  return { ok: true };
 }

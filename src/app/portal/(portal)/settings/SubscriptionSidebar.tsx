@@ -36,7 +36,7 @@ export default function SubscriptionSidebar({
   const pathname = usePathname();
 
   return (
-    <nav className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+    <nav className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <p className="hidden lg:block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 px-2">
         {t("portal_your_locations", lang)}
       </p>

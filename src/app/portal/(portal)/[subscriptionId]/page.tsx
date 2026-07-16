@@ -6,6 +6,7 @@ import {
   getAllReviewsBySubscription,
 } from "@/lib/db/portal";
 import type { Review } from "@/lib/types";
+import { LanguageFlag } from "@/components/flags";
 import PortalSetupForm from "../settings/PortalSetupForm";
 import { getLanguage } from "@/lib/language";
 import { t } from "@/lib/translations";
@@ -141,7 +142,7 @@ function ReviewStats({
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t("portal_google_reviews", lang)}</h3>
         <Link
-          href={`/portal/${subscriptionId}/reviews`}
+          href={`/portal/${subscriptionId}/reviews?scrollTo=google-reviews`}
           className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
         >
           {t("portal_details_link", lang)} →
@@ -203,7 +204,7 @@ function SubscriptionStats({
   lang,
 }: {
   sub: {
-    plates: { plate_id: number; plate_number: string; number_of_visits: number }[];
+    plates: { plate_id: number; plate_number: string; plate_language: string; number_of_visits: number }[];
     activation_datetime: string | null;
     expiration_datetime: string | null;
   };
@@ -249,12 +250,13 @@ function SubscriptionStats({
             {sub.plates.map((plate) => (
               <div
                 key={plate.plate_id}
-                className="bg-gray-50 dark:bg-gray-700 rounded px-3 py-1.5 text-sm"
+                className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700 rounded px-3 py-1.5 text-sm"
               >
+                <LanguageFlag lang={plate.plate_language} />
                 <span className="font-mono font-medium text-gray-900 dark:text-gray-100">
                   {plate.plate_number}
                 </span>
-                <span className="text-gray-400 dark:text-gray-500 ml-2">
+                <span className="text-gray-400 dark:text-gray-500">
                   {scansByPlate[plate.plate_id] ?? 0} {t("portal_scan_suffix", lang)}
                 </span>
               </div>
@@ -282,7 +284,7 @@ function ReviewsSection({
           {t("portal_recent_reviews", lang)}
         </h3>
         <Link
-          href={`/portal/${subscriptionId}/reviews`}
+          href={`/portal/${subscriptionId}/reviews?scrollTo=table`}
           className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
         >
           {t("portal_all_reviews", lang)} →
