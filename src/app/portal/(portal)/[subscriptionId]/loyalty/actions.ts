@@ -3,8 +3,10 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { getCustomerByEmail, getCustomerSubscriptions } from "@/lib/db/portal";
 import { updateLocation } from "@/lib/db/locations";
+import type { ActionResult } from "../../action-result";
 
 function makeSupabase(cookieStore: Awaited<ReturnType<typeof cookies>>) {
   return createServerClient(
@@ -36,7 +38,7 @@ async function verifyOwnership(
   return true;
 }
 
-export async function updateLoyaltyEnabled(formData: FormData) {
+export async function updateLoyaltyEnabled(formData: FormData): Promise<ActionResult> {
   const cookieStore = await cookies();
   const supabase = makeSupabase(cookieStore);
 
@@ -52,18 +54,18 @@ export async function updateLoyaltyEnabled(formData: FormData) {
   const locationId = Number(formData.get("location_id"));
   const enabled = formData.get("has_loyalty_enabled") === "on";
 
-  const dest = `/portal/${subscriptionId}/loyalty`;
-  if (!subscriptionId || !locationId) redirect(dest);
+  if (!subscriptionId || !locationId) return { ok: false, error: "failed" };
 
   const ok = await verifyOwnership(customer.customer_id, subscriptionId, locationId);
-  if (!ok) redirect(`/portal/${subscriptionId}`);
+  if (!ok) return { ok: false, error: "failed" };
 
   await updateLocation(locationId, { has_loyalty_enabled: enabled });
 
-  redirect(`${dest}?saved=1`);
+  revalidatePath(`/portal/${subscriptionId}`, "layout");
+  return { ok: true };
 }
 
-export async function updateLoyaltySettings(formData: FormData) {
+export async function updateLoyaltySettings(formData: FormData): Promise<ActionResult> {
   const cookieStore = await cookies();
   const supabase = makeSupabase(cookieStore);
 
@@ -80,21 +82,27 @@ export async function updateLoyaltySettings(formData: FormData) {
   const cardText = (formData.get("loyalty_card_text") as string)?.trim() || null;
   const cardTextEn = (formData.get("loyalty_card_text_en") as string)?.trim() || null;
   const cardTextDe = (formData.get("loyalty_card_text_de") as string)?.trim() || null;
+  const rewardText = (formData.get("loyalty_reward_text") as string)?.trim() || null;
+  const rewardTextEn = (formData.get("loyalty_reward_text_en") as string)?.trim() || null;
+  const rewardTextDe = (formData.get("loyalty_reward_text_de") as string)?.trim() || null;
   const rawStamps = Number(formData.get("loyalty_stamps_required"));
   const stampsRequired = Math.min(10, Math.max(5, Number.isFinite(rawStamps) ? rawStamps : 10));
 
-  const dest = `/portal/${subscriptionId}/loyalty`;
-  if (!subscriptionId || !locationId) redirect(dest);
+  if (!subscriptionId || !locationId) return { ok: false, error: "failed" };
 
   const ok = await verifyOwnership(customer.customer_id, subscriptionId, locationId);
-  if (!ok) redirect(`/portal/${subscriptionId}`);
+  if (!ok) return { ok: false, error: "failed" };
 
   await updateLocation(locationId, {
     loyalty_card_text: cardText,
     loyalty_card_text_en: cardTextEn,
     loyalty_card_text_de: cardTextDe,
+    loyalty_reward_text: rewardText,
+    loyalty_reward_text_en: rewardTextEn,
+    loyalty_reward_text_de: rewardTextDe,
     loyalty_stamps_required: stampsRequired,
   });
 
-  redirect(`${dest}?saved=1`);
+  revalidatePath(`/portal/${subscriptionId}`, "layout");
+  return { ok: true };
 }

@@ -1,9 +1,16 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
-import type { Review } from "@/lib/types";
+import type { Review, CustomerLocation } from "@/lib/types";
 import { t } from "@/lib/translations";
+import { updateFourStarRedirect } from "../../settings/actions";
+import { updateLocationName, updateSupportEmail } from "../../settings/[subscriptionId]/actions";
+import GoogleLocationEditor from "../../settings/GoogleLocationEditor";
+import LogoUpload from "../../settings/LogoUpload";
+import SubmitButton from "../../SubmitButton";
+import SavableForm from "../../SavableForm";
+import { AutoSaveToggle, AutoSavePendingHint } from "../../settings/AutoSaveControls";
 
 type ReviewWithPlate = Review & { plate_number: string };
 type Range = "7d" | "30d" | "90d" | "1y" | "all";
@@ -194,21 +201,56 @@ function Stars({ rating }: { rating: number }) {
 
 interface Props {
   subscriptionId: number;
+  location: CustomerLocation | null;
+  plateScanUrl: string | null;
   reviews: ReviewWithPlate[];
   totalCount: number;
   avgRating: number | null;
   byStars: Record<number, number>;
   initialStars?: number;
+  scrollTo?: string;
   lang: string;
 }
 
-export default function ReviewsAnalytics({ subscriptionId, reviews, totalCount, avgRating, byStars, initialStars, lang }: Props) {
+export default function ReviewsAnalytics({ subscriptionId, location, plateScanUrl, reviews, totalCount, avgRating, byStars, initialStars, scrollTo, lang }: Props) {
   const [range, setRange] = useState<Range>("30d");
   const [starFilter, setStarFilter] = useState<Set<StarFilter>>(
     initialStars && [1, 2, 3, 4, 5].includes(initialStars)
       ? new Set([initialStars as StarFilter])
       : new Set()
   );
+
+  const logoSectionRef = useRef<HTMLDivElement>(null);
+  const [logoHighlighted, setLogoHighlighted] = useState(false);
+  const googleReviewsSectionRef = useRef<HTMLDivElement>(null);
+  const [googleReviewsHighlighted, setGoogleReviewsHighlighted] = useState(false);
+  const tableSectionRef = useRef<HTMLDivElement>(null);
+  const [tableHighlighted, setTableHighlighted] = useState(false);
+
+  function scrollAndHighlight(
+    ref: React.RefObject<HTMLDivElement | null>,
+    setHighlighted: (v: boolean) => void
+  ) {
+    ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlighted(true);
+    setTimeout(() => setHighlighted(false), 2000);
+  }
+
+  useEffect(() => {
+    if (!scrollTo) return;
+    // Poczekaj na pełne wyrenderowanie strony po nawigacji, zanim policzymy pozycję do scrolla.
+    const timer = setTimeout(() => {
+      if (scrollTo === "logo") {
+        scrollAndHighlight(logoSectionRef, setLogoHighlighted);
+      } else if (scrollTo === "google-reviews") {
+        scrollAndHighlight(googleReviewsSectionRef, setGoogleReviewsHighlighted);
+      } else if (scrollTo === "table") {
+        scrollAndHighlight(tableSectionRef, setTableHighlighted);
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scrollTo]);
 
   const RANGES = useMemo(() => getRanges(lang), [lang]);
   const bars = useMemo(() => buildChartData(reviews, range, lang), [reviews, range, lang]);
@@ -239,48 +281,216 @@ export default function ReviewsAnalytics({ subscriptionId, reviews, totalCount, 
 
   return (
     <div className="space-y-5">
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{t("portal_total", lang)}</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalCount}</p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{t("portal_average", lang)}</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {avgRating !== null ? avgRating.toFixed(2) : "—"}
-            <span className="text-sm font-normal text-amber-500 ml-1">★</span>
-          </p>
-        </div>
-        {([5, 4, 3, 2, 1] as const).slice(0, 2).map((star) => (
-          <div key={star} className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-4">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{"★".repeat(star)}</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{byStars[star] ?? 0}</p>
-          </div>
-        ))}
-      </div>
+      {/* Podgląd dla klienta */}
+      {location && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            {t("portal_customer_preview_title", lang)}
+          </h3>
 
-      {/* Star breakdown */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">{t("portal_rating_distribution", lang)}</h3>
-        <div className="space-y-2">
-          {([5, 4, 3, 2, 1] as const).map((star) => {
-            const count = byStars[star] ?? 0;
-            const pct = totalCount > 0 ? (count / totalCount) * 100 : 0;
-            return (
-              <div key={star} className="flex items-center gap-3 text-sm">
-                <span className="w-12 text-amber-500 shrink-0">{"★".repeat(star)}</span>
-                <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{ width: `${pct}%`, background: STAR_COLORS[star] }}
-                  />
-                </div>
-                <span className="w-10 text-right text-gray-500 dark:text-gray-400">{count}</span>
-                <span className="w-10 text-right text-gray-400 dark:text-gray-500 text-xs">{pct.toFixed(0)}%</span>
+          {plateScanUrl ? (
+            <div>
+              <a
+                href={plateScanUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                {t("portal_simulate_scan_link", lang)} →
+              </a>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {t("portal_simulate_scan_desc", lang)}
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {t("portal_simulate_scan_unavailable", lang)}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Nazwa lokalu */}
+      {location && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+            {t("portal_location_name_title", lang)}
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            {t("portal_location_name_desc", lang)}
+          </p>
+          <SavableForm action={updateLocationName} lang={lang}>
+            <input type="hidden" name="subscription_id" value={subscriptionId} />
+            <input type="hidden" name="location_id" value={location.location_id} />
+            <div className="flex gap-3">
+              <input
+                name="location_name"
+                required
+                type="text"
+                defaultValue={location.location_name}
+                className="flex-1 min-w-0 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <SubmitButton lang={lang} className="shrink-0">
+                {t("portal_save", lang)}
+              </SubmitButton>
+            </div>
+          </SavableForm>
+        </div>
+      )}
+
+      {/* Google Maps */}
+      {location && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+            {t("portal_google_maps_location_title", lang)}
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            {t("portal_google_maps_location_desc", lang)}
+          </p>
+          <GoogleLocationEditor
+            locationId={location.location_id}
+            locationName={location.location_name}
+            currentBusinessName={location.google_business_name}
+            currentBusinessAddress={location.google_business_address}
+            lang={lang}
+          />
+        </div>
+      )}
+
+      {/* Logo */}
+      {location && (
+        <div
+          ref={logoSectionRef}
+          className={`bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5 transition-shadow duration-300 ${
+            logoHighlighted ? "ring-2 ring-amber-500 ring-offset-2 ring-offset-gray-50 dark:ring-offset-gray-900" : ""
+          }`}
+        >
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+            {t("portal_logo_title", lang)}
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            {t("portal_logo_desc", lang)}
+          </p>
+          <LogoUpload
+            locationId={location.location_id}
+            locationName={location.location_name}
+            currentLogoLink={location.logo_link}
+            lang={lang}
+          />
+        </div>
+      )}
+
+      {/* E-mail pomocniczy */}
+      {location && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+            {t("portal_support_email_title", lang)}
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            {t("portal_support_email_desc", lang)}
+          </p>
+          <SavableForm action={updateSupportEmail} lang={lang}>
+            <input type="hidden" name="subscription_id" value={subscriptionId} />
+            <input type="hidden" name="location_id" value={location.location_id} />
+            <div className="flex gap-3">
+              <input
+                name="support_email"
+                required
+                type="email"
+                defaultValue={location.support_email ?? ""}
+                className="flex-1 min-w-0 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <SubmitButton lang={lang} className="shrink-0">
+                {t("portal_save", lang)}
+              </SubmitButton>
+            </div>
+          </SavableForm>
+        </div>
+      )}
+
+      {/* Przekierowanie dla oceny 4 gwiazdek */}
+      {location && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+            {t("portal_four_star_title", lang)}
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            {t("portal_four_star_desc", lang)}
+          </p>
+          <SavableForm action={updateFourStarRedirect} lang={lang}>
+            <input type="hidden" name="location_id" value={location.location_id} />
+            <label className="flex items-start gap-3 cursor-pointer">
+              <AutoSaveToggle
+                name="redirect_four_star_reviews"
+                defaultChecked={location.redirect_four_star_reviews}
+                ariaLabel={t("portal_four_star_checkbox_label", lang)}
+              />
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {t("portal_four_star_checkbox_label", lang)}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {t("portal_four_star_checkbox_desc", lang)}
+                </p>
               </div>
-            );
-          })}
+            </label>
+            <div className="mt-2">
+              <AutoSavePendingHint lang={lang} />
+            </div>
+          </SavableForm>
+        </div>
+      )}
+
+      {/* Opinie Google */}
+      <div
+        ref={googleReviewsSectionRef}
+        className={`space-y-4 rounded-lg transition-shadow duration-300 ${
+          googleReviewsHighlighted ? "ring-2 ring-amber-500 ring-offset-2 ring-offset-gray-50 dark:ring-offset-gray-900" : ""
+        }`}
+      >
+        {/* Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-4">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{t("portal_total", lang)}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalCount}</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-4">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{t("portal_average", lang)}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              {avgRating !== null ? avgRating.toFixed(2) : "—"}
+              <span className="text-sm font-normal text-amber-500 ml-1">★</span>
+            </p>
+          </div>
+          {([5, 4, 3, 2, 1] as const).slice(0, 2).map((star) => (
+            <div key={star} className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{"★".repeat(star)}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{byStars[star] ?? 0}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Star breakdown */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">{t("portal_rating_distribution", lang)}</h3>
+          <div className="space-y-2">
+            {([5, 4, 3, 2, 1] as const).map((star) => {
+              const count = byStars[star] ?? 0;
+              const pct = totalCount > 0 ? (count / totalCount) * 100 : 0;
+              return (
+                <div key={star} className="flex items-center gap-3 text-sm">
+                  <span className="w-12 text-amber-500 shrink-0">{"★".repeat(star)}</span>
+                  <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{ width: `${pct}%`, background: STAR_COLORS[star] }}
+                    />
+                  </div>
+                  <span className="w-10 text-right text-gray-500 dark:text-gray-400">{count}</span>
+                  <span className="w-10 text-right text-gray-400 dark:text-gray-500 text-xs">{pct.toFixed(0)}%</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -307,8 +517,31 @@ export default function ReviewsAnalytics({ subscriptionId, reviews, totalCount, 
         <BarChart bars={bars} maxY={maxY} lang={lang} />
       </div>
 
+      {/* Linki nad tabelą opinii */}
+      <div className="flex items-center justify-between gap-3 px-1 flex-wrap">
+        <a
+          href={`/portal/${subscriptionId}/reviews`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          {t("portal_open_reviews_new_tab", lang)} ↗
+        </a>
+        <Link
+          href={`/portal/${subscriptionId}/messages`}
+          className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          💬 {t("portal_reviews_messages_link", lang)} →
+        </Link>
+      </div>
+
       {/* Filtered table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 overflow-hidden">
+      <div
+        ref={tableSectionRef}
+        className={`bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 overflow-hidden transition-shadow duration-300 ${
+          tableHighlighted ? "ring-2 ring-amber-500 ring-offset-2 ring-offset-gray-50 dark:ring-offset-gray-900" : ""
+        }`}
+      >
         <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">

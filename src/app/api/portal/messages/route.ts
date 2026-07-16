@@ -92,7 +92,7 @@ interface OwnerReviewRow {
   plates: {
     plate_number: string;
     subscription_id: number;
-    subscriptions: { customer_locations: { location_name: string } | null } | null;
+    subscriptions: { customer_locations: { location_name: string }[] | null } | null;
   } | null;
 }
 
@@ -118,7 +118,7 @@ async function getReviewForOwner(reviewId: number, ownedSubscriptionIds: number[
     contact_phone: data.contact_phone,
     subscription_id: data.plates.subscription_id,
     plate_number: data.plates.plate_number,
-    location_name: data.plates.subscriptions?.customer_locations?.location_name ?? null,
+    location_name: data.plates.subscriptions?.customer_locations?.[0]?.location_name ?? null,
   };
 }
 
