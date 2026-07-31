@@ -24,7 +24,6 @@ export default function SubTabs({
 
   const tabs = [
     { href: base, label: t("portal_tab_overview", lang), exact: true },
-    { href: `${base}/reviews`, label: t("portal_tab_reviews", lang) },
     { href: `${base}/messages`, label: t("portal_tab_messages", lang), badge: unreadMessageCount },
     ...(hasPromo
       ? [{ href: `${base}/promo`, label: t("portal_tab_promo", lang) }]
