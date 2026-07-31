@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getPortalSession } from "@/lib/portal-session";
 import { portalLogoutAction } from "./actions";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -61,9 +62,9 @@ export default async function PortalLayout({
       {/* Top nav */}
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-          <span className="font-bold text-lg text-gray-900 dark:text-gray-100">
+          <Link href="/" className="font-bold text-lg text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
             Starlinkee
-          </span>
+          </Link>
           <div className="flex items-center gap-4">
             <LanguageSwitcher currentLang={lang} />
             <UserMenu
