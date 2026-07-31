@@ -11,8 +11,12 @@ import PortalSetupForm from "../settings/PortalSetupForm";
 import { getLanguage } from "@/lib/language";
 import { t } from "@/lib/translations";
 
+import { getPlatesBySubscriptionId } from "@/lib/db/plates";
+import DashboardAnalytics from "./DashboardAnalytics";
+
 interface Props {
   params: Promise<{ subscriptionId: string }>;
+  searchParams: Promise<{ stars?: string; scrollTo?: string }>;
 }
 
 const DATE_LOCALES: Record<string, string> = { en: "en-US", de: "de-DE", pl: "pl-PL" };
@@ -30,7 +34,7 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
-export default async function SubscriptionPage({ params }: Props) {
+export default async function SubscriptionPage({ params, searchParams }: Props) {
   const { subscriptionId: rawId } = await params;
   const subscriptionId = Number(rawId);
   if (!subscriptionId) notFound();
@@ -101,101 +105,40 @@ export default async function SubscriptionPage({ params }: Props) {
 
   // --- ACTIVE ---
   const allReviews = await getAllReviewsBySubscription(subscriptionId);
+  const plates = await getPlatesBySubscriptionId(subscriptionId);
+  const { stars, scrollTo } = await searchParams;
+  
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://starlinkee.com";
+  const plate = plates[0];
+  const plateScanUrl = plate ? `${appUrl}/plate/${plate.plate_number}/${plate.secret_key}` : null;
+  
   const reviewTotal = allReviews.length;
   const reviewAvg = reviewTotal > 0
     ? Math.round((allReviews.reduce((s, r) => s + (r.rating ?? 0), 0) / reviewTotal) * 100) / 100
     : null;
   const reviewByStars: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   for (const r of allReviews) { if (r.rating) reviewByStars[r.rating]++; }
-  const recentReviews = allReviews.slice(0, 10);
 
   return (
     <div className="space-y-6">
       <SubscriptionStats sub={sub} totalScans={totalScans} scansByPlate={scansByPlate} lang={lang} />
-      <ReviewStats total={reviewTotal} avg={reviewAvg} byStars={reviewByStars} subscriptionId={subscriptionId} lang={lang} />
-      <ReviewsSection reviews={recentReviews} subscriptionId={subscriptionId} lang={lang} />
+      <DashboardAnalytics
+        subscriptionId={subscriptionId}
+        location={sub.location}
+        plateScanUrl={plateScanUrl}
+        reviews={allReviews}
+        totalCount={reviewTotal}
+        avgRating={reviewAvg}
+        byStars={reviewByStars}
+        initialStars={stars ? Number(stars) : undefined}
+        scrollTo={scrollTo}
+        lang={lang}
+      />
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-
-function ReviewStats({
-  total,
-  avg,
-  byStars,
-  subscriptionId,
-  lang,
-}: {
-  total: number;
-  avg: number | null;
-  byStars: Record<number, number>;
-  subscriptionId: number;
-  lang: string;
-}) {
-  const STAR_COLORS: Record<number, string> = {
-    1: "#ef4444", 2: "#f97316", 3: "#eab308", 4: "#84cc16", 5: "#22c55e",
-  };
-
-  return (
-    <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t("portal_google_reviews", lang)}</h3>
-        <Link
-          href={`/portal/${subscriptionId}/reviews?scrollTo=google-reviews`}
-          className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-        >
-          {t("portal_details_link", lang)} →
-        </Link>
-      </div>
-      {total === 0 ? (
-        <p className="text-sm text-gray-400 dark:text-gray-500">
-          {t("portal_no_reviews_yet", lang)}
-        </p>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{t("portal_total", lang)}</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{total}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{t("portal_average", lang)}</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {avg !== null ? avg.toFixed(2) : "—"}
-                <span className="text-sm font-normal text-amber-500 ml-1">★</span>
-              </p>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            {([5, 4, 3, 2, 1] as const).map((star) => {
-              const count = byStars[star] ?? 0;
-              const pct = (count / total) * 100;
-              return (
-                <Link
-                  key={star}
-                  href={`/portal/${subscriptionId}/reviews?stars=${star}`}
-                  className="flex items-center gap-2 text-xs group"
-                >
-                  <span className="w-[4.5rem] shrink-0 text-amber-500 group-hover:text-amber-600 transition-colors">
-                    {"★".repeat(star)}{"☆".repeat(5 - star)}
-                  </span>
-                  <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{ width: `${pct}%`, background: STAR_COLORS[star] }}
-                    />
-                  </div>
-                  <span className="w-6 text-right text-gray-400 dark:text-gray-500">{count}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </section>
-  );
-}
 
 function SubscriptionStats({
   sub,
@@ -265,67 +208,5 @@ function SubscriptionStats({
         </div>
       )}
     </div>
-  );
-}
-
-function ReviewsSection({
-  reviews,
-  subscriptionId,
-  lang,
-}: {
-  reviews: (Review & { plate_number: string })[];
-  subscriptionId: number;
-  lang: string;
-}) {
-  return (
-    <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 overflow-hidden">
-      <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-          {t("portal_recent_reviews", lang)}
-        </h3>
-        <Link
-          href={`/portal/${subscriptionId}/reviews?scrollTo=table`}
-          className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-        >
-          {t("portal_all_reviews", lang)} →
-        </Link>
-      </div>
-
-      {reviews.length === 0 && (
-        <p className="px-5 py-6 text-sm text-gray-400 dark:text-gray-500">
-          {t("portal_no_reviews_yet", lang)}
-        </p>
-      )}
-      {reviews.length > 0 && (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-100 dark:border-gray-700">
-              <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium">{t("portal_date", lang)}</th>
-              <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium">{t("portal_plate", lang)}</th>
-              <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium">{t("portal_rating", lang)}</th>
-              <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium hidden sm:table-cell">{t("portal_comment", lang)}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reviews.map((review) => (
-              <tr key={review.review_id} className="border-b border-gray-50 dark:border-gray-700/50 last:border-0">
-                <td className="px-5 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                  {formatDate(review.rating_time ?? review.created_at, lang)}
-                </td>
-                <td className="px-5 py-3 font-mono text-gray-900 dark:text-gray-100">
-                  {review.plate_number}
-                </td>
-                <td className="px-5 py-3">
-                  {review.rating ? <Stars rating={review.rating} /> : "—"}
-                </td>
-                <td className="px-5 py-3 text-gray-600 dark:text-gray-300 max-w-xs truncate hidden sm:table-cell">
-                  {review.feedback_message ?? "—"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </section>
   );
 }

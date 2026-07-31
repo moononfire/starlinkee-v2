@@ -4,13 +4,13 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import type { Review, CustomerLocation } from "@/lib/types";
 import { t } from "@/lib/translations";
-import { updateFourStarRedirect } from "../../settings/actions";
-import { updateLocationName, updateSupportEmail } from "../../settings/[subscriptionId]/actions";
-import GoogleLocationEditor from "../../settings/GoogleLocationEditor";
-import LogoUpload from "../../settings/LogoUpload";
-import SubmitButton from "../../SubmitButton";
-import SavableForm from "../../SavableForm";
-import { AutoSaveToggle, AutoSavePendingHint } from "../../settings/AutoSaveControls";
+import { updateFourStarRedirect } from "../settings/actions";
+import { updateLocationName, updateSupportEmail } from "../settings/[subscriptionId]/actions";
+import GoogleLocationEditor from "../settings/GoogleLocationEditor";
+import LogoUpload from "../settings/LogoUpload";
+import SubmitButton from "../SubmitButton";
+import SavableForm from "../SavableForm";
+import { AutoSaveToggle, AutoSavePendingHint } from "../settings/AutoSaveControls";
 
 type ReviewWithPlate = Review & { plate_number: string };
 type Range = "7d" | "30d" | "90d" | "1y" | "all";
@@ -518,15 +518,7 @@ export default function ReviewsAnalytics({ subscriptionId, location, plateScanUr
       </div>
 
       {/* Linki nad tabelą opinii */}
-      <div className="flex items-center justify-between gap-3 px-1 flex-wrap">
-        <a
-          href={`/portal/${subscriptionId}/reviews`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
-        >
-          {t("portal_open_reviews_new_tab", lang)} ↗
-        </a>
+      <div className="flex items-center justify-end gap-3 px-1 flex-wrap">
         <Link
           href={`/portal/${subscriptionId}/messages`}
           className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
