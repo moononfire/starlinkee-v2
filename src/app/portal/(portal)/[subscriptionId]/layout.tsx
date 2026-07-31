@@ -58,7 +58,7 @@ export default async function SubscriptionLayout({
           />
         ) : (
           <Link
-            href={`/portal/${subscriptionId}/reviews?scrollTo=logo`}
+            href={`/portal/${subscriptionId}?scrollTo=logo`}
             className="flex flex-col items-center gap-1 w-fit"
           >
             <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 hover:underline whitespace-nowrap">
