@@ -32,7 +32,7 @@ export default async function LoyaltyPage({ params, searchParams }: Props) {
       : lang === "de"
         ? location.loyalty_card_text_de || location.loyalty_card_text || location.loyalty_card_text_en
         : location.loyalty_card_text || location.loyalty_card_text_en || location.loyalty_card_text_de;
-  const subtitle = customText?.trim() || t("loyalty_program", lang);
+  const subtitle = customText?.trim() || t("portal_loyalty_card_text_placeholder", lang);
 
   return (
     <>

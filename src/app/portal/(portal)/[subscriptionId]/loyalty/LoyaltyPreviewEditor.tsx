@@ -75,7 +75,7 @@ export default function LoyaltyPreviewEditor({
         </div>
       </div>
 
-      {/* Karta w trakcie zbierania pieczątek */}
+      {/* Strona powitalna */}
       <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-0.5">
           {t("portal_loyalty_card_preview_title", lang)}
@@ -90,41 +90,58 @@ export default function LoyaltyPreviewEditor({
               <img
                 src={logoLink}
                 alt={locationName}
-                className="w-12 h-12 object-cover rounded-full mx-auto mb-3"
+                className="w-16 h-16 object-contain rounded-xl mx-auto mb-4"
               />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-gray-200 mx-auto mb-3" />
+              <div className="w-16 h-16 rounded-xl bg-gray-200 mx-auto mb-4" />
             )}
-            <p className="text-sm font-semibold text-gray-800 text-center mb-2">{locationName}</p>
+            <p className="text-xl font-semibold text-gray-800 text-center mb-1">{locationName}</p>
 
             {hiddenInputsFor("loyalty_card_text", cardText, editLang)}
             <textarea
               name={fieldName("loyalty_card_text", editLang)}
               value={cardText[editLang]}
               onChange={(e) => setCardText({ ...cardText, [editLang]: e.target.value })}
-              placeholder={t("portal_loyalty_card_text_placeholder", lang)}
+              placeholder={t("portal_loyalty_card_text_placeholder", editLang)}
               rows={2}
               maxLength={80}
-              className="w-full text-xs text-gray-500 text-center bg-transparent border border-dashed border-gray-300 hover:border-blue-300 focus:border-blue-400 rounded-lg px-2 py-1.5 mb-4 resize-none focus:outline-none transition-colors placeholder-gray-300"
+              className="w-full text-sm text-gray-500 text-center bg-transparent border border-dashed border-gray-300 hover:border-blue-300 focus:border-blue-400 rounded-lg px-2 py-1.5 mb-6 resize-none focus:outline-none transition-colors placeholder-gray-300"
             />
 
-            <div className="flex flex-wrap justify-center gap-2 mb-3 pointer-events-none select-none">
-              {Array.from({ length: stampsRequired }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs ${
-                    i < stampsCollected
-                      ? "bg-amber-400 border-amber-500 text-white"
-                      : "border-gray-300 text-transparent"
-                  }`}
-                >
-                  ★
-                </div>
-              ))}
+            <div className="flex flex-col gap-4 opacity-40 pointer-events-none select-none">
+              <p className="text-sm text-gray-600 text-center">
+                {t("loyalty_app_prompt", editLang)}
+              </p>
+              <div className="bg-black text-white rounded-lg px-4 py-3 text-sm font-medium text-center">
+                {t("open_in_app_button", editLang)}
+              </div>
+              <div className="text-center text-sm text-gray-500 underline">
+                {t("download_app_link", editLang)}
+              </div>
             </div>
-            <p className="text-xs text-gray-400 text-center pointer-events-none select-none">
-              {stampsCollected}/{stampsRequired} {t("portal_loyalty_stamp_progress_label", lang)}
-            </p>
+
+            <div className="mt-8 pt-6 border-t border-gray-200 border-dashed">
+              <p className="text-xs font-medium text-gray-400 text-center uppercase tracking-wider mb-4">
+                {t("portal_loyalty_stamps_title", editLang)}
+              </p>
+              <div className="flex flex-wrap justify-center gap-2 mb-3 pointer-events-none select-none">
+                {Array.from({ length: stampsRequired }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs ${
+                      i < stampsCollected
+                        ? "bg-amber-400 border-amber-500 text-white"
+                        : "border-gray-300 text-transparent"
+                    }`}
+                  >
+                    ★
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-400 text-center pointer-events-none select-none">
+                {stampsCollected}/{stampsRequired} {t("portal_loyalty_stamp_progress_label", editLang)}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -169,7 +186,7 @@ export default function LoyaltyPreviewEditor({
             )}
             <p className="text-sm font-semibold text-gray-800 text-center mb-1">{locationName}</p>
             <p className="text-xs text-gray-500 text-center mb-4">
-              {t("portal_loyalty_reward_ready_label", lang)}
+              {t("portal_loyalty_reward_ready_label", editLang)}
             </p>
 
             <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 mb-5">
@@ -178,7 +195,7 @@ export default function LoyaltyPreviewEditor({
                 name={fieldName("loyalty_reward_text", editLang)}
                 value={rewardText[editLang]}
                 onChange={(e) => setRewardText({ ...rewardText, [editLang]: e.target.value })}
-                placeholder={t("portal_loyalty_reward_placeholder", lang)}
+                placeholder={t("portal_loyalty_reward_placeholder", editLang)}
                 rows={2}
                 className="w-full text-amber-900 font-semibold text-sm text-center bg-transparent border-none resize-none focus:outline-none focus:ring-0 placeholder-amber-300"
               />
@@ -186,13 +203,13 @@ export default function LoyaltyPreviewEditor({
 
             <div className="flex flex-col items-center gap-3 opacity-40 pointer-events-none select-none">
               <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
-                {t("portal_loyalty_redeem_code_label", lang)}
+                {t("portal_loyalty_redeem_code_label", editLang)}
               </p>
               <p className="text-xl font-mono font-bold tracking-widest text-gray-900">B7K3X9A2</p>
               <div className="bg-white p-2 rounded-xl border border-gray-100">
                 <div className="w-20 h-20 bg-gray-200 rounded" />
               </div>
-              <p className="text-xs text-gray-500 text-center">{t("portal_loyalty_show_staff", lang)}</p>
+              <p className="text-xs text-gray-500 text-center">{t("portal_loyalty_show_staff", editLang)}</p>
             </div>
           </div>
         </div>

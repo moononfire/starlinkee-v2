@@ -1,0 +1,1 @@
+ALTER TABLE customer_locations ADD COLUMN review_banner_text text; ALTER TABLE customer_locations ADD COLUMN review_banner_text_en text; ALTER TABLE customer_locations ADD COLUMN review_banner_text_de text; ALTER TABLE customer_locations ADD COLUMN review_show_star boolean DEFAULT true;
