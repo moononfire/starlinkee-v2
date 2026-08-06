@@ -4,13 +4,6 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import type { Review, CustomerLocation } from "@/lib/types";
 import { t } from "@/lib/translations";
-import { updateFourStarRedirect } from "../settings/actions";
-import { updateLocationName, updateSupportEmail } from "../settings/[subscriptionId]/actions";
-import GoogleLocationEditor from "../settings/GoogleLocationEditor";
-import LogoUpload from "../settings/LogoUpload";
-import SubmitButton from "../SubmitButton";
-import SavableForm from "../SavableForm";
-import { AutoSaveToggle, AutoSavePendingHint } from "../settings/AutoSaveControls";
 
 type ReviewWithPlate = Review & { plate_number: string };
 type Range = "7d" | "30d" | "90d" | "1y" | "all";
@@ -89,21 +82,22 @@ function buildChartData(reviews: ReviewWithPlate[], range: Range, lang: string) 
 function BarChart({ bars, maxY, lang }: { bars: ReturnType<typeof buildChartData>; maxY: number; lang: string }) {
   if (bars.length === 0) {
     return (
-      <div className="flex items-center justify-center h-40 text-sm text-gray-400 dark:text-gray-500">
-        {t("portal_no_data_range", lang)}
+      <div className="flex flex-col items-center justify-center h-48 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
+        <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t("portal_no_data_range", lang)}</p>
       </div>
     );
   }
 
-  const H = 160;
-  const barW = Math.max(8, Math.min(40, Math.floor(560 / bars.length) - 4));
+  const H = 220;
+  const barW = Math.max(12, Math.min(48, Math.floor(800 / bars.length) - 8));
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto pb-2 flex justify-center">
       <svg
-        viewBox={`0 0 ${Math.max(560, bars.length * (barW + 4) + 40)} ${H + 36}`}
-        className="w-full"
-        style={{ minWidth: Math.min(560, bars.length * (barW + 4) + 40) }}
+        viewBox={`0 0 ${Math.max(800, bars.length * (barW + 8) + 40)} ${H + 40}`}
+        className="w-full max-w-4xl"
+        style={{ minWidth: Math.min(800, bars.length * (barW + 8) + 40) }}
       >
         {/* Y gridlines */}
         {[0, 0.25, 0.5, 0.75, 1].map((f) => (
@@ -114,17 +108,19 @@ function BarChart({ bars, maxY, lang }: { bars: ReturnType<typeof buildChartData
             y1={H - f * H}
             y2={H - f * H}
             stroke="currentColor"
-            strokeOpacity={0.08}
+            className="text-gray-200 dark:text-gray-700"
+            strokeOpacity={1}
             strokeWidth={1}
+            strokeDasharray={f === 0 ? "0" : "4 4"}
           />
         ))}
 
         {/* Bars */}
         {bars.map((bar, i) => {
-          const x = 36 + i * (barW + 4);
+          const x = 40 + i * (barW + 8);
           let yOffset = H;
           return (
-            <g key={bar.key}>
+            <g key={bar.key} className="group cursor-default">
               {([1, 2, 3, 4, 5] as const).map((star) => {
                 const count = bar.byStars[star] ?? 0;
                 if (!count) return null;
@@ -138,18 +134,20 @@ function BarChart({ bars, maxY, lang }: { bars: ReturnType<typeof buildChartData
                     width={barW}
                     height={h}
                     fill={STAR_COLORS[star]}
-                    opacity={0.85}
-                    rx={2}
-                  />
+                    className="transition-all duration-300 group-hover:brightness-110"
+                    rx={3}
+                  >
+                    <title>{`${star} ★: ${count}`}</title>
+                  </rect>
                 );
               })}
               <text
                 x={x + barW / 2}
-                y={H + 16}
+                y={H + 24}
                 textAnchor="middle"
-                fontSize={9}
-                fill="currentColor"
-                opacity={0.5}
+                fontSize={11}
+                fontWeight="500"
+                className="fill-gray-500 dark:fill-gray-400"
               >
                 {bar.label}
               </text>
@@ -161,12 +159,12 @@ function BarChart({ bars, maxY, lang }: { bars: ReturnType<typeof buildChartData
         {maxY > 0 && [...new Set([0, Math.round(maxY / 2), maxY])].map((v) => (
           <text
             key={v}
-            x={28}
+            x={24}
             y={H - (v / maxY) * H + 4}
             textAnchor="end"
-            fontSize={9}
-            fill="currentColor"
-            opacity={0.4}
+            fontSize={11}
+            fontWeight="500"
+            className="fill-gray-400 dark:fill-gray-500"
           >
             {v}
           </text>
@@ -174,11 +172,11 @@ function BarChart({ bars, maxY, lang }: { bars: ReturnType<typeof buildChartData
       </svg>
 
       {/* Legend */}
-      <div className="flex gap-3 mt-1 flex-wrap">
+      <div className="flex justify-center gap-6 mt-6 flex-wrap">
         {([5, 4, 3, 2, 1] as const).map((star) => (
-          <div key={star} className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-            <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: STAR_COLORS[star] }} />
-            {"★".repeat(star)}
+          <div key={star} className="flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-300">
+            <span className="w-3 h-3 rounded-full shadow-sm" style={{ background: STAR_COLORS[star] }} />
+            {star} ★
           </div>
         ))}
       </div>
@@ -220,12 +218,9 @@ export default function ReviewsAnalytics({ subscriptionId, location, plateScanUr
       : new Set()
   );
 
-  const logoSectionRef = useRef<HTMLDivElement>(null);
-  const [logoHighlighted, setLogoHighlighted] = useState(false);
+
   const googleReviewsSectionRef = useRef<HTMLDivElement>(null);
   const [googleReviewsHighlighted, setGoogleReviewsHighlighted] = useState(false);
-  const tableSectionRef = useRef<HTMLDivElement>(null);
-  const [tableHighlighted, setTableHighlighted] = useState(false);
 
   function scrollAndHighlight(
     ref: React.RefObject<HTMLDivElement | null>,
@@ -240,12 +235,8 @@ export default function ReviewsAnalytics({ subscriptionId, location, plateScanUr
     if (!scrollTo) return;
     // Poczekaj na pełne wyrenderowanie strony po nawigacji, zanim policzymy pozycję do scrolla.
     const timer = setTimeout(() => {
-      if (scrollTo === "logo") {
-        scrollAndHighlight(logoSectionRef, setLogoHighlighted);
-      } else if (scrollTo === "google-reviews") {
+      if (scrollTo === "google-reviews") {
         scrollAndHighlight(googleReviewsSectionRef, setGoogleReviewsHighlighted);
-      } else if (scrollTo === "table") {
-        scrollAndHighlight(tableSectionRef, setTableHighlighted);
       }
     }, 100);
     return () => clearTimeout(timer);
@@ -280,208 +271,63 @@ export default function ReviewsAnalytics({ subscriptionId, location, plateScanUr
     : null;
 
   return (
-    <div className="space-y-5">
-      {/* Podgląd dla klienta */}
-      {location && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            {t("portal_customer_preview_title", lang)}
-          </h3>
+    <div className="space-y-6">
 
-          {plateScanUrl ? (
-            <div>
-              <a
-                href={plateScanUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                {t("portal_simulate_scan_link", lang)} →
-              </a>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {t("portal_simulate_scan_desc", lang)}
-              </p>
-            </div>
-          ) : (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {t("portal_simulate_scan_unavailable", lang)}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Nazwa lokalu */}
-      {location && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-            {t("portal_location_name_title", lang)}
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            {t("portal_location_name_desc", lang)}
-          </p>
-          <SavableForm action={updateLocationName} lang={lang}>
-            <input type="hidden" name="subscription_id" value={subscriptionId} />
-            <input type="hidden" name="location_id" value={location.location_id} />
-            <div className="flex gap-3">
-              <input
-                name="location_name"
-                required
-                type="text"
-                defaultValue={location.location_name}
-                className="flex-1 min-w-0 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <SubmitButton lang={lang} className="shrink-0">
-                {t("portal_save", lang)}
-              </SubmitButton>
-            </div>
-          </SavableForm>
-        </div>
-      )}
-
-      {/* Google Maps */}
-      {location && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-            {t("portal_google_maps_location_title", lang)}
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            {t("portal_google_maps_location_desc", lang)}
-          </p>
-          <GoogleLocationEditor
-            locationId={location.location_id}
-            locationName={location.location_name}
-            currentBusinessName={location.google_business_name}
-            currentBusinessAddress={location.google_business_address}
-            lang={lang}
-          />
-        </div>
-      )}
-
-      {/* Logo */}
-      {location && (
-        <div
-          ref={logoSectionRef}
-          className={`bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5 transition-shadow duration-300 ${
-            logoHighlighted ? "ring-2 ring-amber-500 ring-offset-2 ring-offset-gray-50 dark:ring-offset-gray-900" : ""
-          }`}
-        >
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-            {t("portal_logo_title", lang)}
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            {t("portal_logo_desc", lang)}
-          </p>
-          <LogoUpload
-            locationId={location.location_id}
-            locationName={location.location_name}
-            currentLogoLink={location.logo_link}
-            lang={lang}
-          />
-        </div>
-      )}
-
-      {/* E-mail pomocniczy */}
-      {location && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-            {t("portal_support_email_title", lang)}
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            {t("portal_support_email_desc", lang)}
-          </p>
-          <SavableForm action={updateSupportEmail} lang={lang}>
-            <input type="hidden" name="subscription_id" value={subscriptionId} />
-            <input type="hidden" name="location_id" value={location.location_id} />
-            <div className="flex gap-3">
-              <input
-                name="support_email"
-                required
-                type="email"
-                defaultValue={location.support_email ?? ""}
-                className="flex-1 min-w-0 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <SubmitButton lang={lang} className="shrink-0">
-                {t("portal_save", lang)}
-              </SubmitButton>
-            </div>
-          </SavableForm>
-        </div>
-      )}
-
-      {/* Przekierowanie dla oceny 4 gwiazdek */}
-      {location && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-            {t("portal_four_star_title", lang)}
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            {t("portal_four_star_desc", lang)}
-          </p>
-          <SavableForm action={updateFourStarRedirect} lang={lang}>
-            <input type="hidden" name="location_id" value={location.location_id} />
-            <label className="flex items-start gap-3 cursor-pointer">
-              <AutoSaveToggle
-                name="redirect_four_star_reviews"
-                defaultChecked={location.redirect_four_star_reviews}
-                ariaLabel={t("portal_four_star_checkbox_label", lang)}
-              />
-              <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {t("portal_four_star_checkbox_label", lang)}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {t("portal_four_star_checkbox_desc", lang)}
-                </p>
-              </div>
-            </label>
-            <div className="mt-2">
-              <AutoSavePendingHint lang={lang} />
-            </div>
-          </SavableForm>
-        </div>
-      )}
-
-      {/* Opinie Google */}
       <div
         ref={googleReviewsSectionRef}
-        className={`space-y-4 rounded-lg transition-shadow duration-300 ${
+        className={`space-y-5 rounded-lg transition-shadow duration-300 ${
           googleReviewsHighlighted ? "ring-2 ring-amber-500 ring-offset-2 ring-offset-gray-50 dark:ring-offset-gray-900" : ""
         }`}
       >
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-4">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{t("portal_total", lang)}</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalCount}</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="col-span-2 lg:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5 flex flex-col justify-center items-center text-center">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t("portal_average", lang)}</p>
+            <div className="flex items-center gap-1">
+              <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                {avgRating !== null ? avgRating.toFixed(2) : "—"}
+              </p>
+              <span className="text-xl text-amber-500">★</span>
+            </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-4">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{t("portal_average", lang)}</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              {avgRating !== null ? avgRating.toFixed(2) : "—"}
-              <span className="text-sm font-normal text-amber-500 ml-1">★</span>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5 flex flex-col justify-center items-center text-center">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t("portal_total", lang)}</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{totalCount}</p>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5 flex flex-col justify-center items-center text-center">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">5 <span className="text-amber-500">★</span></p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{byStars[5] ?? 0}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              {totalCount > 0 ? Math.round(((byStars[5] ?? 0) / totalCount) * 100) : 0}% 
             </p>
           </div>
-          {([5, 4, 3, 2, 1] as const).slice(0, 2).map((star) => (
-            <div key={star} className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{"★".repeat(star)}</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{byStars[star] ?? 0}</p>
-            </div>
-          ))}
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5 flex flex-col justify-center items-center text-center">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">4 <span className="text-amber-500">★</span></p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{byStars[4] ?? 0}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              {totalCount > 0 ? Math.round(((byStars[4] ?? 0) / totalCount) * 100) : 0}% 
+            </p>
+          </div>
         </div>
 
         {/* Star breakdown */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">{t("portal_rating_distribution", lang)}</h3>
-          <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            {t("portal_rating_distribution", lang)}
+          </h3>
+          <div className="space-y-3">
             {([5, 4, 3, 2, 1] as const).map((star) => {
               const count = byStars[star] ?? 0;
               const pct = totalCount > 0 ? (count / totalCount) * 100 : 0;
               return (
                 <div key={star} className="flex items-center gap-3 text-sm">
                   <span className="w-12 text-amber-500 shrink-0">{"★".repeat(star)}</span>
-                  <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                  <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
                     <div
-                      className="h-full rounded-full transition-all"
+                      className="h-full rounded-full transition-all duration-500"
                       style={{ width: `${pct}%`, background: STAR_COLORS[star] }}
                     />
                   </div>
@@ -497,13 +343,15 @@ export default function ReviewsAnalytics({ subscriptionId, location, plateScanUr
       {/* Chart */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t("portal_reviews_over_time", lang)}</h3>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            {t("portal_reviews_over_time", lang)}
+          </h3>
           <div className="flex gap-1">
             {RANGES.map((r) => (
               <button
                 key={r.key}
                 onClick={() => setRange(r.key)}
-                className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
                   range === r.key
                     ? "bg-blue-600 text-white"
                     : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
@@ -517,104 +365,6 @@ export default function ReviewsAnalytics({ subscriptionId, location, plateScanUr
         <BarChart bars={bars} maxY={maxY} lang={lang} />
       </div>
 
-      {/* Linki nad tabelą opinii */}
-      <div className="flex items-center justify-end gap-3 px-1 flex-wrap">
-        <Link
-          href={`/portal/${subscriptionId}/messages`}
-          className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
-        >
-          💬 {t("portal_reviews_messages_link", lang)} →
-        </Link>
-      </div>
-
-      {/* Filtered table */}
-      <div
-        ref={tableSectionRef}
-        className={`bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 overflow-hidden transition-shadow duration-300 ${
-          tableHighlighted ? "ring-2 ring-amber-500 ring-offset-2 ring-offset-gray-50 dark:ring-offset-gray-900" : ""
-        }`}
-      >
-        <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-              {t("portal_reviews_count_label", lang)} ({rangeTotal}
-              {rangeAvg !== null && (
-                <span className="text-gray-400 dark:text-gray-500 font-normal ml-1">· {t("portal_avg_abbrev", lang)} {rangeAvg.toFixed(2)} ★</span>
-              )}
-              )
-            </h3>
-            <div className="flex gap-1.5 flex-wrap">
-              {([5, 4, 3, 2, 1] as const).map((star) => (
-                <button
-                  key={star}
-                  onClick={() => toggleStar(star)}
-                  className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-colors ${
-                    starFilter.has(star)
-                      ? "border-transparent text-white"
-                      : "border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-400"
-                  }`}
-                  style={starFilter.has(star) ? { background: STAR_COLORS[star] } : {}}
-                >
-                  {"★".repeat(star)}
-                </button>
-              ))}
-              {starFilter.size > 0 && (
-                <button
-                  onClick={() => setStarFilter(new Set())}
-                  className="px-2.5 py-1 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                >
-                  ✕ {t("portal_clear_filter", lang)}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {displayed.length === 0 ? (
-          <p className="px-5 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
-            {t("portal_no_reviews_filtered", lang)}
-          </p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 dark:border-gray-700">
-                <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium">{t("portal_date", lang)}</th>
-                <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium">{t("portal_plate", lang)}</th>
-                <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium">{t("portal_rating", lang)}</th>
-                <th className="text-left px-5 py-3 text-gray-500 dark:text-gray-400 font-medium hidden sm:table-cell">{t("portal_comment", lang)}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {displayed.map((review) => (
-                <tr key={review.review_id} className="border-b border-gray-50 dark:border-gray-700/50 last:border-0">
-                  <td className="px-5 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                    {formatDate(review.rating_time ?? review.created_at, lang)}
-                  </td>
-                  <td className="px-5 py-3 font-mono text-gray-900 dark:text-gray-100">
-                    {review.plate_number}
-                  </td>
-                  <td className="px-5 py-3">
-                    {review.rating ? <Stars rating={review.rating} /> : "—"}
-                  </td>
-                  <td className="px-5 py-3 text-gray-600 dark:text-gray-300 max-w-xs truncate hidden sm:table-cell">
-                    {review.feedback_message ? (
-                      <Link
-                        href={`/portal/${subscriptionId}/messages?review=${review.review_id}`}
-                        className="hover:underline hover:text-blue-600 dark:hover:text-blue-400"
-                        title={t("portal_open_in_messages", lang)}
-                      >
-                        {review.feedback_message}
-                      </Link>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
     </div>
   );
 }

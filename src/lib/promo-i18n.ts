@@ -3,7 +3,11 @@ import type { CustomerLocation } from "./types";
 export type PromoField = "promo_description" | "promo_banner_text" | "promo_sms_text";
 
 export function getPromoText(location: CustomerLocation, lang: string, field: PromoField): string {
-  const pl = location[field] ?? "";
+  return getModuleText(location, lang, field);
+}
+
+export function getModuleText(location: CustomerLocation, lang: string, field: string): string {
+  const pl = location[field as keyof CustomerLocation] as string | null ?? "";
   const en = location[`${field}_en` as keyof CustomerLocation] as string | null ?? "";
   const de = location[`${field}_de` as keyof CustomerLocation] as string | null ?? "";
   if (lang === "en") return en || pl || de;
