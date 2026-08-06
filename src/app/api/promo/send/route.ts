@@ -6,6 +6,7 @@ import { sendSms } from "@/lib/sms";
 import { sendPromoEmail } from "@/lib/email";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { getPromoText } from "@/lib/promo-i18n";
+import { t } from "@/lib/translations";
 
 const PHONE_PATTERN = /^\+?[0-9 ()-]{6,20}$/;
 
@@ -56,10 +57,14 @@ export async function POST(request: NextRequest) {
   try {
     await createLead(location.location_id, phone, email ?? null, agreed, claimToken, couponCode);
 
-    const localizedSmsText = getPromoText(location, typeof lang === "string" ? lang : "pl", "promo_sms_text");
-    const smsText = localizedSmsText
-      ? `${localizedSmsText} ${claimUrl}`
-      : `Twoja promocja od ${location.location_name}: ${claimUrl}`;
+    const currentLang = typeof lang === "string" ? lang : "pl";
+    const localizedSmsText = getPromoText(location, currentLang, "promo_sms_text");
+    const defaultSms = t("portal_promo_sms_placeholder", currentLang);
+
+    const baseSmsText = localizedSmsText || defaultSms;
+    const smsText = baseSmsText.includes("{link}")
+      ? baseSmsText.replace("{link}", claimUrl)
+      : `${baseSmsText} ${claimUrl}`;
 
     await sendSms(phone, smsText);
 
@@ -67,7 +72,7 @@ export async function POST(request: NextRequest) {
       sendPromoEmail(email, {
         locationName: location.location_name,
         claimUrl,
-        smsText: localizedSmsText || `Twoja promocja od ${location.location_name}`,
+        smsText: baseSmsText.includes("{link}") ? baseSmsText.replace("{link}", "") : baseSmsText,
       }).catch(() => {});
     }
   } catch {

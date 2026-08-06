@@ -83,6 +83,7 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
   const router = useRouter();
   const [plateId, setPlateId] = useState("");
   const [email, setEmail] = useState("");
+  const [duration, setDuration] = useState(33);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ plateNumber: string; googleReviewLink: string } | null>(null);
@@ -94,6 +95,54 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
   const [loadingPlace, setLoadingPlace] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [menuLink, setMenuLink] = useState("");
+  const [facebook, setFacebook] = useState("");
+  const [instagram, setInstagram] = useState("");
+
+  const [isScraping, setIsScraping] = useState(false);
+  const [scrapeTimeLeft, setScrapeTimeLeft] = useState(0);
+
+  useEffect(() => {
+    const checkLock = () => {
+      const lockStr = localStorage.getItem("scrape_lock");
+      if (lockStr) {
+        const lockTime = parseInt(lockStr, 10);
+        const diff = lockTime + 120000 - Date.now();
+        if (diff > 0) {
+          setScrapeTimeLeft(Math.ceil(diff / 1000));
+        } else {
+          setScrapeTimeLeft(0);
+        }
+      }
+    };
+    checkLock();
+    const interval = setInterval(checkLock, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function handleScrape() {
+    if (!selectedPlace?.website) return;
+    if (scrapeTimeLeft > 0) return;
+    
+    setIsScraping(true);
+    localStorage.setItem("scrape_lock", Date.now().toString());
+    setScrapeTimeLeft(120);
+
+    try {
+      const res = await fetch(`/api/admin/places/scrape?url=${encodeURIComponent(selectedPlace.website)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.facebook) setFacebook(data.facebook);
+        if (data.instagram) setInstagram(data.instagram);
+        if (data.menuLink) setMenuLink(data.menuLink);
+      }
+    } catch (err) {
+      console.error("Failed to scrape", err);
+    } finally {
+      setIsScraping(false);
+    }
+  }
 
   // Logo cropping
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -191,6 +240,9 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
     const details: PlaceDetails = await res.json();
     setSelectedPlace(details);
     setSearchQuery(details.name);
+    setMenuLink("");
+    setFacebook("");
+    setInstagram("");
   }
 
   function handleLogoFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -264,6 +316,11 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
         form.append("logo", logoBlob, "logo.jpg");
         form.append("logo_is_round", String(savedLogoIsRound));
       }
+      form.append("duration", String(duration));
+      if (menuLink) form.append("menu_link", menuLink);
+      if (facebook) form.append("facebook", facebook);
+      if (instagram) form.append("instagram", instagram);
+      if (selectedPlace.website) form.append("website", selectedPlace.website);
 
       const res = await fetch("/api/admin/plates/quick-activate", {
         method: "POST",
@@ -370,14 +427,24 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
             <div className="mt-1 space-y-0.5">
               <p className="text-xs text-gray-500 dark:text-gray-400">{selectedPlace.address}</p>
               {selectedPlace.website ? (
-                <a
-                  href={selectedPlace.website}
-                  target="_blank"
-                  rel="noopener"
-                  className="text-xs text-blue-600 underline break-all"
-                >
-                  {selectedPlace.website}
-                </a>
+                <div className="flex items-center gap-2 mt-1">
+                  <a
+                    href={selectedPlace.website}
+                    target="_blank"
+                    rel="noopener"
+                    className="text-xs text-blue-600 underline break-all truncate max-w-[200px] block"
+                  >
+                    {selectedPlace.website}
+                  </a>
+                  <button
+                    type="button"
+                    disabled={scrapeTimeLeft > 0 || isScraping}
+                    onClick={handleScrape}
+                    className="ml-auto bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded text-xs font-medium disabled:opacity-50 transition-colors shrink-0"
+                  >
+                    {isScraping ? "Pobieranie..." : scrapeTimeLeft > 0 ? `Pobierz informację (${scrapeTimeLeft}s)` : "Pobierz informację"}
+                  </button>
+                </div>
               ) : (
                 <p className="text-xs text-gray-400 italic">Brak strony internetowej w profilu Google</p>
               )}
@@ -509,6 +576,57 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Link do menu (opcjonalnie)
+          </label>
+          <input
+            type="url"
+            value={menuLink}
+            onChange={(e) => setMenuLink(e.target.value)}
+            className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Facebook (opcjonalnie)
+          </label>
+          <input
+            type="url"
+            value={facebook}
+            onChange={(e) => setFacebook(e.target.value)}
+            className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Instagram (opcjonalnie)
+          </label>
+          <input
+            type="url"
+            value={instagram}
+            onChange={(e) => setInstagram(e.target.value)}
+            className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Okres próbny
+          </label>
+          <select
+            value={duration}
+            onChange={(e) => setDuration(Number(e.target.value))}
+            className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value={8}>8 dni</option>
+            <option value={15}>15 dni</option>
+            <option value={33}>33 dni</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             E-mail klienta *
           </label>
           <input
@@ -530,7 +648,7 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
             disabled={plates.length === 0 || loading}
             className="bg-blue-600 text-white px-5 py-2 rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
-            {loading ? "Aktywowanie..." : "Aktywuj płytkę (33 dni)"}
+            {loading ? "Aktywowanie..." : `Aktywuj płytkę (${duration} dni)`}
           </button>
           <a
             href="/admin/plates"

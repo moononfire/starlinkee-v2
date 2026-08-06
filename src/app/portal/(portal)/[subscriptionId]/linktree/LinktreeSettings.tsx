@@ -71,13 +71,13 @@ export default function LinktreeSettings({
       {/* Linki Linktree */}
       <section className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-5">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-          {t("portal_linktree_links_title", lang)}
+          {lang === "pl" ? "Elementy na profilu" : "Profile Elements"}
         </h3>
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-          {t("portal_linktree_links_desc", lang)}
+          {lang === "pl" ? "Dostosuj zawartość swojego profilu. Możesz dodać do 7 własnych linków i dowolnie zmieniać kolejność wszystkich elementów." : "Customize your profile content. You can add up to 7 custom links and freely reorder all elements."}
         </p>
         <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
-          {t("portal_linktree_lang_hint", lang)}
+          {lang === "pl" ? "Wybierz język z paska poniżej, aby przetłumaczyć napisy dla obcokrajowców. Klient automatycznie zobaczy wersję dopasowaną do języka jego telefonu." : "Select a language from the bar below to translate the text for foreigners. Customers will automatically see the version matching their phone's language."}
         </p>
         <LinktreeLinksEditor
           locationId={location.location_id}
@@ -98,6 +98,35 @@ export default function LinktreeSettings({
           hasPromo={location.has_promo_enabled}
           promoBannerText={location.promo_banner_text}
           hasLoyalty={location.has_loyalty_enabled}
+          hasWifi={location.has_wifi_enabled}
+          hasMenu={location.has_menu_enabled}
+          initialModuleOrder={location.module_order}
+          initialPromoBanner={{
+            pl: location.promo_banner_text ?? "",
+            en: location.promo_banner_text_en ?? "",
+            de: location.promo_banner_text_de ?? "",
+          }}
+          initialLoyaltyBanner={{
+            pl: location.loyalty_banner_text ?? "",
+            en: location.loyalty_banner_text_en ?? "",
+            de: location.loyalty_banner_text_de ?? "",
+          }}
+          initialWifiBanner={{
+            pl: location.wifi_banner_text ?? "",
+            en: location.wifi_banner_text_en ?? "",
+            de: location.wifi_banner_text_de ?? "",
+          }}
+          initialMenuBanner={{
+            pl: location.menu_banner_text ?? "",
+            en: location.menu_banner_text_en ?? "",
+            de: location.menu_banner_text_de ?? "",
+          }}
+          initialReviewBanner={{
+            pl: location.review_banner_text ?? "",
+            en: location.review_banner_text_en ?? "",
+            de: location.review_banner_text_de ?? "",
+          }}
+          initialReviewShowStar={location.review_show_star ?? true}
         />
       </section>
 

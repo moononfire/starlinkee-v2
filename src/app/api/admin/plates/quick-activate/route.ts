@@ -3,13 +3,11 @@ import { requireAdmin } from "@/lib/api-auth";
 import { getPlateById, assignPlateToSubscription } from "@/lib/db/plates";
 import { createSubscription, setSubscriptionActive } from "@/lib/db/subscriptions";
 import { upsertCustomerByEmail } from "@/lib/db/customers";
-import { createLocation } from "@/lib/db/locations";
+import { createLocation, upsertLocationLinks } from "@/lib/db/locations";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateRandomPassword } from "@/lib/password";
 import { sendQuickPlateCredentialsToAdmin } from "@/lib/email";
 import { uploadLogo } from "@/lib/storage";
-
-const TRIAL_DAYS = 33;
 
 export async function POST(request: NextRequest) {
   const authError = await requireAdmin();
@@ -23,9 +21,21 @@ export async function POST(request: NextRequest) {
   const googlePlacesId = (form.get("google_places_id") as string)?.trim() || undefined;
   const email = (form.get("email") as string)?.trim().toLowerCase();
   const logoIsRound = (form.get("logo_is_round") as string) !== "false";
+  const durationStr = form.get("duration") as string;
+  const TRIAL_DAYS = durationStr ? parseInt(durationStr, 10) : 33;
+
+  const website = (form.get("website") as string)?.trim() || undefined;
+  const menuLink = (form.get("menu_link") as string)?.trim() || undefined;
+  const facebook = (form.get("facebook") as string)?.trim() || undefined;
+  const instagram = (form.get("instagram") as string)?.trim() || undefined;
 
   if (!plateId || !businessName || !email || !googleReviewLink) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  }
+
+  const validDurations = [8, 15, 33];
+  if (!validDurations.includes(TRIAL_DAYS)) {
+    return NextResponse.json({ error: "Invalid duration" }, { status: 400 });
   }
 
   const plate = await getPlateById(plateId);
@@ -62,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     const subscription = await createSubscription({
       customer_id: customerId,
-      subscription_name: "33_DAYS_TRIAL_FREE",
+      subscription_name: `${TRIAL_DAYS}_DAYS_TRIAL_FREE`,
       duration_in_days: TRIAL_DAYS,
       is_free: true,
     });
@@ -81,7 +91,24 @@ export async function POST(request: NextRequest) {
       logo_path: logoPath,
       logo_link: logoLink,
       logo_is_round: logoIsRound,
+      has_menu_enabled: !!menuLink,
+      menu_link: menuLink,
+      menu_type: menuLink ? "link" : undefined,
     });
+
+    const links = [];
+    if (website) {
+      links.push({ title: "Strona WWW", url: website, icon: "globe", sort_order: 1 });
+    }
+    if (facebook) {
+      links.push({ title: "Facebook", url: facebook, icon: "facebook", sort_order: 2 });
+    }
+    if (instagram) {
+      links.push({ title: "Instagram", url: instagram, icon: "instagram", sort_order: 3 });
+    }
+    if (links.length > 0) {
+      await upsertLocationLinks(location.location_id, links);
+    }
 
     const now = new Date();
     const expiration = new Date(now);
@@ -106,15 +133,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    sendQuickPlateCredentialsToAdmin({
-      plateNumber: plate.plate_number,
-      businessName,
-      businessAddress,
-      googleReviewLink,
-      customerEmail: email,
-      portalPassword,
-      existingAccount,
-    }).catch((err) => console.error("[quick-activate] Failed to send admin email:", err));
+    try {
+      await sendQuickPlateCredentialsToAdmin({
+        plateNumber: plate.plate_number,
+        businessName,
+        businessAddress,
+        googleReviewLink,
+        customerEmail: email,
+        portalPassword,
+        existingAccount,
+      });
+    } catch (err) {
+      console.error("[quick-activate] Failed to send admin email:", err);
+    }
 
     return NextResponse.json({
       ok: true,

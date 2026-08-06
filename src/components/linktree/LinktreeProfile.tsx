@@ -6,6 +6,7 @@ import { LinkIconGlyph } from "@/lib/linkIcons";
 import { getTileBackground } from "@/lib/linkBackgrounds";
 import { getPageBackground } from "@/lib/pageBackgrounds";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { getModuleText } from "@/lib/promo-i18n";
 
 interface Props {
   location: CustomerLocation;
@@ -44,47 +45,88 @@ export default function LinktreeProfile({ location, links, slug, scanToken, lang
         </h1>
 
         <div className="w-full flex flex-col gap-3">
-          <Link
-            href={`/l/${slug}/review`}
-            className="w-full text-center py-3 px-6 rounded-full bg-blue-600 hover:bg-blue-700 font-semibold text-white transition-colors"
-          >
-            ⭐ {t("leave_review", lang)}
-          </Link>
-          {links.filter((link) => isSafeHttpUrl(link.url)).map((link) => (
-            <a
-              key={link.id}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`w-full flex items-center justify-center gap-2 py-3 px-6 rounded-full font-medium hover:opacity-90 transition-opacity ${getTileBackground(link.background).tile}`}
-            >
-              <LinkIconGlyph icon={link.icon} className="w-4 h-4 shrink-0" />
-              {getLinkTitle(link, lang)}
-            </a>
-          ))}
+          {(location.module_order ?? ["review", "promo", "loyalty", "wifi", "menu"]).map((modId) => {
+            if (modId.startsWith("link:")) {
+              const idx = parseInt(modId.substring(5), 10);
+              const sortedLinks = [...links].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+              const link = sortedLinks[idx];
+              if (!link || !isSafeHttpUrl(link.url)) return null;
+              return (
+                <a
+                  key={modId}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`w-full flex items-center justify-center gap-2 py-3 px-6 rounded-full font-medium hover:opacity-90 transition-opacity ${getTileBackground(link.background).tile}`}
+                >
+                  <LinkIconGlyph icon={link.icon} className="w-4 h-4 shrink-0" />
+                  {getLinkTitle(link, lang)}
+                </a>
+              );
+            }
+            if (modId === "review") {
+              return (
+                <div key="review" className="w-full">
+                  <Link
+                    href={`/l/${slug}/review`}
+                    className="block w-full text-center py-3 px-6 rounded-full bg-blue-600 hover:bg-blue-700 font-semibold text-white transition-colors"
+                  >
+                    {(location.review_show_star ?? true) && "⭐ "}{getModuleText(location, lang, "review_banner_text") || t("leave_review", lang)}
+                  </Link>
+                </div>
+              );
+            }
+            if (modId === "promo" && location.has_promo_enabled) {
+              return (
+                <div key="promo" className="w-full">
+                  <Link
+                    href={`/l/${slug}/promo${scanToken ? `?scan=${scanToken}` : ""}`}
+                    className="block w-full text-center py-3 px-6 rounded-full bg-amber-400 hover:bg-amber-500 font-semibold text-gray-900 transition-colors"
+                  >
+                    {getModuleText(location, lang, "promo_banner_text") || t("collect_promo_default", lang)}
+                  </Link>
+                </div>
+              );
+            }
+            if (modId === "wifi" && location.has_wifi_enabled && location.wifi_ssid) {
+              return (
+                <div key="wifi" className="w-full">
+                  <Link
+                    href={`/l/${slug}/wifi${scanToken ? `?scan=${scanToken}` : ""}`}
+                    className="block w-full text-center py-3 px-6 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-900 dark:bg-blue-900/40 dark:hover:bg-blue-900/60 dark:text-blue-200 font-semibold transition-colors"
+                  >
+                    {getModuleText(location, lang, "wifi_banner_text") || t("portal_tab_wifi", lang)}
+                  </Link>
+                </div>
+              );
+            }
+            if (modId === "loyalty" && location.has_loyalty_enabled) {
+              return (
+                <div key="loyalty" className="w-full">
+                  <Link
+                    href={`/l/${slug}/loyalty${scanToken ? `?scan=${scanToken}` : ""}`}
+                    className="block w-full text-center py-3 px-6 rounded-full bg-gray-900 hover:bg-gray-700 font-semibold text-white transition-colors"
+                  >
+                    {getModuleText(location, lang, "loyalty_banner_text") || t("loyalty_card_link", lang)}
+                  </Link>
+                </div>
+              );
+            }
+            if (modId === "menu" && location.has_menu_enabled) {
+              return (
+                <div key="menu" className="w-full">
+                  <Link
+                    href={`/l/${slug}/menu${scanToken ? `?scan=${scanToken}` : ""}`}
+                    className="block w-full text-center py-3 px-6 rounded-full bg-emerald-500 hover:bg-emerald-600 font-semibold text-white transition-colors"
+                  >
+                    {getModuleText(location, lang, "menu_banner_text") || t("portal_tab_menu", lang)}
+                  </Link>
+                </div>
+              );
+            }
+            return null;
+          })}
         </div>
-
-        {location.has_promo_enabled && (
-          <div className="w-full mt-2">
-            <Link
-              href={`/l/${slug}/promo${scanToken ? `?scan=${scanToken}` : ""}`}
-              className="block w-full text-center py-3 px-6 rounded-full bg-amber-400 hover:bg-amber-500 font-semibold text-gray-900 transition-colors"
-            >
-              {location.promo_banner_text ?? t("collect_promo_default", lang)}
-            </Link>
-          </div>
-        )}
-
-        {location.has_loyalty_enabled && (
-          <div className="w-full">
-            <Link
-              href={`/l/${slug}/loyalty${scanToken ? `?scan=${scanToken}` : ""}`}
-              className="block w-full text-center py-3 px-6 rounded-full bg-gray-900 hover:bg-gray-700 font-semibold text-white transition-colors"
-            >
-              {t("loyalty_card_link", lang)}
-            </Link>
-          </div>
-        )}
       </div>
     </main>
   );
