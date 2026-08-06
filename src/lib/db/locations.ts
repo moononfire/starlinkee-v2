@@ -108,6 +108,9 @@ export async function createLocation(data: {
   logo_link?: string;
   logo_is_round?: boolean;
   owner_email?: string;
+  has_menu_enabled?: boolean;
+  menu_link?: string;
+  menu_type?: "link" | "image";
 }): Promise<CustomerLocation> {
   const supabase = createAdminClient();
   const { data: location, error } = await supabase
@@ -224,6 +227,19 @@ export async function updateLocation(
     promo_sms_text?: string | null;
     promo_sms_text_en?: string | null;
     promo_sms_text_de?: string | null;
+    wifi_banner_text_en?: string | null;
+    wifi_banner_text_de?: string | null;
+    has_menu_enabled?: boolean;
+    menu_type?: "link" | "image";
+    menu_link?: string | null;
+    menu_image_url?: string | null;
+    menu_banner_text?: string | null;
+    menu_banner_text_en?: string | null;
+    menu_banner_text_de?: string | null;
+    review_banner_text?: string | null;
+    review_banner_text_en?: string | null;
+    review_banner_text_de?: string | null;
+    review_show_star?: boolean;
     google_review_link?: string | null;
     google_places_id?: string | null;
     support_email?: string | null;

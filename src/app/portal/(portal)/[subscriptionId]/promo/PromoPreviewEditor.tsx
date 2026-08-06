@@ -98,7 +98,7 @@ export default function PromoPreviewEditor({
               name={fieldName("promo_description", editLang)}
               value={description[editLang]}
               onChange={(e) => setDescription({ ...description, [editLang]: e.target.value })}
-              placeholder={t("portal_promo_description_placeholder", lang)}
+              placeholder={t("portal_promo_description_placeholder", editLang)}
               rows={2}
               className="w-full text-xs text-gray-500 text-center bg-transparent border border-dashed border-gray-300 hover:border-blue-300 focus:border-blue-400 rounded-lg px-2 py-1.5 mb-4 resize-none focus:outline-none transition-colors placeholder-gray-300"
             />
@@ -108,16 +108,16 @@ export default function PromoPreviewEditor({
                 +48 600 000 000
               </div>
               <div className="border border-gray-300 rounded-lg px-3 py-2 text-xs text-gray-400 bg-white">
-                {t("portal_promo_email_optional", lang)}
+                {t("portal_promo_email_optional", editLang)}
               </div>
               <div className="flex items-start gap-2">
                 <div className="w-3 h-3 border border-gray-300 rounded shrink-0 mt-0.5" />
                 <span className="text-xs text-gray-400 leading-snug">
-                  {t("portal_promo_consent_text", lang)}
+                  {t("portal_promo_consent_text", editLang)}
                 </span>
               </div>
               <div className="bg-black text-white text-center text-xs rounded-lg py-2 font-medium">
-                {t("portal_promo_claim_button", lang)}
+                {t("portal_promo_claim_button", editLang)}
               </div>
             </div>
           </div>
@@ -145,7 +145,7 @@ export default function PromoPreviewEditor({
               <div className="w-12 h-12 rounded-full bg-gray-200 mx-auto mb-3" />
             )}
             <p className="text-sm font-semibold text-gray-800 text-center mb-1">{locationName}</p>
-            <p className="text-xs text-gray-500 text-center mb-4">{t("portal_promo_your_coupon", lang)}</p>
+            <p className="text-xs text-gray-500 text-center mb-4">{t("portal_promo_your_coupon", editLang)}</p>
 
             <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 mb-5">
               {hiddenInputsFor("promo_banner_text", bannerText, editLang)}
@@ -153,7 +153,7 @@ export default function PromoPreviewEditor({
                 name={fieldName("promo_banner_text", editLang)}
                 value={bannerText[editLang]}
                 onChange={(e) => setBannerText({ ...bannerText, [editLang]: e.target.value })}
-                placeholder={t("portal_promo_banner_placeholder", lang)}
+                placeholder={t("portal_promo_banner_placeholder", editLang)}
                 rows={2}
                 className="w-full text-amber-900 font-semibold text-sm text-center bg-transparent border-none resize-none focus:outline-none focus:ring-0 placeholder-amber-300"
               />
@@ -161,13 +161,13 @@ export default function PromoPreviewEditor({
 
             <div className="flex flex-col items-center gap-3 opacity-40 pointer-events-none select-none">
               <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
-                {t("portal_promo_coupon_code_label", lang)}
+                {t("portal_promo_coupon_code_label", editLang)}
               </p>
               <p className="text-xl font-mono font-bold tracking-widest text-gray-900">A3K9X2B7</p>
               <div className="bg-white p-2 rounded-xl border border-gray-100">
                 <div className="w-20 h-20 bg-gray-200 rounded" />
               </div>
-              <p className="text-xs text-gray-500 text-center">{t("portal_promo_show_staff", lang)}</p>
+              <p className="text-xs text-gray-500 text-center">{t("portal_promo_show_staff", editLang)}</p>
             </div>
           </div>
         </div>
@@ -190,7 +190,7 @@ export default function PromoPreviewEditor({
           <div className="bg-gray-100 dark:bg-gray-700 rounded-2xl rounded-bl-sm px-4 py-3 max-w-xs w-full text-sm text-gray-800 dark:text-gray-200 min-h-[48px]">
             {smsText[editLang] || (
               <span className="text-gray-400 dark:text-gray-500 text-xs">
-                {t("portal_promo_sms_preview_placeholder", lang)}
+                {t("portal_promo_sms_placeholder", editLang)}
               </span>
             )}
           </div>
@@ -201,7 +201,7 @@ export default function PromoPreviewEditor({
           name={fieldName("promo_sms_text", editLang)}
           value={smsText[editLang]}
           onChange={(e) => setSmsText({ ...smsText, [editLang]: e.target.value })}
-          placeholder={t("portal_promo_sms_placeholder", lang)}
+          placeholder={t("portal_promo_sms_placeholder", editLang)}
           rows={3}
           className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
         />

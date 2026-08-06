@@ -43,6 +43,21 @@ export async function getLoyaltyCardsForPhone(phone: string): Promise<LoyaltyCar
     });
 }
 
+export async function getLoyaltyStatsForLocation(locationId: number): Promise<{ totalUsers: number; totalStamps: number }> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("loyalty_cards")
+    .select("stamps_count")
+    .eq("location_id", locationId);
+
+  if (error) throw new Error(`Failed to fetch loyalty stats: ${error.message}`);
+
+  const totalUsers = data.length;
+  const totalStamps = data.reduce((acc, row) => acc + (row.stamps_count ?? 0), 0);
+
+  return { totalUsers, totalStamps };
+}
+
 export async function getLoyaltyCard(locationId: number, phone: string): Promise<LoyaltyCard | null> {
   const supabase = createAdminClient();
   const { data } = await supabase
