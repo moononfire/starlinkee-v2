@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     await assignPlateToSubscription(plate.plate_id, subscription.subscription_id);
 
-    await createLocation({
+    const newLocation = await createLocation({
       subscription_id: subscription.subscription_id,
       location_name: businessName,
       google_business_name: businessName,
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       links.push({ title: "Instagram", url: instagram, icon: "instagram", sort_order: 3 });
     }
     if (links.length > 0) {
-      await upsertLocationLinks(location.location_id, links);
+      await upsertLocationLinks(newLocation.location_id, links);
     }
 
     const now = new Date();
