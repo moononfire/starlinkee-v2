@@ -75,6 +75,7 @@ export default function LinktreeLinksEditor({
   const [moduleOrder, setModuleOrder] = useState<string[]>(() => {
     let order = initialModuleOrder ? [...initialModuleOrder] : [...defaultOrder];
     if (!order.includes("review")) order = ["review", ...order];
+    if (!order.includes("menu")) order.push("menu");
     for (let i = 0; i < initialLinks.length; i++) {
       if (!order.includes(`link:${i}`)) order.push(`link:${i}`);
     }
