@@ -25,11 +25,11 @@ function getLinkTitle(link: CustomerLocationLink, lang: string): string {
 
 export default function LinktreeProfile({ location, links, slug, scanToken, lang }: Props) {
   return (
-    <main className={`min-h-screen flex flex-col items-center p-6 ${getPageBackground(location.page_background).page}`}>
-      <div className="flex justify-end w-full max-w-sm mb-3">
+    <main className={`min-h-screen flex flex-col p-6 ${getPageBackground(location.page_background).page}`}>
+      <div className="flex justify-end w-full max-w-sm mx-auto mb-3 shrink-0">
         <LanguageSwitcher currentLang={lang} scopeKey={slug} availableLanguages={location.active_languages} />
       </div>
-      <div className="max-w-sm w-full flex flex-col items-center gap-6">
+      <div className="max-w-sm w-full mx-auto flex flex-col items-center gap-6 my-auto pb-8">
 
         {location.logo_link && (
           // eslint-disable-next-line @next/next/no-img-element

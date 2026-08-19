@@ -58,9 +58,12 @@ export default async function ScanPage({ params }: Props) {
   return (
     <>
       <PageTracker locationId={location.location_id} pagePath={`/plate/${number}/scan`} pageType="plate_scan" />
-      <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
-        <div className="max-w-sm w-full flex flex-col items-center gap-6">
+      <main className="min-h-screen flex flex-col p-6 bg-white">
+        <div className="flex justify-end w-full max-w-sm mx-auto mb-3 shrink-0">
           <LanguageSwitcher currentLang={lang} scopeKey={plate.plate_number} availableLanguages={location.active_languages} />
+        </div>
+        
+        <div className="max-w-sm w-full mx-auto flex flex-col items-center gap-6 my-auto pb-8">
 
           {location.logo_link && (
             // eslint-disable-next-line @next/next/no-img-element
