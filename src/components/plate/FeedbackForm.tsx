@@ -92,7 +92,8 @@ export default function FeedbackForm({ scanId, lang }: Props) {
       <input
         name="contact_email"
         type="email"
-        placeholder={t("email_optional_input", lang)}
+        required
+        placeholder={t("email_required_input", lang)}
         className="w-full border border-gray-300 rounded-lg p-3 text-sm text-black bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400"
       />
 

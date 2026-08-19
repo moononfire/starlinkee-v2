@@ -12,8 +12,8 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { scanId, feedback_message, user_name, contact_email, contact_phone } = body;
 
-  if (!scanId || !feedback_message?.trim()) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+  if (!scanId || !feedback_message?.trim() || !contact_email?.trim()) {
+    return NextResponse.json({ error: "Invalid input: missing email or message" }, { status: 400 });
   }
 
   try {
