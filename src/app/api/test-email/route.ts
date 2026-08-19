@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import nodemailer from 'nodemailer';
 
-export async function GET(request) {
+export async function GET(request: NextRequest) {
   try {
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -17,11 +17,11 @@ export async function GET(request) {
       from: process.env.EMAIL_FROM || 'noreply@starlinkee.com',
       to: 'vikbobinski@gmail.com',
       subject: 'Test z Vercela - omijanie logiki biznesowej',
-      text: 'Jeśli to dotarło, to znaczy że konfiguracja SMTP na Vercelu działa w 100%. Problem leży gdzie indziej.',
+      text: 'Test powiodl sie.',
     });
 
     return NextResponse.json({ success: true, messageId: info.messageId, host: process.env.SMTP_HOST });
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message, host: process.env.SMTP_HOST }, { status: 500 });
   }
 }
