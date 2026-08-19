@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     await updateFeedback(scanId, { feedback_message, user_name, contact_email, contact_phone });
 
     // Send notification email to the venue's support email (non-blocking)
-    sendNotification(scanId, feedback_message, user_name, contact_email, contact_phone).catch(() => {});
+    await sendNotification(scanId, feedback_message, user_name, contact_email, contact_phone).catch(() => {});
 
     // Seed the message thread with the initial feedback and notify any open
     // portal/scan-page tabs (non-blocking, best-effort — DB write above is

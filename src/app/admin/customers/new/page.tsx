@@ -28,7 +28,7 @@ async function createCustomerAction(formData: FormData) {
     preferred_language: preferredLanguage,
   });
 
-  void sendCustomerRegistration(email, preferredLanguage, {
+  await sendCustomerRegistration(email, preferredLanguage, {
     customerName,
     orderId: 0,
   }).catch(() => {});
