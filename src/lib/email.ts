@@ -1,10 +1,6 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
 type Lang = "en" | "de" | "pl";
-
-function resend() {
-  return new Resend(process.env.RESEND_API_KEY);
-}
 
 // ---------------------------------------------------------------------------
 // HTML layout helpers
@@ -142,20 +138,38 @@ function toLang(l: string): Lang {
 // Internal send helper
 // ---------------------------------------------------------------------------
 
+function getTransporter() {
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT) || 465,
+    secure: Number(process.env.SMTP_PORT) === 465, // true for 465, false for other ports
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASSWORD,
+    },
+  });
+}
+
 async function sendMail(
   to: string,
   subject: string,
   html: string,
   text: string
 ) {
-  const { error } = await resend().emails.send({
-    from: process.env.EMAIL_FROM!,
-    to,
-    subject,
-    html,
-    text,
-  });
-  if (error) throw new Error(`Resend error: ${error.message}`);
+  const transporter = getTransporter();
+  const from = process.env.EMAIL_FROM || "noreply@starlinkee.com";
+  
+  try {
+    await transporter.sendMail({
+      from,
+      to,
+      subject,
+      html,
+      text,
+    });
+  } catch (error: any) {
+    throw new Error(`SMTP Nodemailer error: ${error.message}`);
+  }
 }
 
 // ---------------------------------------------------------------------------
