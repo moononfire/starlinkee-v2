@@ -19,14 +19,15 @@ export async function POST(request: NextRequest) {
   try {
     await updateFeedback(scanId, { feedback_message, user_name, contact_email, contact_phone });
 
-    // Send notification email to the venue's support email (non-blocking)
-    await sendNotification(scanId, feedback_message, user_name, contact_email, contact_phone).catch(() => {});
+    // Send notification email to the venue's support email
+    await sendNotification(scanId, feedback_message, user_name, contact_email, contact_phone).catch((err) => {
+      console.error("[sendNotification] Nie udało się wysłać powiadomienia:", err);
+    });
 
-    // Seed the message thread with the initial feedback and notify any open
-    // portal/scan-page tabs (non-blocking, best-effort — DB write above is
-    // the source of truth).
+    // Seed the message thread
     seedThread(scanId, feedback_message).catch(() => {});
-  } catch {
+  } catch (err) {
+    console.error("[Feedback POST] Główny błąd:", err);
     return NextResponse.json({ error: "Failed to save feedback" }, { status: 500 });
   }
 
@@ -67,25 +68,43 @@ async function sendNotification(
   contactEmail?: string,
   contactPhone?: string
 ) {
+  console.log("[sendNotification] Start dla scanId:", scanId);
   const review = await getReviewByScanId(scanId);
-  if (!review) return;
+  if (!review) {
+    console.log("[sendNotification] PRZERWANO: Nie znaleziono opinii (review) w bazie.");
+    return;
+  }
 
-  // Get plate → subscription → location to find support_email
   const supabase = (await import("@/lib/supabase/admin")).createAdminClient();
-  const { data: plate } = await supabase
+  const { data: plate, error: plateError } = await supabase
     .from("plates")
     .select("plate_number, subscription_id")
     .eq("plate_id", review.plate_id)
     .single();
 
-  if (!plate?.subscription_id) return;
+  if (plateError) {
+    console.error("[sendNotification] PRZERWANO: Błąd pobierania płytki:", plateError);
+    return;
+  }
+  if (!plate?.subscription_id) {
+    console.log("[sendNotification] PRZERWANO: Płytka nie ma przypisanej subskrypcji.");
+    return;
+  }
 
   const location = await getLocationBySubscriptionId(plate.subscription_id);
-  if (!location?.support_email) return;
+  if (!location) {
+    console.log("[sendNotification] PRZERWANO: Nie znaleziono lokalizacji dla subskrypcji:", plate.subscription_id);
+    return;
+  }
+  if (!location.support_email) {
+    console.log("[sendNotification] PRZERWANO: Lokalizacja NIE MA ustawionego 'support_email'.");
+    return;
+  }
 
   const subscription = await getSubscriptionById(plate.subscription_id);
   const customer = subscription ? await getCustomerById(subscription.customer_id) : null;
 
+  console.log(`[sendNotification] Znalazłem support_email: ${location.support_email}. Wywołuję sendFeedbackNotification...`);
   await sendFeedbackNotification(location.support_email, customer?.preferred_language ?? "en", {
     locationName: location.location_name,
     rating: review.rating ?? 0,
