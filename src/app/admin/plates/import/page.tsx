@@ -33,7 +33,7 @@ async function importPlatesAction(formData: FormData) {
 
   await insertPlatesBatch(plates);
 
-  void sendPlateImportLinks({
+  await sendPlateImportLinks({
     fileContent: linkLines.join("\n"),
     plateCount: plates.length,
   }).catch(() => {});
