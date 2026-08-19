@@ -49,6 +49,14 @@ export default function LinktreeProfile({ location, links, slug, scanToken, lang
             let order = location.module_order ?? ["review", "promo", "loyalty", "wifi", "menu"];
             if (!order.includes("review")) order = ["review", ...order];
             if (!order.includes("menu")) order = [...order, "menu"];
+            
+            // Auto-append any custom links that were left out of module_order
+            links.forEach((_, idx) => {
+              if (!order.includes(`link:${idx}`)) {
+                order.push(`link:${idx}`);
+              }
+            });
+            
             return order;
           })().map((modId) => {
             if (modId.startsWith("link:")) {
