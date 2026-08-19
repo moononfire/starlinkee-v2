@@ -101,11 +101,11 @@ export async function processRenewalInvoicePaid(invoice: Stripe.Invoice): Promis
     if (email) {
       const customer = await getCustomerByEmail(email);
       const lang = customer?.preferred_language ?? metadata.plate_language ?? "en";
-      sendRenewalConfirmation(email, lang, { plateNumber }).catch((err) =>
+      await sendRenewalConfirmation(email, lang, { plateNumber }).catch((err) =>
         console.error("[stripe] renewal confirmation email failed:", err)
       );
     }
-    sendRenewalConfirmationToAdmin({
+    await sendRenewalConfirmationToAdmin({
       plateNumber,
       customerEmail: email ?? "unknown",
       interval,
@@ -142,7 +142,7 @@ export async function processRenewalInvoicePaid(invoice: Stripe.Invoice): Promis
 
   await assignPlateToSubscription(plateId, subscription.subscription_id);
 
-  sendRenewalConfirmationToAdmin({ plateNumber, customerEmail: email, interval }).catch((err) =>
+  await sendRenewalConfirmationToAdmin({ plateNumber, customerEmail: email, interval }).catch((err) =>
     console.error("[stripe] renewal admin email failed:", err)
   );
 }
@@ -280,14 +280,14 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
     }
   }
 
-  sendPortalCredentials(email, language, {
+  await sendPortalCredentials(email, language, {
     customerName: invoice.customer_name ?? email,
     loginUrl,
     password: portalPassword,
   }).catch((err) => console.error("[stripe] credentials email failed:", err));
 
   // 7. Notify admin (non-blocking — failure must not abort the webhook)
-  sendOrderConfirmationToAdmin({
+  await sendOrderConfirmationToAdmin({
     orderId,
     customerName: invoice.customer_name ?? email,
     customerEmail: email,

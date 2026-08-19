@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
   let smsQuotaExceeded = false;
 
   if (review.contact_email) {
-    sendReplyNotification(review.contact_email, customer.preferred_language, {
+    await sendReplyNotification(review.contact_email, customer.preferred_language, {
       locationName: review.location_name ?? "",
       message: created.body,
       scanUrl: buildScanUrl(review.plate_number, review.scan_id),
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       const text = review.location_name
         ? `${review.location_name}: ${created.body}`
         : created.body;
-      sendSms(review.contact_phone, text).catch(() => {});
+      await sendSms(review.contact_phone, text).catch(() => {});
     } else {
       smsQuotaExceeded = true;
     }

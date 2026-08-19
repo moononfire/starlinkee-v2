@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     created_at: created.created_at,
   }).catch(() => {});
 
-  notifyPortal(review.plate_id, review.review_id, created.created_at, created.sender).catch(() => {});
+  await notifyPortal(review.plate_id, review.review_id, created.created_at, created.sender).catch(() => {});
 
   return NextResponse.json({ message: created });
 }
