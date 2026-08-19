@@ -108,6 +108,14 @@ export async function POST(request: NextRequest) {
     }
     if (links.length > 0) {
       await upsertLocationLinks(newLocation.location_id, links);
+
+      const moduleOrder = ["review", "promo", "loyalty", "wifi", "menu"];
+      for (let i = 0; i < links.length; i++) {
+        moduleOrder.push(`link:${i}`);
+      }
+      
+      const supabaseAdmin = (await import("@/lib/supabase/admin")).createAdminClient();
+      await supabaseAdmin.from("customer_locations").update({ module_order: moduleOrder }).eq("location_id", newLocation.location_id);
     }
 
     const now = new Date();
