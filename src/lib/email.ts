@@ -441,7 +441,7 @@ const replyStrings = {
   },
 } satisfies Record<Lang, object>;
 
-export async function sendReplyNotification(
+export async function await sendReplyNotification(
   to: string,
   language: string,
   data: { locationName: string; message: string; scanUrl: string }
@@ -459,7 +459,7 @@ export async function sendReplyNotification(
   await sendMail(to, s.subject(data.locationName), html, text);
 }
 
-export async function sendPromoEmail(
+export async function await sendPromoEmail(
   to: string,
   data: { locationName: string; claimUrl: string; smsText: string }
 ) {
