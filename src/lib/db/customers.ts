@@ -80,6 +80,17 @@ export async function updateCustomer(
   updates: Partial<Omit<Customer, "customer_id" | "created_at" | "updated_at">>
 ): Promise<Customer> {
   const supabase = createAdminClient();
+
+  if (updates.email) {
+    const { data: existing } = await supabase
+      .from("customers")
+      .select("customer_id")
+      .eq("email", updates.email)
+      .neq("customer_id", id)
+      .maybeSingle();
+    if (existing) throw new Error("Ten adres e-mail jest już przypisany do innego klienta.");
+  }
+
   const { data: customer, error } = await supabase
     .from("customers")
     .update(updates)
@@ -92,6 +103,16 @@ export async function updateCustomer(
 
 export async function createCustomer(data: CustomerInsert): Promise<Customer> {
   const supabase = createAdminClient();
+
+  if (data.email) {
+    const { data: existing } = await supabase
+      .from("customers")
+      .select("customer_id")
+      .eq("email", data.email)
+      .maybeSingle();
+    if (existing) throw new Error("Ten adres e-mail jest już przypisany do innego klienta.");
+  }
+
   const { data: customer, error } = await supabase
     .from("customers")
     .insert(data)
