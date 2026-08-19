@@ -436,7 +436,8 @@
     "portal_tab_analytics": "Analytics",
     "portal_loyalty_stats_title": "Loyalty statistics",
     "portal_loyalty_total_users": "Total loyalty users",
-    "portal_loyalty_total_stamps": "Total stamps collected"
+    "portal_loyalty_total_stamps": "Total stamps collected",
+    "email_required_input": "Email (required)"
   },
   "de": {
     "back_button": "Zurück",
@@ -876,7 +877,8 @@
     "portal_tab_analytics": "Analytik",
     "portal_loyalty_stats_title": "Treuestatistiken",
     "portal_loyalty_total_users": "Gesamtzahl der Treuenutzer",
-    "portal_loyalty_total_stamps": "Gesammelte Stempel"
+    "portal_loyalty_total_stamps": "Gesammelte Stempel",
+    "email_required_input": "E-Mail (erforderlich)"
   },
   "pl": {
     "back_button": "Powrót",
@@ -1315,7 +1317,8 @@
     "portal_tab_analytics": "Analityka",
     "portal_loyalty_stats_title": "Statystyki programu",
     "portal_loyalty_total_users": "Liczba użytkowników (kart)",
-    "portal_loyalty_total_stamps": "Rozdane pieczątki"
+    "portal_loyalty_total_stamps": "Rozdane pieczątki",
+    "email_required_input": "Adres e-mail (wymagany)"
   },
   "zh": {
     "proxy_page_title": "您如何评价您的体验？",
