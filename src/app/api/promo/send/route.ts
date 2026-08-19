@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     await sendSms(phone, smsText);
 
     if (email) {
-      sendPromoEmail(email, {
+      await sendPromoEmail(email, {
         locationName: location.location_name,
         claimUrl,
         smsText: baseSmsText.includes("{link}") ? baseSmsText.replace("{link}", "") : baseSmsText,

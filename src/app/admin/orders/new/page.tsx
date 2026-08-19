@@ -67,7 +67,7 @@ async function createOrderAction(formData: FormData) {
     });
   }
 
-  void sendOrderConfirmationToAdmin({
+  await sendOrderConfirmationToAdmin({
     orderId,
     customerName: "",
     customerEmail: "",

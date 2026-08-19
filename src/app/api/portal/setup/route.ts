@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
   expiration.setDate(expiration.getDate() + subscription.duration_in_days);
   await setSubscriptionActive(subscriptionId, now.toISOString(), expiration.toISOString());
 
-  sendPlateSetupConfirmation(supportEmail.trim(), customer.preferred_language, {
+  await sendPlateSetupConfirmation(supportEmail.trim(), customer.preferred_language, {
     locationName: locationName.trim(),
   }).catch(() => {});
 
