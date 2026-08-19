@@ -45,7 +45,12 @@ export default function LinktreeProfile({ location, links, slug, scanToken, lang
         </h1>
 
         <div className="w-full flex flex-col gap-3">
-          {(location.module_order ?? ["review", "promo", "loyalty", "wifi", "menu"]).map((modId) => {
+          {(() => {
+            let order = location.module_order ?? ["review", "promo", "loyalty", "wifi", "menu"];
+            if (!order.includes("review")) order = ["review", ...order];
+            if (!order.includes("menu")) order = [...order, "menu"];
+            return order;
+          })().map((modId) => {
             if (modId.startsWith("link:")) {
               const idx = parseInt(modId.substring(5), 10);
               const sortedLinks = [...links].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
