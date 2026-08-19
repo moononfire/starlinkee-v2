@@ -112,5 +112,6 @@ async function sendNotification(
     userName,
     contactEmail,
     contactPhone,
+    subscriptionId: plate.subscription_id,
   });
 }
