@@ -364,6 +364,7 @@ const feedbackStrings = {
     nameLabel: "Name",
     emailLabel: "Email",
     phoneLabel: "Phone",
+    replyBtn: "Reply to review",
   },
   de: {
     title: (locationName: string) => `Neues Feedback — ${locationName}`,
@@ -375,6 +376,7 @@ const feedbackStrings = {
     nameLabel: "Name",
     emailLabel: "E-Mail",
     phoneLabel: "Telefon",
+    replyBtn: "Auf Feedback antworten",
   },
   pl: {
     title: (locationName: string) => `Nowa opinia — ${locationName}`,
@@ -386,6 +388,7 @@ const feedbackStrings = {
     nameLabel: "Imię",
     emailLabel: "E-mail",
     phoneLabel: "Telefon",
+    replyBtn: "Odpowiedz na opinię",
   },
 } satisfies Record<Lang, object>;
 
@@ -399,6 +402,7 @@ export async function sendFeedbackNotification(
     userName?: string;
     contactEmail?: string;
     contactPhone?: string;
+    subscriptionId?: number;
   }
 ) {
   const s = feedbackStrings[toLang(language)];
@@ -414,6 +418,13 @@ export async function sendFeedbackNotification(
       : []),
   ];
 
+  let appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.starlinkee.com";
+  appUrl = appUrl.replace(/\/$/, "");
+
+  const btnHtml = data.subscriptionId
+    ? `<div style="margin-top:24px;">${btn(`${appUrl}/portal/${data.subscriptionId}/reviews`, s.replyBtn)}</div>`
+    : "";
+
   const html = layout(
     h1(s.title(data.locationName)) +
       para(
@@ -421,7 +432,8 @@ export async function sendFeedbackNotification(
       ) +
       (contactRows.length ? dataTable(...contactRows) : "") +
       divider() +
-      `<blockquote style="margin:0;padding:12px 16px;background:#f4f4f5;border-left:3px solid #d4d4d8;border-radius:0 4px 4px 0;font-size:14px;line-height:1.7;color:#3f3f46;">${data.message}</blockquote>`
+      `<blockquote style="margin:0;padding:12px 16px;background:#f4f4f5;border-left:3px solid #d4d4d8;border-radius:0 4px 4px 0;font-size:14px;line-height:1.7;color:#3f3f46;">${data.message}</blockquote>` +
+      btnHtml
   );
 
   const textLines = [
@@ -432,6 +444,7 @@ export async function sendFeedbackNotification(
     ...(data.contactPhone ? [`${s.phoneLabel}: ${data.contactPhone}`] : []),
     "",
     s.messageText(data.message),
+    ...(data.subscriptionId ? ["", `${s.replyBtn}: ${appUrl}/portal/${data.subscriptionId}/reviews`] : []),
   ];
 
   await sendMail(to, s.subject(data.locationName, data.rating), html, textLines.join("\n"));
