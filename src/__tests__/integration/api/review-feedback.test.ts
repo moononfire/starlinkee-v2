@@ -58,13 +58,13 @@ describe("POST /api/review/feedback", () => {
   });
 
   it("returns 200 and saves feedback on valid input", async () => {
-    const res = await POST(makeRequest({ scanId: "scan-1", feedback_message: "Food was cold." }));
+    const res = await POST(makeRequest({ scanId: "scan-1", feedback_message: "Food was cold.", contact_email: "test@example.com" }));
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
     expect(mockUpdateFeedback).toHaveBeenCalledWith(
       "scan-1",
-      expect.objectContaining({ feedback_message: "Food was cold." })
+      expect.objectContaining({ feedback_message: "Food was cold.", contact_email: "test@example.com" })
     );
   });
 
@@ -86,7 +86,7 @@ describe("POST /api/review/feedback", () => {
 
   it("returns 500 when updateFeedback throws", async () => {
     mockUpdateFeedback.mockRejectedValue(new Error("DB error"));
-    const res = await POST(makeRequest({ scanId: "scan-1", feedback_message: "Bad food." }));
+    const res = await POST(makeRequest({ scanId: "scan-1", feedback_message: "Bad food.", contact_email: "test@example.com" }));
     expect(res.status).toBe(500);
   });
 });

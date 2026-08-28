@@ -1,13 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockEmailsSend } = vi.hoisted(() => ({
-  mockEmailsSend: vi.fn(),
+const { mockSendMail } = vi.hoisted(() => ({
+  mockSendMail: vi.fn(),
 }));
 
-vi.mock("resend", () => ({
-  Resend: vi.fn(function (this: { emails: { send: typeof mockEmailsSend } }) {
-    this.emails = { send: mockEmailsSend };
-  }),
+vi.mock("nodemailer", () => ({
+  default: {
+    createTransport: vi.fn(() => ({
+      sendMail: mockSendMail,
+    })),
+  },
 }));
 
 import {
@@ -21,7 +23,7 @@ import {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockEmailsSend.mockResolvedValue({ error: null });
+  mockSendMail.mockResolvedValue({ messageId: "test-id" });
 });
 
 describe("sendOrderConfirmationToAdmin()", () => {
@@ -33,15 +35,15 @@ describe("sendOrderConfirmationToAdmin()", () => {
       plateCount: 3,
     });
 
-    expect(mockEmailsSend).toHaveBeenCalledOnce();
-    const call = mockEmailsSend.mock.calls[0][0];
+    expect(mockSendMail).toHaveBeenCalledOnce();
+    const call = mockSendMail.mock.calls[0][0];
     expect(call.to).toBe("admin@test.com");
     expect(call.subject).toContain("42");
     expect(call.subject).toContain("Jan Kowalski");
   });
 
-  it("throws when Resend returns an error", async () => {
-    mockEmailsSend.mockResolvedValue({ error: { message: "API limit reached" } });
+  it("throws when Nodemailer returns an error", async () => {
+    mockSendMail.mockRejectedValue(new Error("API limit reached"));
 
     await expect(
       sendOrderConfirmationToAdmin({
@@ -50,7 +52,7 @@ describe("sendOrderConfirmationToAdmin()", () => {
         customerEmail: "test@test.com",
         plateCount: 1,
       })
-    ).rejects.toThrow("Resend error");
+    ).rejects.toThrow("SMTP Nodemailer error: API limit reached");
   });
 });
 
@@ -61,7 +63,7 @@ describe("sendCustomerRegistration()", () => {
       orderId: 99,
     });
 
-    const call = mockEmailsSend.mock.calls[0][0];
+    const call = mockSendMail.mock.calls[0][0];
     expect(call.to).toBe("customer@example.com");
     expect(call.subject).toContain("99");
   });
@@ -72,7 +74,7 @@ describe("sendCustomerRegistration()", () => {
       orderId: 5,
     });
 
-    const call = mockEmailsSend.mock.calls[0][0];
+    const call = mockSendMail.mock.calls[0][0];
     expect(call.subject).toContain("5");
   });
 });
@@ -83,7 +85,7 @@ describe("sendPlateSetupConfirmation()", () => {
       locationName: "My Bistro",
     });
 
-    const call = mockEmailsSend.mock.calls[0][0];
+    const call = mockSendMail.mock.calls[0][0];
     expect(call.to).toBe("owner@restaurant.com");
   });
 });
@@ -96,7 +98,7 @@ describe("sendFeedbackNotification()", () => {
       message: "Food was cold",
     });
 
-    const call = mockEmailsSend.mock.calls[0][0];
+    const call = mockSendMail.mock.calls[0][0];
     expect(call.to).toBe("owner@restaurant.com");
     expect(call.subject).toContain("My Bistro");
     expect(call.subject).toContain("2");
@@ -112,7 +114,7 @@ describe("sendFeedbackNotification()", () => {
       contactPhone: "+48600000000",
     });
 
-    const call = mockEmailsSend.mock.calls[0][0];
+    const call = mockSendMail.mock.calls[0][0];
     expect(call.text).toContain("Jan");
     expect(call.text).toContain("jan@example.com");
     expect(call.text).toContain("+48600000000");
@@ -125,7 +127,7 @@ describe("sendFeedbackNotification()", () => {
       message: "OK",
     });
 
-    const call = mockEmailsSend.mock.calls[0][0];
+    const call = mockSendMail.mock.calls[0][0];
     expect(call.text).not.toContain("undefined");
     expect(call.text).not.toContain("null");
   });
@@ -138,7 +140,7 @@ describe("sendFeedbackNotification()", () => {
       userName: "Anna",
     });
 
-    const call = mockEmailsSend.mock.calls[0][0];
+    const call = mockSendMail.mock.calls[0][0];
     expect(call.subject).toContain("Nowa opinia");
     expect(call.text).toContain("Imię: Anna");
     expect(call.text).toContain("Ocena: 4/5");
@@ -153,7 +155,7 @@ describe("sendPromoEmail()", () => {
       smsText: "Odbierz swój kupon!",
     });
 
-    const call = mockEmailsSend.mock.calls[0][0];
+    const call = mockSendMail.mock.calls[0][0];
     expect(call.to).toBe("customer@example.com");
     expect(call.text).toContain("https://app.test/l/my-bistro/promo/claim/abc123");
   });
@@ -163,7 +165,7 @@ describe("sendPlateImportLinks()", () => {
   it("sends to ADMIN_EMAIL_FOR_PLATE_IMPORT with plate count in subject", async () => {
     await sendPlateImportLinks({ fileContent: "link1\nlink2", plateCount: 2 });
 
-    const call = mockEmailsSend.mock.calls[0][0];
+    const call = mockSendMail.mock.calls[0][0];
     expect(call.to).toBe("import@test.com");
     expect(call.subject).toContain("2");
   });
