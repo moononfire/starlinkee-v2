@@ -7,7 +7,7 @@ const PLATE_SCAN_PATTERN = /^\/plate\/[^/]+\/[^/]+$/;
 // Matches /l/[slug]/review
 const LINKTREE_REVIEW_PATTERN = /^\/l\/[^/]+\/review$/;
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Set a persistent device-identity cookie on scan initiation pages so

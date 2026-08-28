@@ -42,6 +42,7 @@ test.describe('Active plate', () => {
     await expect(textarea).toBeVisible();
 
     await textarea.fill('Test feedback message from E2E');
+    await page.locator('input[name="contact_email"]').fill('test@example.com');
     await page.getByRole('button', { name: 'Wyślij opinię' }).click();
 
     await expect(page.getByText('Dziękujemy!')).toBeVisible();
