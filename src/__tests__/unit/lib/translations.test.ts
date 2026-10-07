@@ -49,3 +49,11 @@ describe("t()", () => {
     expect(zh).not.toBe("proxy_page_title");
   });
 });
+
+describe("we_will_be_in_touch", () => {
+  it.each(["en", "de", "pl"])("is translated for %s", (lang) => {
+    const text = t("we_will_be_in_touch", lang);
+    expect(text).not.toBe("we_will_be_in_touch");
+    expect(text.length).toBeGreaterThan(0);
+  });
+});

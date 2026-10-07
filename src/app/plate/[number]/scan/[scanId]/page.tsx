@@ -9,6 +9,7 @@ import RatingStars from "@/components/plate/RatingStars";
 import FeedbackForm from "@/components/plate/FeedbackForm";
 import ReviewConversation from "@/components/plate/ReviewConversation";
 import PageTracker from "@/components/tracking/PageTracker";
+import { hasOwnerReply } from "@/lib/review-thread";
 import { getLanguage } from "@/lib/language";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
@@ -39,8 +40,9 @@ export default async function ScanPage({ params }: Props) {
 
   const lang = await getLanguage(plate.plate_number, plate.plate_language, location.active_languages);
 
-  // Feedback already submitted for this scan — show the conversation thread
-  // instead of the rating/contact flow again.
+  // Feedback already submitted for this scan. Until the owner has replied we only
+  // show a thank-you; once they have (the reporter is emailed a link to this very
+  // page) we show the conversation thread instead of the rating/contact flow.
   if (review.rating !== null && review.feedback_time !== null) {
     const messages = await listMessagesByReviewId(review.review_id);
     return (
@@ -49,8 +51,13 @@ export default async function ScanPage({ params }: Props) {
           <div className="text-center">
             <p className="text-lg font-semibold text-gray-800">{t("thank_you_short", lang)}</p>
             <p className="text-gray-500">{t("appreciate_feedback", lang)}</p>
+            {!hasOwnerReply(messages) && (
+              <p className="text-gray-500 mt-1">{t("we_will_be_in_touch", lang)}</p>
+            )}
           </div>
-          <ReviewConversation scanId={scanId} lang={lang} initialMessages={messages} />
+          {hasOwnerReply(messages) && (
+            <ReviewConversation scanId={scanId} lang={lang} initialMessages={messages} />
+          )}
         </div>
       </main>
     );
