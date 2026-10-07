@@ -1,4 +1,5 @@
 import { createAdminClient } from "../supabase/admin";
+import { plateScanCount } from "../plate-scans";
 import type { CustomerLocation, CustomerLocationLink } from "../types";
 
 const PL_CHAR_MAP: Record<string, string> = {
@@ -154,7 +155,7 @@ export async function listLocations(search?: string): Promise<LocationWithCustom
   const supabase = createAdminClient();
   let query = supabase
     .from("customer_locations")
-    .select("*, subscriptions(status, customers(customer_name), plates(number_of_visits, reviews(rating)))")
+    .select("*, subscriptions(status, customers(customer_name), plates(number_of_visits, scan_count_offset, reviews(rating)))")
     .order("created_at", { ascending: false });
 
   if (search) {
@@ -175,10 +176,7 @@ export async function listLocations(search?: string): Promise<LocationWithCustom
       ...row,
       customer_name: row.subscriptions?.customers?.customer_name ?? "",
       subscription_status: row.subscriptions?.status ?? "",
-      total_plate_visits: plates.reduce(
-        (sum: number, p: any) => sum + (p.number_of_visits ?? 0),
-        0
-      ),
+      total_plate_visits: plates.reduce((sum: number, p: any) => sum + plateScanCount(p), 0),
       avg_rating: ratings.length > 0
         ? Math.round((ratings.reduce((s, r) => s + r, 0) / ratings.length) * 100) / 100
         : null,

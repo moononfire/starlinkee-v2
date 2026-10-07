@@ -1,9 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import { headers, cookies } from "next/headers";
+import { after } from "next/server";
 import { getPlateByNumber, incrementPlateVisits } from "@/lib/db/plates";
 import { getSubscriptionById } from "@/lib/db/subscriptions";
 import { getLocationBySubscriptionId } from "@/lib/db/locations";
 import { createScanRecord, findScanIdByDevice } from "@/lib/db/reviews";
+import { isCountableScan } from "@/lib/scan-filter";
 import { createScanToken } from "@/lib/db/scan-tokens";
 import { t } from "@/lib/translations";
 import { getLanguage } from "@/lib/language";
@@ -46,8 +48,19 @@ export default async function PlatePage({ params }: Props) {
     );
   }
 
-  // Physical scan — always increment plate visits
-  incrementPlateVisits(plate.plate_id).catch(() => {});
+  // Physical scan — increment plate visits (skipping prefetches and bots)
+  const [headersList, cookieStore] = await Promise.all([headers(), cookies()]);
+  // Counted in after() so the write survives the redirect below on serverless.
+  if (isCountableScan(headersList)) {
+    const plateId = plate.plate_id;
+    after(async () => {
+      try {
+        await incrementPlateVisits(plateId);
+      } catch (err) {
+        console.error("[scan] Failed to increment plate visits", plateId, err);
+      }
+    });
+  }
 
   const location = await getLocationBySubscriptionId(plate.subscription_id);
 
@@ -61,7 +74,6 @@ export default async function PlatePage({ params }: Props) {
     redirect(`/l/${location.linktree_slug}?scan=${scanToken}`);
   }
 
-  const [headersList, cookieStore] = await Promise.all([headers(), cookies()]);
   const ip = headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? headersList.get("x-real-ip") ?? null;
   const userAgent = headersList.get("user-agent") ?? null;
   const deviceId = cookieStore.get("_did")?.value ?? null;

@@ -11,6 +11,7 @@ import {
   getLocationBySlug,
   createLocation,
   incrementLinktreeVisits,
+  listLocations,
 } from "@/lib/db/locations";
 
 beforeEach(() => {
@@ -117,5 +118,34 @@ describe("incrementLinktreeVisits()", () => {
     expect(supabaseMock.rpc).toHaveBeenCalledWith("increment_linktree_visits", {
       p_location_id: 7,
     });
+  });
+});
+
+describe("listLocations()", () => {
+  it("total_plate_visits adds scan_count_offset, same as the portal", async () => {
+    const select = vi.fn(() => ({
+      order: vi.fn().mockResolvedValue({
+        data: [
+          {
+            location_id: 1,
+            subscriptions: {
+              status: "active",
+              customers: { customer_name: "Jan" },
+              plates: [
+                { number_of_visits: 5, scan_count_offset: 2, reviews: [{ rating: 4 }] },
+                { number_of_visits: 3, scan_count_offset: 0, reviews: [] },
+              ],
+            },
+          },
+        ],
+        error: null,
+      }),
+    }));
+    supabaseMock.from.mockReturnValue({ select });
+
+    const [loc] = await listLocations();
+
+    expect(select).toHaveBeenCalledWith(expect.stringContaining("scan_count_offset"));
+    expect(loc.total_plate_visits).toBe(10);
   });
 });
