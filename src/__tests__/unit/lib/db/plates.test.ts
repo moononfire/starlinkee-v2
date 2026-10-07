@@ -29,7 +29,7 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => supabaseMock,
 }));
 
-import { getPlateByNumber, plateExists, insertPlatesBatch } from "@/lib/db/plates";
+import { getPlateByNumber, plateExists, insertPlatesBatch, incrementPlateVisits } from "@/lib/db/plates";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -110,5 +110,18 @@ describe("insertPlatesBatch()", () => {
     await expect(
       insertPlatesBatch([{ plate_number: "BBBBBB", plate_language: "de", secret_key: "key2" }])
     ).resolves.toBeUndefined();
+  });
+});
+
+describe("incrementPlateVisits()", () => {
+  it("calls the increment_plate_visits rpc with the plate id", async () => {
+    mockRpc.mockResolvedValue({ error: null });
+    await incrementPlateVisits(42);
+    expect(mockRpc).toHaveBeenCalledWith("increment_plate_visits", { p_plate_id: 42 });
+  });
+
+  it("throws when the rpc returns an error", async () => {
+    mockRpc.mockResolvedValue({ error: { message: "rpc failed" } });
+    await expect(incrementPlateVisits(42)).rejects.toThrow("Failed to increment plate visits");
   });
 });

@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getPortalSession } from "@/lib/portal-session";
-import { getScanCountsBySubscription } from "@/lib/db/portal";
+import { getPlateStatsBySubscription, type PlateCounts } from "@/lib/db/portal";
 import { LanguageFlag } from "@/components/flags";
 import PortalSetupForm from "../settings/PortalSetupForm";
 import { getLanguage } from "@/lib/language";
@@ -42,14 +42,13 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
   if (!sub) notFound();
 
   const lang = await getLanguage();
-  const { total: totalScans, byPlate: scansByPlate } =
-    await getScanCountsBySubscription(subscriptionId);
+  const { scans, reviewVisits } = await getPlateStatsBySubscription(subscriptionId);
 
   // --- PENDING ---
   if (sub.status === "pending") {
     return (
       <div className="space-y-6">
-        <SubscriptionStats sub={sub} totalScans={totalScans} scansByPlate={scansByPlate} lang={lang} />
+        <SubscriptionStats sub={sub} scans={scans} reviewVisits={reviewVisits} lang={lang} />
         <PortalSetupForm subscriptionId={sub.subscription_id} lang={lang} />
       </div>
     );
@@ -59,7 +58,7 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
   if (sub.status === "inactive") {
     return (
       <div className="space-y-6">
-        <SubscriptionStats sub={sub} totalScans={totalScans} scansByPlate={scansByPlate} lang={lang} />
+        <SubscriptionStats sub={sub} scans={scans} reviewVisits={reviewVisits} lang={lang} />
 
         <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-5">
           <div className="flex gap-3">
@@ -109,7 +108,7 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
 
   return (
     <div className="space-y-6">
-      <SubscriptionStats sub={sub} totalScans={totalScans} scansByPlate={scansByPlate} plateScanUrl={plateScanUrl} lang={lang} />
+      <SubscriptionStats sub={sub} scans={scans} reviewVisits={reviewVisits} plateScanUrl={plateScanUrl} lang={lang} />
       <DashboardSettings
         subscriptionId={subscriptionId}
         location={sub.location}
@@ -124,8 +123,8 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
 
 function SubscriptionStats({
   sub,
-  totalScans,
-  scansByPlate,
+  scans,
+  reviewVisits,
   plateScanUrl,
   lang,
 }: {
@@ -134,8 +133,8 @@ function SubscriptionStats({
     activation_datetime: string | null;
     expiration_datetime: string | null;
   };
-  totalScans: number;
-  scansByPlate: Record<number, number>;
+  scans: PlateCounts;
+  reviewVisits: PlateCounts;
   plateScanUrl?: string | null;
   lang: string;
 }) {
@@ -156,7 +155,7 @@ function SubscriptionStats({
           </p>
         </div>
       )}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 text-sm">
         <div>
           <p className="text-gray-500 dark:text-gray-400 mb-0.5">{t("portal_plates", lang)}</p>
           <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
@@ -166,7 +165,13 @@ function SubscriptionStats({
         <div>
           <p className="text-gray-500 dark:text-gray-400 mb-0.5">{t("portal_scans", lang)}</p>
           <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            {totalScans}
+            {scans.total}
+          </p>
+        </div>
+        <div>
+          <p className="text-gray-500 dark:text-gray-400 mb-0.5">{t("portal_review_visits", lang)}</p>
+          <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            {reviewVisits.total}
           </p>
         </div>
         <div>
@@ -199,7 +204,8 @@ function SubscriptionStats({
                   {plate.plate_number}
                 </span>
                 <span className="text-gray-400 dark:text-gray-500">
-                  {scansByPlate[plate.plate_id] ?? 0} {t("portal_scan_suffix", lang)}
+                  {scans.byPlate[plate.plate_id] ?? 0} {t("portal_scan_suffix", lang)} · {reviewVisits.byPlate[plate.plate_id] ?? 0}{" "}
+                  {t("portal_review_visit_suffix", lang)}
                 </span>
               </div>
             ))}
