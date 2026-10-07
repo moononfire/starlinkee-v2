@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import { t } from "@/lib/translations";
 import { postDemoStep } from "@/lib/demoTour";
-import ReviewConversation from "./ReviewConversation";
-import type { ReviewMessage } from "@/lib/types";
 
 interface Props {
   scanId: string;
@@ -14,7 +12,6 @@ interface Props {
 export default function FeedbackForm({ scanId, lang }: Props) {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [firstMessage, setFirstMessage] = useState<ReviewMessage | null>(null);
 
   useEffect(() => {
     postDemoStep("low_rating_feedback");
@@ -38,16 +35,6 @@ export default function FeedbackForm({ scanId, lang }: Props) {
       }),
     });
 
-    // Optimistic first bubble — the server inserts the same message into
-    // review_messages asynchronously (non-blocking), so we render it
-    // immediately instead of racing the realtime broadcast on mount.
-    setFirstMessage({
-      message_id: -1,
-      review_id: 0,
-      sender: "reporter",
-      body: feedbackMessage,
-      created_at: new Date().toISOString(),
-    });
     setLoading(false);
     setSubmitted(true);
   }
@@ -58,12 +45,8 @@ export default function FeedbackForm({ scanId, lang }: Props) {
         <div className="text-center">
           <p className="text-lg font-semibold text-gray-800">{t("thank_you_short", lang)}</p>
           <p className="text-gray-500 mt-1">{t("appreciate_feedback", lang)}</p>
+          <p className="text-gray-500 mt-1">{t("we_will_be_in_touch", lang)}</p>
         </div>
-        <ReviewConversation
-          scanId={scanId}
-          lang={lang}
-          initialMessages={firstMessage ? [firstMessage] : []}
-        />
       </div>
     );
   }
