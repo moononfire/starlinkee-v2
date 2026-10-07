@@ -1,4 +1,5 @@
 import { createAdminClient } from "../supabase/admin";
+import { ilikeValue } from "./search";
 import type { Order } from "../types";
 
 export async function createOrder(data: {
@@ -63,10 +64,22 @@ export async function listOrders(search?: string): Promise<OrderWithCustomer[]> 
     .select("*, customers(customer_name, email), order_items(quantity, products(name))")
     .order("created_at", { ascending: false });
 
-  if (search) {
-    query = query.or(
-      `customers.customer_name.ilike.%${search}%,customers.email.ilike.%${search}%,stripe_payment_id.ilike.%${search}%,internal_payment_reference.ilike.%${search}%`
-    );
+  const term = search?.trim();
+  if (term) {
+    const pattern = ilikeValue(term);
+    const { data: matched, error: customersError } = await supabase
+      .from("customers")
+      .select("customer_id")
+      .or(`customer_name.ilike.${pattern},email.ilike.${pattern}`);
+    if (customersError) throw new Error(`Failed to list orders: ${customersError.message}`);
+
+    const ids = (matched ?? []).map((c) => c.customer_id as number);
+    const clauses = [
+      `stripe_payment_id.ilike.${pattern}`,
+      `internal_payment_reference.ilike.${pattern}`,
+    ];
+    if (ids.length > 0) clauses.push(`customer_id.in.(${ids.join(",")})`);
+    query = query.or(clauses.join(","));
   }
 
   const { data, error } = await query;

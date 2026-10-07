@@ -6,7 +6,7 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => supabaseMock,
 }));
 
-import { getSubscriptionById, setSubscriptionActive, createSubscription } from "@/lib/db/subscriptions";
+import { getSubscriptionById, setSubscriptionActive, createSubscription, listSubscriptions } from "@/lib/db/subscriptions";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -102,5 +102,94 @@ describe("createSubscription()", () => {
     });
 
     await expect(createSubscription(input)).rejects.toThrow("Failed to create subscription");
+  });
+});
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+describe("listSubscriptions()", () => {
+  // Mocks: from("customers") -> select -> or -> {data,error}; from("subscriptions") -> select -> order -> (or ->) {data,error}
+  function setup(
+    opts: { customers?: any[]; customersError?: any; plates?: any[]; platesError?: any; subs?: any[]; subsError?: any } = {}
+  ) {
+    const customersOr = vi.fn().mockResolvedValue({
+      data: opts.customers ?? [],
+      error: opts.customersError ?? null,
+    });
+    const subsResult = { data: opts.subs ?? [], error: opts.subsError ?? null };
+    const subsOr = vi.fn().mockResolvedValue(subsResult);
+    const order = vi.fn(() => ({ or: subsOr, then: (res: any, rej: any) => Promise.resolve(subsResult).then(res, rej) }));
+    const platesNot = vi.fn().mockResolvedValue({
+      data: opts.plates ?? [],
+      error: opts.platesError ?? null,
+    });
+    const platesIlike = vi.fn(() => ({ not: platesNot }));
+    supabaseMock.from.mockImplementation((table: string) =>
+      table === "customers"
+        ? { select: vi.fn(() => ({ or: customersOr })) }
+        : table === "plates"
+          ? { select: vi.fn(() => ({ ilike: platesIlike })) }
+          : { select: vi.fn(() => ({ order })) }
+    );
+    return { customersOr, subsOr, platesIlike, platesNot };
+  }
+
+  it.each([undefined, "", "   "])("applies no filter for q=%j", async (q) => {
+    const { customersOr, subsOr } = setup();
+    await listSubscriptions(q);
+    expect(customersOr).not.toHaveBeenCalled();
+    expect(subsOr).not.toHaveBeenCalled();
+    expect(supabaseMock.from).not.toHaveBeenCalledWith("customers");
+  });
+
+  it("searches customers, then filters by plan name or matching customer ids", async () => {
+    const { customersOr, subsOr } = setup({ customers: [{ customer_id: 3 }, { customer_id: 7 }] });
+    await listSubscriptions("jan");
+    expect(customersOr).toHaveBeenCalledWith('customer_name.ilike."%jan%",email.ilike."%jan%"');
+    expect(subsOr).toHaveBeenCalledWith('subscription_name.ilike."%jan%",customer_id.in.(3,7)');
+  });
+
+  it("omits the customer_id.in clause when no customer matches", async () => {
+    const { subsOr } = setup({ customers: [] });
+    await listSubscriptions("1_YEAR");
+    expect(subsOr).toHaveBeenCalledWith('subscription_name.ilike."%1\\\\_YEAR%"');
+  });
+
+  it("quotes and escapes special characters without throwing", async () => {
+    const { customersOr, subsOr } = setup();
+    await expect(listSubscriptions('a,b(c)%_"\\')).resolves.toEqual([]);
+    const expected = '"%a,b(c)\\\\%\\\\_\\"\\\\\\\\%"';
+    expect(customersOr).toHaveBeenCalledWith(`customer_name.ilike.${expected},email.ilike.${expected}`);
+    expect(subsOr).toHaveBeenCalledWith(`subscription_name.ilike.${expected}`);
+  });
+
+  it("throws when the customers lookup fails", async () => {
+    setup({ customersError: { message: "boom" } });
+    await expect(listSubscriptions("jan")).rejects.toThrow("Failed to list subscriptions");
+  });
+
+  it("throws when the subscriptions query fails", async () => {
+    setup({ subsError: { message: "boom" } });
+    await expect(listSubscriptions("jan")).rejects.toThrow("Failed to list subscriptions");
+  });
+
+  it("adds subscription_id.in for assigned plates matching the query", async () => {
+    const { subsOr, platesIlike, platesNot } = setup({
+      plates: [{ subscription_id: 5 }, { subscription_id: 5 }, { subscription_id: 9 }],
+    });
+    await listSubscriptions("ab1");
+    expect(platesIlike).toHaveBeenCalledWith("plate_number", "%ab1%");
+    expect(platesNot).toHaveBeenCalledWith("subscription_id", "is", null);
+    expect(subsOr).toHaveBeenCalledWith('subscription_name.ilike."%ab1%",subscription_id.in.(5,9)');
+  });
+
+  it("omits subscription_id.in when no plate matches", async () => {
+    const { subsOr } = setup({ plates: [] });
+    await listSubscriptions("zzz");
+    expect(subsOr).toHaveBeenCalledWith('subscription_name.ilike."%zzz%"');
+  });
+
+  it("throws when the plates lookup fails", async () => {
+    setup({ platesError: { message: "boom" } });
+    await expect(listSubscriptions("jan")).rejects.toThrow("Failed to list subscriptions");
   });
 });
