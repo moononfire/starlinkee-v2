@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { listPlates } from "@/lib/db/plates";
+import { plateScanCount } from "@/lib/plate-scans";
 import SearchInput from "@/components/admin/SearchInput";
 
 export default async function PlatesPage({
@@ -71,7 +72,7 @@ export default async function PlatesPage({
                 </td>
                 <td className="px-4 py-3 font-mono text-gray-500 dark:text-gray-400 text-xs">{p.secret_key}</td>
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300 uppercase">{p.plate_language}</td>
-                <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{p.number_of_visits}</td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{plateScanCount(p)}</td>
                 <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{p.subscription_id ?? "—"}</td>
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{p.customer_name ?? "—"}</td>
                 <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
