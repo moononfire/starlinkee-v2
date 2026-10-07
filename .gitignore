@@ -42,3 +42,9 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# OpenRig / agent tooling (local only)
+/rigs/
+/.openrig/
+/.claude/
+/.mcp.json
