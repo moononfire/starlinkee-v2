@@ -23,7 +23,8 @@ export async function getPlateById(plateId: number): Promise<Plate | null> {
 
 export async function incrementPlateVisits(plateId: number): Promise<void> {
   const supabase = createAdminClient();
-  await supabase.rpc("increment_plate_visits", { p_plate_id: plateId });
+  const { error } = await supabase.rpc("increment_plate_visits", { p_plate_id: plateId });
+  if (error) throw new Error(`Failed to increment plate visits: ${error.message}`);
 }
 
 export async function plateExists(plateNumber: string): Promise<boolean> {

@@ -57,3 +57,12 @@ describe("we_will_be_in_touch", () => {
     expect(text.length).toBeGreaterThan(0);
   });
 });
+
+describe("portal review visit keys", () => {
+  it.each(["en", "de", "pl"])("portal_review_visits and suffix are translated for %s", (lang) => {
+    for (const key of ["portal_review_visits", "portal_review_visit_suffix"]) {
+      expect(t(key, lang)).not.toBe(key);
+      expect(t(key, lang).length).toBeGreaterThan(0);
+    }
+  });
+});
