@@ -1,4 +1,5 @@
 import { createAdminClient } from "../supabase/admin";
+import { ilikeValue, likePattern } from "./search";
 import type { Subscription } from "../types";
 
 export async function getSubscriptionById(id: number): Promise<Subscription | null> {
@@ -83,10 +84,31 @@ export async function listSubscriptions(search?: string): Promise<SubscriptionWi
     .select("*, customers(customer_name, email), plates(plate_number)")
     .order("created_at", { ascending: false });
 
-  if (search) {
-    query = query.or(
-      `customers.customer_name.ilike.%${search}%,customers.email.ilike.%${search}%,plates.plate_number.ilike.%${search}%`
-    );
+  const term = search?.trim();
+  if (term) {
+    const pattern = ilikeValue(term);
+    const [customersRes, platesRes] = await Promise.all([
+      supabase
+        .from("customers")
+        .select("customer_id")
+        .or(`customer_name.ilike.${pattern},email.ilike.${pattern}`),
+      supabase
+        .from("plates")
+        .select("subscription_id")
+        .ilike("plate_number", likePattern(term))
+        .not("subscription_id", "is", null),
+    ]);
+    if (customersRes.error) throw new Error(`Failed to list subscriptions: ${customersRes.error.message}`);
+    if (platesRes.error) throw new Error(`Failed to list subscriptions: ${platesRes.error.message}`);
+
+    const customerIds = (customersRes.data ?? []).map((c) => c.customer_id as number);
+    const subscriptionIds = [
+      ...new Set((platesRes.data ?? []).map((p) => p.subscription_id as number)),
+    ];
+    const clauses = [`subscription_name.ilike.${pattern}`];
+    if (customerIds.length > 0) clauses.push(`customer_id.in.(${customerIds.join(",")})`);
+    if (subscriptionIds.length > 0) clauses.push(`subscription_id.in.(${subscriptionIds.join(",")})`);
+    query = query.or(clauses.join(","));
   }
 
   const { data, error } = await query;
