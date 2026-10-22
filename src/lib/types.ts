@@ -9,6 +9,7 @@ export interface Plate {
   scan_count_offset: number;
   secret_key: string;
   nfc_uid: string | null;
+  nfc_assigned_at?: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -75,7 +75,7 @@ export async function assignNfcToPlate(
   const supabase = createAdminClient();
   const { error } = await supabase
     .from("plates")
-    .update({ nfc_uid: nfcUid })
+    .update({ nfc_uid: nfcUid, nfc_assigned_at: new Date().toISOString() })
     .eq("plate_number", plateNumber.toUpperCase());
   if (error) throw new Error(`Failed to assign NFC: ${error.message}`);
 }

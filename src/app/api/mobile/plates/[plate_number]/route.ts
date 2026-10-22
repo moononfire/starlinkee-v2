@@ -19,7 +19,9 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   return NextResponse.json({
     plate_number: plate.plate_number,
-    nfc_uid: plate.nfc_uid,
+    // The UID itself is not returned: together with assign-nfc it would let
+    // anyone holding the shared key replay it to obtain the plate secret.
+    tagged: Boolean(plate.nfc_uid),
     subscription_id: plate.subscription_id,
     plate_language: plate.plate_language,
   });
