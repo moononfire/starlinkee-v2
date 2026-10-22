@@ -38,7 +38,7 @@ export const getPortalSession = cache(async (): Promise<PortalSession> => {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user?.email) return { user: null, customer: null, subscriptions: [] };
+  if (!user?.email || !user.email_confirmed_at) return { user: null, customer: null, subscriptions: [] };
 
   const customer = await getCustomerByEmail(user.email);
   if (!customer) return { user, customer: null, subscriptions: [] };

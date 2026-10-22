@@ -667,3 +667,61 @@ export async function sendPlateActivationCode(
     [s.title, "", s.body, "", `${s.plates}: ${plates}`, `${s.codeLabel}: ${data.code}`, "", s.footer].join("\n")
   );
 }
+
+const accountLinkStrings = {
+  en: {
+    confirmSubject: "Confirm your Starlinkee account",
+    confirmTitle: "Confirm your email address",
+    confirmBody: "Thank you for signing up. Click the button below to confirm your email address and open your customer portal.",
+    confirmBtn: "Confirm email",
+    passwordSubject: "Set your Starlinkee password",
+    passwordTitle: "Set your password",
+    passwordBody: "Click the button below to choose a password and open your Starlinkee customer portal.",
+    passwordBtn: "Set password",
+    footer: "If you did not request this, you can safely ignore this email.",
+  },
+  de: {
+    confirmSubject: "Bestätigen Sie Ihr Starlinkee-Konto",
+    confirmTitle: "E-Mail-Adresse bestätigen",
+    confirmBody: "Vielen Dank für Ihre Registrierung. Klicken Sie auf die Schaltfläche, um Ihre E-Mail-Adresse zu bestätigen und Ihr Kundenportal zu öffnen.",
+    confirmBtn: "E-Mail bestätigen",
+    passwordSubject: "Legen Sie Ihr Starlinkee-Passwort fest",
+    passwordTitle: "Passwort festlegen",
+    passwordBody: "Klicken Sie auf die Schaltfläche, um ein Passwort zu wählen und Ihr Starlinkee-Kundenportal zu öffnen.",
+    passwordBtn: "Passwort festlegen",
+    footer: "Wenn Sie dies nicht angefordert haben, können Sie diese E-Mail ignorieren.",
+  },
+  pl: {
+    confirmSubject: "Potwierdź swoje konto Starlinkee",
+    confirmTitle: "Potwierdź adres e-mail",
+    confirmBody: "Dziękujemy za rejestrację. Kliknij przycisk poniżej, aby potwierdzić adres e-mail i otworzyć panel klienta.",
+    confirmBtn: "Potwierdź e-mail",
+    passwordSubject: "Ustaw hasło do konta Starlinkee",
+    passwordTitle: "Ustaw hasło",
+    passwordBody: "Kliknij przycisk poniżej, aby wybrać hasło i otworzyć panel klienta Starlinkee.",
+    passwordBtn: "Ustaw hasło",
+    footer: "Jeśli to nie Ty, zignoruj tę wiadomość.",
+  },
+} satisfies Record<Lang, object>;
+
+/** Link emails for the signup flow: confirm a new account, or set a password for an existing customer. */
+export async function sendAccountLink(
+  to: string,
+  language: string,
+  data: { kind: "confirm" | "set-password"; link: string }
+) {
+  const s = accountLinkStrings[toLang(language)];
+  const confirm = data.kind === "confirm";
+  const title = confirm ? s.confirmTitle : s.passwordTitle;
+  const body = confirm ? s.confirmBody : s.passwordBody;
+  const label = confirm ? s.confirmBtn : s.passwordBtn;
+  const html = layout(
+    h1(title) + para(body) + `<div style="margin-top:20px;">${btn(data.link, label)}</div>` + divider() + para(s.footer)
+  );
+  await sendMail(
+    to,
+    confirm ? s.confirmSubject : s.passwordSubject,
+    html,
+    [title, "", body, "", `${label}: ${data.link}`, "", s.footer].join("\n")
+  );
+}
