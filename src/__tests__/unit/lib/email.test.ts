@@ -19,6 +19,7 @@ import {
   sendFeedbackNotification,
   sendPromoEmail,
   sendPlateImportLinks,
+  sendReplyNotification,
 } from "@/lib/email";
 
 beforeEach(() => {
@@ -168,5 +169,43 @@ describe("sendPlateImportLinks()", () => {
     const call = mockSendMail.mock.calls[0][0];
     expect(call.to).toBe("import@test.com");
     expect(call.subject).toContain("2");
+  });
+});
+
+describe("HTML escaping of user-controlled values", () => {
+  const evil = '<a href="https://evil.example/login">Log in</a><script>x()</script>';
+
+  it("renders feedback text, name and contact details as text, not markup", async () => {
+    await sendFeedbackNotification("owner@x.pl", "en", {
+      locationName: evil,
+      rating: 5,
+      message: evil,
+      userName: evil,
+      contactEmail: evil,
+      contactPhone: evil,
+    });
+    const { html } = mockSendMail.mock.calls[0][0];
+    expect(html).not.toContain("<a href=\"https://evil.example");
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("&lt;a href=&quot;https://evil.example/login&quot;&gt;");
+  });
+
+  it("escapes reply text and refuses non-http button links", async () => {
+    await sendReplyNotification("guest@x.pl", "en", {
+      locationName: "Cafe",
+      message: evil,
+      scanUrl: "javascript:alert(1)",
+    });
+    const { html } = mockSendMail.mock.calls[0][0];
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain("javascript:");
+  });
+
+  it("escapes the promo text and plate import contents", async () => {
+    await sendPromoEmail("guest@x.pl", { locationName: "Cafe", claimUrl: "https://app/x", smsText: evil });
+    expect(mockSendMail.mock.calls[0][0].html).not.toContain("<script>");
+    mockSendMail.mockClear();
+    await sendPlateImportLinks({ fileContent: evil, plateCount: 1 });
+    expect(mockSendMail.mock.calls[0][0].html).not.toContain("<script>");
   });
 });
