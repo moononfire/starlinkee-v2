@@ -36,6 +36,60 @@ describe("upsertCustomerByEmail()", () => {
     expect(result).toBe(42);
   });
 
+  it("never overwrites an existing customer's data, only fills empty fields", async () => {
+    const update = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }));
+    supabaseMock.from.mockReturnValue({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: vi.fn().mockResolvedValue({
+            data: {
+              customer_id: 42,
+              customer_name: "Real Owner",
+              customer_type: "individual",
+              tax_id: "PL111",
+              billing_address: null,
+              phone: "",
+              is_activated: false,
+            },
+          }),
+        })),
+      })),
+      update,
+    });
+
+    await upsertCustomerByEmail({
+      ...customerData,
+      customer_name: "Attacker",
+      tax_id: "PL999",
+      billing_address: "New street 1",
+      phone: "+48600000000",
+      is_activated: true,
+    });
+
+    expect(update).toHaveBeenCalledWith({
+      billing_address: "New street 1",
+      phone: "+48600000000",
+      is_activated: true,
+    });
+  });
+
+  it("does not write at all when nothing is missing", async () => {
+    const update = vi.fn();
+    supabaseMock.from.mockReturnValue({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: vi.fn().mockResolvedValue({
+            data: { customer_id: 42, customer_name: "Real Owner", customer_type: "business", is_activated: true },
+          }),
+        })),
+      })),
+      update,
+    });
+
+    await upsertCustomerByEmail({ ...customerData, customer_name: "Attacker" });
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it("inserts a new customer and returns its customer_id when not found", async () => {
     let callCount = 0;
     supabaseMock.from.mockImplementation(() => {

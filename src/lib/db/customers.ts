@@ -18,22 +18,37 @@ interface CustomerInsert {
   is_activated?: boolean;
 }
 
+/**
+ * Finds the customer for this email or creates one. An existing customer's
+ * data is never overwritten (checkout/webhook emails are unverified, so a
+ * stranger paying with someone else's address must not rewrite their billing
+ * details); only fields that are still empty are filled in.
+ */
 export async function upsertCustomerByEmail(data: CustomerInsert): Promise<number> {
   const supabase = createAdminClient();
 
   const { data: existing } = await supabase
     .from("customers")
-    .select("customer_id")
+    .select("*")
     .eq("email", data.email)
     .single();
 
   if (existing) {
-    const { email: _email, preferred_language: _preferredLanguage, ...updateFields } = data;
-    const { error } = await supabase
-      .from("customers")
-      .update(updateFields)
-      .eq("customer_id", existing.customer_id);
-    if (error) throw new Error(`Failed to update customer: ${error.message}`);
+    const { email: _email, preferred_language: _preferredLanguage, source: _source, ...candidates } = data;
+    const fill: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(candidates)) {
+      if (value === undefined || value === null || value === "") continue;
+      if (key === "is_activated") {
+        if (value === true && existing.is_activated !== true) fill[key] = true;
+        continue;
+      }
+      const current = (existing as Record<string, unknown>)[key];
+      if (current === undefined || current === null || current === "") fill[key] = value;
+    }
+    if (Object.keys(fill).length > 0) {
+      const { error } = await supabase.from("customers").update(fill).eq("customer_id", existing.customer_id);
+      if (error) throw new Error(`Failed to update customer: ${error.message}`);
+    }
     return existing.customer_id;
   }
 

@@ -9,7 +9,7 @@ beforeEach(() => vi.clearAllMocks());
 
 function mockTable(insertResult: unknown, retryResult?: unknown) {
   const select = vi.fn().mockResolvedValue(retryResult);
-  const orFn = vi.fn(() => ({ select }));
+  const orFn = vi.fn((_filter: string) => ({ select }));
   const eq = vi.fn(() => ({ or: orFn }));
   supabaseMock.from.mockReturnValue({
     insert: vi.fn().mockResolvedValue(insertResult),
