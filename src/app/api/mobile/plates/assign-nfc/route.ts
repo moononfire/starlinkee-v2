@@ -32,7 +32,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Plate is already tagged" }, { status: 409 });
     }
   } else {
-    await assignNfcToPlate(plate.plate_number, nfc_uid);
+    if (!(await assignNfcToPlate(plate.plate_number, nfc_uid))) {
+      // Lost a race with a parallel request that tagged the plate first.
+      return NextResponse.json({ error: "Plate already assigned to a different NFC tag" }, { status: 409 });
+    }
     console.info(
       JSON.stringify({
         event: "nfc_assigned",

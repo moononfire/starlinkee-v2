@@ -68,16 +68,23 @@ export async function listPlateNumbersBySubscription(subscriptionId: number): Pr
   return (data ?? []).map((p) => p.plate_number);
 }
 
+/**
+ * Binds an NFC UID to a plate only if it is still untagged. Returns false when
+ * another request tagged it first (two parallel assignments must not both win).
+ */
 export async function assignNfcToPlate(
   plateNumber: string,
   nfcUid: string
-): Promise<void> {
+): Promise<boolean> {
   const supabase = createAdminClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("plates")
     .update({ nfc_uid: nfcUid, nfc_assigned_at: new Date().toISOString() })
-    .eq("plate_number", plateNumber.toUpperCase());
+    .eq("plate_number", plateNumber.toUpperCase())
+    .is("nfc_uid", null)
+    .select("plate_id");
   if (error) throw new Error(`Failed to assign NFC: ${error.message}`);
+  return (data?.length ?? 0) > 0;
 }
 
 export async function insertPlatesBatch(

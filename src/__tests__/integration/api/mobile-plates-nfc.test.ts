@@ -17,7 +17,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   process.env.MOBILE_API_KEY = "test-mobile-key";
   process.env.NEXT_PUBLIC_APP_URL = "https://app.test";
-  mockAssign.mockResolvedValue(undefined);
+  mockAssign.mockResolvedValue(true);
   vi.spyOn(console, "info").mockImplementation(() => {});
 });
 
@@ -35,6 +35,14 @@ describe("POST /api/mobile/plates/assign-nfc", () => {
     await assignNfc(post({ plate_number: "ABCDEF", nfc_uid: "04:AA" }));
     const line = JSON.parse((console.info as unknown as { mock: { calls: string[][] } }).mock.calls[0][0]);
     expect(line).toMatchObject({ event: "nfc_assigned", plate_number: "ABCDEF", nfc_uid: "04:AA" });
+  });
+
+  it("returns 409 (and no secret) when a parallel request tagged the plate first", async () => {
+    mockGetPlate.mockResolvedValue(basePlate);
+    mockAssign.mockResolvedValue(false);
+    const res = await assignNfc(post({ plate_number: "ABCDEF", nfc_uid: "04:AA" }));
+    expect(res.status).toBe(409);
+    expect(JSON.stringify(await res.json())).not.toContain("s3cret");
   });
 
   it("lets the same tag retry shortly after assignment (chip write failed)", async () => {
@@ -60,12 +68,12 @@ describe("POST /api/mobile/plates/assign-nfc", () => {
 });
 
 describe("GET /api/mobile/plates/[plate_number]", () => {
-  it("reports whether the plate is tagged but never returns the UID", async () => {
+  it("reports whether the plate is tagged but never returns the real UID", async () => {
     mockGetPlate.mockResolvedValue({ ...basePlate, nfc_uid: "04:AA" });
     const res = await getPlate(new NextRequest("http://localhost/x", { headers: key }), { params: Promise.resolve({ plate_number: "ABCDEF" }) });
     const body = await res.json();
     expect(body.tagged).toBe(true);
-    expect(body).not.toHaveProperty("nfc_uid");
+    expect(body.nfc_uid).toBe("tagged"); // non-null marker for older app versions, never the real UID
     expect(JSON.stringify(body)).not.toContain("04:AA");
   });
 });
