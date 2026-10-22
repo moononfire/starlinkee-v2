@@ -128,11 +128,15 @@ export async function updateFeedback(
     contact_email?: string;
     contact_phone?: string;
   }
-): Promise<void> {
+): Promise<boolean> {
   const supabase = createAdminClient();
-  const { error } = await supabase
+  // Feedback is accepted once per scan; follow-ups go through the message thread.
+  const { data: updated, error } = await supabase
     .from("reviews")
     .update({ ...data, feedback_time: new Date().toISOString() })
-    .eq("scan_id", scanId);
+    .eq("scan_id", scanId)
+    .is("feedback_time", null)
+    .select("review_id");
   if (error) throw new Error(`Failed to update feedback: ${error.message}`);
+  return (updated?.length ?? 0) > 0;
 }
