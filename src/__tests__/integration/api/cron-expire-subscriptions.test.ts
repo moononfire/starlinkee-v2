@@ -3,6 +3,8 @@ import { NextRequest } from "next/server";
 
 const { mockDeactivate } = vi.hoisted(() => ({ mockDeactivate: vi.fn() }));
 vi.mock("@/lib/db/subscriptions", () => ({ deactivateExpiredSubscriptions: mockDeactivate }));
+const { mockCleanup } = vi.hoisted(() => ({ mockCleanup: vi.fn() }));
+vi.mock("@/lib/rate-limit-persistent", () => ({ cleanupRateLimits: mockCleanup }));
 
 import { GET } from "@/app/api/cron/expire-subscriptions/route";
 
@@ -17,6 +19,7 @@ describe("GET /api/cron/expire-subscriptions", () => {
 
   beforeEach(() => {
     mockDeactivate.mockReset().mockResolvedValue(3);
+    mockCleanup.mockReset().mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -43,5 +46,6 @@ describe("GET /api/cron/expire-subscriptions", () => {
     const res = await GET(req("Bearer s3cret"));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ deactivatedCount: 3 });
+    expect(mockCleanup).toHaveBeenCalledOnce();
   });
 });

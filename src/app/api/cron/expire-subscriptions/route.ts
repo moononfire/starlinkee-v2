@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 import { deactivateExpiredSubscriptions } from "@/lib/db/subscriptions";
+import { cleanupRateLimits } from "@/lib/rate-limit-persistent";
 
 function safeCompare(a: string, b: string): boolean {
   const bufA = Buffer.from(a);
@@ -20,5 +21,7 @@ export async function GET(request: NextRequest) {
   }
 
   const deactivatedCount = await deactivateExpiredSubscriptions();
+  // Housekeeping for the persistent rate limiter; never fails the job.
+  await cleanupRateLimits().catch((err) => console.error("[cron] rate_limit_cleanup failed:", err));
   return NextResponse.json({ deactivatedCount });
 }
