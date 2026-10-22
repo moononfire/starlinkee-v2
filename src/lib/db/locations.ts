@@ -1,5 +1,6 @@
 import { createAdminClient } from "../supabase/admin";
 import { plateScanCount } from "../plate-scans";
+import { isSafeGoogleReviewUrl } from "../urls";
 import type { CustomerLocation, CustomerLocationLink } from "../types";
 
 const PL_CHAR_MAP: Record<string, string> = {
@@ -94,6 +95,10 @@ export async function getLocationBySlug(slug: string): Promise<CustomerLocation 
   return data ?? null;
 }
 
+function assertSafeReviewLink(link: string | null | undefined): void {
+  if (link && !isSafeGoogleReviewUrl(link)) throw new Error("Invalid google_review_link");
+}
+
 export async function createLocation(data: {
   subscription_id: number;
   location_name: string;
@@ -113,6 +118,7 @@ export async function createLocation(data: {
   menu_link?: string;
   menu_type?: "link" | "image";
 }): Promise<CustomerLocation> {
+  assertSafeReviewLink(data.google_review_link);
   const supabase = createAdminClient();
   const { data: location, error } = await supabase
     .from("customer_locations")
@@ -254,6 +260,7 @@ export async function updateLocation(
     active_languages?: string[];
   }
 ): Promise<CustomerLocation> {
+  assertSafeReviewLink(updates.google_review_link);
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("customer_locations")

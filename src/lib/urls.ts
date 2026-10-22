@@ -24,3 +24,22 @@ export function safeRedirectPath(next: string | null | undefined, fallback: stri
   if (/[\u0000-\u001f]/.test(next)) return fallback;
   return next;
 }
+
+const GOOGLE_REVIEW_HOSTS = ["google.com", "g.page", "goo.gl"];
+
+/**
+ * google_review_link is assigned to location.href after a good rating, so a
+ * javascript:/data: value would run script on our origin. Allow only https
+ * links to Google (Maps/Search review links, g.page, goo.gl short links).
+ */
+export function isSafeGoogleReviewUrl(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "https:" || parsed.username || parsed.password) return false;
+  const host = parsed.hostname.toLowerCase();
+  return GOOGLE_REVIEW_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
+}

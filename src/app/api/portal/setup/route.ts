@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { getCustomerByEmail, getCustomerSubscriptions } from "@/lib/db/portal";
 import { setSubscriptionActive } from "@/lib/db/subscriptions";
+import { isSafeGoogleReviewUrl } from "@/lib/urls";
 import { createLocation } from "@/lib/db/locations";
 import { uploadLogo } from "@/lib/storage";
 import { sendPlateSetupConfirmation } from "@/lib/email";
@@ -45,6 +46,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
+  const googleReviewLink = (form.get("google_review_link") as string) || undefined;
+  if (googleReviewLink && !isSafeGoogleReviewUrl(googleReviewLink)) {
+    return NextResponse.json({ error: "Invalid Google review link" }, { status: 400 });
+  }
+
   const subscriptions = await getCustomerSubscriptions(customer.customer_id);
   const subscription = subscriptions.find((s) => s.subscription_id === subscriptionId);
   if (!subscription)
@@ -71,7 +77,7 @@ export async function POST(request: NextRequest) {
     location_name: locationName.trim(),
     google_business_name: (form.get("google_business_name") as string) || undefined,
     google_business_address: (form.get("google_business_address") as string) || undefined,
-    google_review_link: (form.get("google_review_link") as string) || undefined,
+    google_review_link: googleReviewLink,
     google_places_id: (form.get("google_places_id") as string) || undefined,
     support_email: supportEmail.trim(),
     logo_path: logoPath,

@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { getCustomerByEmail, getCustomerSubscriptions } from "@/lib/db/portal";
 import { updateLocation, setLinktreeSlug } from "@/lib/db/locations";
 import type { ActionResult } from "../action-result";
+import { isSafeGoogleReviewUrl } from "@/lib/urls";
 
 function makeSupabase(cookieStore: Awaited<ReturnType<typeof cookies>>) {
   return createServerClient(
@@ -175,7 +176,7 @@ export async function updateGoogleLocation(formData: FormData): Promise<ActionRe
   const googleReviewLink = formData.get("google_review_link") as string;
   const googlePlacesId = formData.get("google_places_id") as string;
 
-  if (!locationId || !googlePlacesId || !googleReviewLink) {
+  if (!locationId || !googlePlacesId || !googleReviewLink || !isSafeGoogleReviewUrl(googleReviewLink)) {
     return { ok: false, error: "failed" };
   }
 

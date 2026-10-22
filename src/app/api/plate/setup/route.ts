@@ -4,6 +4,7 @@ import { getSubscriptionById, setSubscriptionActive } from "@/lib/db/subscriptio
 import { getCustomerById } from "@/lib/db/customers";
 import { createLocation } from "@/lib/db/locations";
 import { uploadLogo } from "@/lib/storage";
+import { isSafeGoogleReviewUrl } from "@/lib/urls";
 import { sendPlateSetupConfirmation } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
@@ -18,6 +19,9 @@ export async function POST(request: NextRequest) {
 
   if (!plateNumber || !plateSecret || !locationName || !supportEmail) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  }
+  if (googleReviewLink && !isSafeGoogleReviewUrl(googleReviewLink)) {
+    return NextResponse.json({ error: "Invalid Google review link" }, { status: 400 });
   }
 
   // Re-verify plate and secret

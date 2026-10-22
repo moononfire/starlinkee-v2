@@ -8,6 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { generateRandomPassword } from "@/lib/password";
 import { sendQuickPlateCredentialsToAdmin } from "@/lib/email";
 import { uploadLogo } from "@/lib/storage";
+import { isSafeGoogleReviewUrl } from "@/lib/urls";
 
 export async function POST(request: NextRequest) {
   const authError = await requireAdmin();
@@ -31,6 +32,9 @@ export async function POST(request: NextRequest) {
 
   if (!plateId || !businessName || !email || !googleReviewLink) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  }
+  if (googleReviewLink && !isSafeGoogleReviewUrl(googleReviewLink)) {
+    return NextResponse.json({ error: "Invalid Google review link" }, { status: 400 });
   }
 
   const validDurations = [8, 15, 33];
