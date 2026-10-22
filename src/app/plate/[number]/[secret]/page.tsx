@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { headers, cookies } from "next/headers";
 import { after } from "next/server";
+import { safeEqual } from "@/lib/secure-compare";
 import { getPlateByNumber, incrementPlateVisits } from "@/lib/db/plates";
 import { getSubscriptionById } from "@/lib/db/subscriptions";
 import { getLocationBySubscriptionId } from "@/lib/db/locations";
@@ -23,7 +24,7 @@ export default async function PlatePage({ params }: Props) {
   if (!plate) notFound();
 
   // Strict secret key validation
-  if (secret !== plate.secret_key) notFound();
+  if (!safeEqual(secret, plate.secret_key)) notFound();
 
   const lang = await getLanguage(plate.plate_number, plate.plate_language);
 

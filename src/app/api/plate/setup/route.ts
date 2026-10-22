@@ -8,6 +8,7 @@ import { isSafeGoogleReviewUrl } from "@/lib/urls";
 import { sendPlateSetupConfirmation } from "@/lib/email";
 import { verifyActivationCode } from "@/lib/activation-code";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { safeEqual } from "@/lib/secure-compare";
 
 export async function POST(request: NextRequest) {
   const form = await request.formData();
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
 
   // Re-verify plate and secret
   const plate = await getPlateByNumber(plateNumber);
-  if (!plate || plateSecret !== plate.secret_key) {
+  if (!plate || !safeEqual(plateSecret, plate.secret_key)) {
     return NextResponse.json({ error: "Invalid plate" }, { status: 403 });
   }
 
