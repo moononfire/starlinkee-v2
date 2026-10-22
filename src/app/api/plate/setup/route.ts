@@ -7,7 +7,8 @@ import { uploadLogo } from "@/lib/storage";
 import { isSafeGoogleReviewUrl } from "@/lib/urls";
 import { sendPlateSetupConfirmation } from "@/lib/email";
 import { verifyActivationCode } from "@/lib/activation-code";
-import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/rate-limit";
+import { rateLimitPersistent } from "@/lib/rate-limit-persistent";
 import { safeEqual } from "@/lib/secure-compare";
 
 export async function POST(request: NextRequest) {
@@ -46,8 +47,8 @@ export async function POST(request: NextRequest) {
   // setting up a pending subscription also needs the activation code that was
   // emailed to the customer when the plate was assigned to them.
   if (
-    !rateLimit(`plate-setup-code:${plate.plate_number}`, 5, 15 * 60_000) ||
-    !rateLimit(`plate-setup-ip:${clientIp(request)}`, 20, 15 * 60_000)
+    !(await rateLimitPersistent(`plate-setup-code:${plate.plate_number}`, 5, 15 * 60_000)) ||
+    !(await rateLimitPersistent(`plate-setup-ip:${clientIp(request)}`, 20, 15 * 60_000))
   ) {
     return NextResponse.json({ error: "Too many attempts" }, { status: 429 });
   }

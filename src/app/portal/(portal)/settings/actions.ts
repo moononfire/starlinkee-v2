@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitPersistent } from "@/lib/rate-limit-persistent";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCustomerByEmail, getCustomerSubscriptions } from "@/lib/db/portal";
@@ -56,7 +56,7 @@ export async function updatePortalPassword(formData: FormData): Promise<ActionRe
 
   // A stolen session cookie alone must not be enough to take the account over:
   // re-check the current password (on a cookie-less client, so the session is untouched).
-  if (!currentPassword || !rateLimit(`portal-pw-change:${user.id}`, 5, 15 * 60_000)) {
+  if (!currentPassword || !(await rateLimitPersistent(`portal-pw-change:${user.id}`, 5, 15 * 60_000))) {
     return { ok: false, error: "wrong_current" };
   }
   const verifier = createClient(

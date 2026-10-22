@@ -2,6 +2,10 @@ import { sealData, unsealData } from "iron-session";
 
 export interface MobileLoyaltySession {
   phone: string;
+  /** How the phone was proven; absent on tokens issued before this field existed. */
+  method?: "otp" | "hint";
+  /** Issued-at (ms). Absent on legacy tokens. */
+  iat?: number;
 }
 
 // Login (Google Sign-In, then phone verified once via SMS OTP) is app-wide,
@@ -12,7 +16,7 @@ export interface MobileLoyaltySession {
 const TTL_SECONDS = 60 * 60 * 24 * 365 * 10;
 
 export async function signMobileToken(session: MobileLoyaltySession): Promise<string> {
-  return sealData(session, { password: process.env.SESSION_SECRET!, ttl: TTL_SECONDS });
+  return sealData({ ...session, iat: session.iat ?? Date.now() }, { password: process.env.SESSION_SECRET!, ttl: TTL_SECONDS });
 }
 
 export async function verifyMobileToken(token: string): Promise<MobileLoyaltySession | null> {

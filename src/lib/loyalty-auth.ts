@@ -1,10 +1,11 @@
 import { randomInt } from "crypto";
 import { timingSafeEqual } from "crypto";
-import { upsertOtp, getOtp, deleteOtp } from "./db/loyalty";
+import { upsertOtp, getOtp, deleteOtp, registerOtpAttempt } from "./db/loyalty";
 import { sendSms } from "./sms";
-import { rateLimit } from "./rate-limit";
+import { rateLimitPersistent } from "./rate-limit-persistent";
 import { normalizePhone } from "./phone";
 
+const MAX_OTP_ATTEMPTS = 5;
 const PHONE_PATTERN = /^\+?[0-9 ()-]{6,20}$/;
 
 export type LoyaltyAuthResult<T> = { ok: true; data: T } | { ok: false; status: number; error: string };
@@ -24,8 +25,8 @@ export async function requestLoyaltyOtp(rawPhone: unknown, ip: string): Promise<
 
   // Each request sends a paid SMS — throttle per phone and per IP.
   if (
-    !rateLimit(`otp-req-phone:${phone}`, 3, 15 * 60_000) ||
-    !rateLimit(`otp-req-ip:${ip}`, 10, 15 * 60_000)
+    !(await rateLimitPersistent(`otp-req-phone:${phone}`, 3, 15 * 60_000)) ||
+    !(await rateLimitPersistent(`otp-req-ip:${ip}`, 10, 15 * 60_000))
   ) {
     return { ok: false, status: 429, error: "Too many requests" };
   }
@@ -57,8 +58,8 @@ export async function verifyLoyaltyOtp(
 
   // A 4-digit code is brute-forceable — cap verification attempts.
   if (
-    !rateLimit(`otp-verify-phone:${phone}`, 5, 10 * 60_000) ||
-    !rateLimit(`otp-verify-ip:${ip}`, 20, 10 * 60_000)
+    !(await rateLimitPersistent(`otp-verify-phone:${phone}`, 5, 10 * 60_000)) ||
+    !(await rateLimitPersistent(`otp-verify-ip:${ip}`, 20, 10 * 60_000))
   ) {
     return { ok: false, status: 429, error: "Too many attempts" };
   }
@@ -70,6 +71,14 @@ export async function verifyLoyaltyOtp(
 
   if (new Date(otp.expires_at) < new Date()) {
     return { ok: false, status: 401, error: "Code expired" };
+  }
+
+  // Counted in the database next to the code, so spreading guesses over many
+  // server instances or waiting out an in-memory limiter does not help: the
+  // code is destroyed after MAX_OTP_ATTEMPTS wrong tries.
+  const attempt = await registerOtpAttempt(phone, MAX_OTP_ATTEMPTS);
+  if (attempt > MAX_OTP_ATTEMPTS) {
+    return { ok: false, status: 429, error: "Too many attempts" };
   }
 
   const storedBuf = Buffer.from(otp.otp_code);

@@ -4,7 +4,8 @@ import { checkLeadExists, createLead, generateCouponCode } from "@/lib/db/leads"
 import { validateScanToken } from "@/lib/db/scan-tokens";
 import { sendSms } from "@/lib/sms";
 import { sendPromoEmail } from "@/lib/email";
-import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/rate-limit";
+import { rateLimitPersistent } from "@/lib/rate-limit-persistent";
 import { getPromoText } from "@/lib/promo-i18n";
 import { t } from "@/lib/translations";
 import { normalizePhone } from "@/lib/phone";
@@ -29,8 +30,8 @@ export async function POST(request: NextRequest) {
   // Each accepted request sends a paid SMS — one scan should yield one promo,
   // not a fan-out to arbitrary numbers within the token's lifetime.
   if (
-    !rateLimit(`promo-token:${scanToken}`, 3, 10 * 60_000) ||
-    !rateLimit(`promo-ip:${clientIp(request)}`, 5, 10 * 60_000)
+    !(await rateLimitPersistent(`promo-token:${scanToken}`, 3, 10 * 60_000)) ||
+    !(await rateLimitPersistent(`promo-ip:${clientIp(request)}`, 5, 10 * 60_000))
   ) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }

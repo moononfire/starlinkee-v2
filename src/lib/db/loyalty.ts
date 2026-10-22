@@ -145,6 +145,7 @@ export async function upsertOtp(phone: string, code: string, expiresAt: Date): P
     phone,
     otp_code: code,
     expires_at: expiresAt.toISOString(),
+    attempts: 0,
   });
   if (error) throw new Error(`Failed to upsert OTP: ${error.message}`);
 }
@@ -153,6 +154,23 @@ export async function getOtp(phone: string): Promise<LoyaltyOtp | null> {
   const supabase = createAdminClient();
   const { data } = await supabase.from("loyalty_otp").select("*").eq("phone", phone).single();
   return data ?? null;
+}
+
+/**
+ * Registers one verification attempt against the phone's current code in the
+ * database; the code is deleted once more than `max` attempts were made.
+ * Returns the attempt number (0 = no code). If the database function is
+ * unavailable (migration not applied yet) it logs and reports 1 so login
+ * keeps working on the old, in-memory-limited behaviour.
+ */
+export async function registerOtpAttempt(phone: string, max: number): Promise<number> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc("loyalty_otp_attempt", { p_phone: phone, p_max: max });
+  if (error || typeof data !== "number") {
+    console.error("[loyalty] loyalty_otp_attempt failed:", error?.message ?? "unexpected result");
+    return 1;
+  }
+  return data;
 }
 
 export async function deleteOtp(phone: string): Promise<void> {

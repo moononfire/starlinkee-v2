@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const { mockGetOtp, mockDeleteOtp, mockSignMobileToken, mockLinkLoyaltyEmail } = vi.hoisted(() => ({
+const { mockGetOtp, mockDeleteOtp, mockSignMobileToken, mockLinkLoyaltyEmail, mockRegisterAttempt } = vi.hoisted(() => ({
   mockGetOtp: vi.fn(),
+  mockRegisterAttempt: vi.fn(),
   mockDeleteOtp: vi.fn(),
   mockSignMobileToken: vi.fn(),
   mockLinkLoyaltyEmail: vi.fn(),
@@ -11,6 +12,7 @@ const { mockGetOtp, mockDeleteOtp, mockSignMobileToken, mockLinkLoyaltyEmail } =
 vi.mock("@/lib/db/loyalty", () => ({
   getOtp: mockGetOtp,
   deleteOtp: mockDeleteOtp,
+  registerOtpAttempt: mockRegisterAttempt,
   linkLoyaltyEmail: mockLinkLoyaltyEmail,
 }));
 vi.mock("@/lib/mobile-session", () => ({ signMobileToken: mockSignMobileToken }));
@@ -35,6 +37,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   resetRateLimits();
   mockGetOtp.mockResolvedValue(validOtp);
+  mockRegisterAttempt.mockResolvedValue(1);
   mockDeleteOtp.mockResolvedValue(undefined);
   mockSignMobileToken.mockResolvedValue("signed-token");
   mockLinkLoyaltyEmail.mockResolvedValue(undefined);
@@ -61,6 +64,19 @@ describe("POST /api/mobile/loyalty/verify-otp", () => {
     expect(res.status).toBe(401);
   });
 
+  it("returns 429 without checking the code once the database attempt counter is exhausted", async () => {
+    mockRegisterAttempt.mockResolvedValue(6);
+    const res = await POST(makeRequest({ phone: "+48600000000", code: "5678" }));
+    expect(res.status).toBe(429);
+    expect(mockSignMobileToken).not.toHaveBeenCalled();
+    expect(mockDeleteOtp).not.toHaveBeenCalled();
+  });
+
+  it("counts every attempt against the stored code (max 5)", async () => {
+    await POST(makeRequest({ phone: "+48600000000", code: "0000" }));
+    expect(mockRegisterAttempt).toHaveBeenCalledWith("+48600000000", 5);
+  });
+
   it("returns 401 for wrong code", async () => {
     const res = await POST(makeRequest({ phone: "+48600000000", code: "0000" }));
     expect(res.status).toBe(401);
@@ -73,7 +89,7 @@ describe("POST /api/mobile/loyalty/verify-otp", () => {
     expect(body.ok).toBe(true);
     expect(body.token).toBe("signed-token");
     expect(mockDeleteOtp).toHaveBeenCalledOnce();
-    expect(mockSignMobileToken).toHaveBeenCalledWith({ phone: "+48600000000" });
+    expect(mockSignMobileToken).toHaveBeenCalledWith({ phone: "+48600000000", method: "otp" });
   });
 
   it("links the email to the phone when provided", async () => {

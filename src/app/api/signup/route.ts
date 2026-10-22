@@ -5,7 +5,8 @@ import { upsertCustomerByEmail } from "@/lib/db/customers";
 import { getCustomerByEmail } from "@/lib/db/portal";
 import { sendAccountLink } from "@/lib/email";
 import { isEmailExistsError } from "@/lib/services/portal-account";
-import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/rate-limit";
+import { rateLimitPersistent } from "@/lib/rate-limit-persistent";
 
 const ALLOWED_LANGUAGES = ["en", "de", "pl"] as const;
 
@@ -74,8 +75,8 @@ export async function POST(request: NextRequest) {
 
   const email = rawEmail.trim().toLowerCase();
   if (
-    !rateLimit(`signup-email:${email}`, 3, 60 * 60_000) ||
-    !rateLimit(`signup-ip:${clientIp(request)}`, 20, 60 * 60_000)
+    !(await rateLimitPersistent(`signup-email:${email}`, 3, 60 * 60_000)) ||
+    !(await rateLimitPersistent(`signup-ip:${clientIp(request)}`, 20, 60 * 60_000))
   ) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
