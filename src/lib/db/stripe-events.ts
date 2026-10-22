@@ -3,12 +3,18 @@ import { createAdminClient } from "../supabase/admin";
 /** A "processing" claim older than this is assumed dead (function timed out) and may be retried. */
 const STALE_PROCESSING_MS = 5 * 60_000;
 
-export type ClaimResult = "claimed" | "duplicate";
+/**
+ * claimed     - this delivery owns the event and must process it
+ * done        - already processed: acknowledge with 2xx
+ * in_progress - another delivery is processing it right now: do NOT acknowledge
+ *               (respond non-2xx so Stripe retries later; if that attempt dies
+ *               or times out, the retry will find it stale/failed and take over)
+ */
+export type ClaimResult = "claimed" | "done" | "in_progress";
 
 /**
  * Atomically claims a Stripe event for processing. Stripe delivers at least
- * once, so a second delivery of an event that is done (or still being worked
- * on) is a duplicate; a previously failed or stale claim may be retried.
+ * once; a previously failed or stale claim may be taken over.
  */
 export async function claimStripeEvent(eventId: string): Promise<ClaimResult> {
   const supabase = createAdminClient();
@@ -27,7 +33,10 @@ export async function claimStripeEvent(eventId: string): Promise<ClaimResult> {
     .or(`status.eq.failed,and(status.eq.processing,updated_at.lt.${staleBefore})`)
     .select("event_id");
   if (retryError) throw new Error(`Failed to re-claim Stripe event: ${retryError.message}`);
-  return (retried?.length ?? 0) > 0 ? "claimed" : "duplicate";
+  if ((retried?.length ?? 0) > 0) return "claimed";
+
+  const { data: current } = await supabase.from("stripe_events").select("status").eq("event_id", eventId).single();
+  return current?.status === "done" ? "done" : "in_progress";
 }
 
 export async function markStripeEventDone(eventId: string): Promise<void> {

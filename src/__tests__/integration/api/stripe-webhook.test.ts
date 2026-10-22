@@ -86,12 +86,22 @@ describe("POST /api/stripe/webhook", () => {
     expect(mockDone).toHaveBeenCalledWith("evt_1");
   });
 
-  it("does not process a redelivered event twice", async () => {
-    mockClaim.mockResolvedValue("duplicate");
+  it("acknowledges (200) a redelivery of an event that is already done, without processing", async () => {
+    mockClaim.mockResolvedValue("done");
     mockConstructEvent.mockReturnValue({ id: "evt_1", type: "invoice.payment_succeeded", data: { object: { id: "in_1" } } });
 
     const res = await POST(makeRequest("{}", "valid-sig"));
     expect(res.status).toBe(200);
+    expect(mockProcessStripeInvoice).not.toHaveBeenCalled();
+    expect(mockDone).not.toHaveBeenCalled();
+  });
+
+  it("does NOT acknowledge a delivery that arrives while the first attempt is still processing (409 so Stripe retries)", async () => {
+    mockClaim.mockResolvedValue("in_progress");
+    mockConstructEvent.mockReturnValue({ id: "evt_1", type: "invoice.payment_succeeded", data: { object: { id: "in_1" } } });
+
+    const res = await POST(makeRequest("{}", "valid-sig"));
+    expect(res.status).toBe(409);
     expect(mockProcessStripeInvoice).not.toHaveBeenCalled();
     expect(mockDone).not.toHaveBeenCalled();
   });

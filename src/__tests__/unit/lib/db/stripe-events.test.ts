@@ -7,13 +7,14 @@ import { claimStripeEvent } from "@/lib/db/stripe-events";
 
 beforeEach(() => vi.clearAllMocks());
 
-function mockTable(insertResult: unknown, retryResult?: unknown) {
+function mockTable(insertResult: unknown, retryResult?: unknown, currentStatus?: string) {
   const select = vi.fn().mockResolvedValue(retryResult);
   const orFn = vi.fn((_filter: string) => ({ select }));
   const eq = vi.fn(() => ({ or: orFn }));
   supabaseMock.from.mockReturnValue({
     insert: vi.fn().mockResolvedValue(insertResult),
     update: vi.fn(() => ({ eq })),
+    select: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { status: currentStatus } }) })) })),
   });
   return { orFn };
 }
@@ -24,9 +25,14 @@ describe("claimStripeEvent()", () => {
     expect(await claimStripeEvent("evt_1")).toBe("claimed");
   });
 
-  it("reports a duplicate when the event is done or being processed", async () => {
-    mockTable({ error: { code: "23505", message: "dup" } }, { data: [], error: null });
-    expect(await claimStripeEvent("evt_1")).toBe("duplicate");
+  it("reports done for an event that was already processed", async () => {
+    mockTable({ error: { code: "23505", message: "dup" } }, { data: [], error: null }, "done");
+    expect(await claimStripeEvent("evt_1")).toBe("done");
+  });
+
+  it("reports in_progress (not done) while a fresh attempt is still processing", async () => {
+    mockTable({ error: { code: "23505", message: "dup" } }, { data: [], error: null }, "processing");
+    expect(await claimStripeEvent("evt_1")).toBe("in_progress");
   });
 
   it("re-claims a failed or stale event, only matching failed/stale rows", async () => {

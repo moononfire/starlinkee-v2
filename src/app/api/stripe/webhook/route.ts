@@ -29,8 +29,14 @@ export async function POST(request: NextRequest) {
 
   // Stripe delivers at least once: a redelivery of an event we already
   // handled (or are handling) must not create a second order/shipment.
-  if ((await claimStripeEvent(event.id)) === "duplicate") {
+  const claim = await claimStripeEvent(event.id);
+  if (claim === "done") {
     return NextResponse.json({ received: true, duplicate: true });
+  }
+  if (claim === "in_progress") {
+    // Another delivery is still working on it. Acknowledging here would make
+    // Stripe stop retrying even if that attempt then fails or times out.
+    return NextResponse.json({ error: "Event is being processed" }, { status: 409 });
   }
 
   try {
