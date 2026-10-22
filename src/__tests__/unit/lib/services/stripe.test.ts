@@ -11,7 +11,6 @@ const {
   mockSendOrderConfirmationToAdmin,
   mockGetCustomerByEmail,
   mockSendPortalCredentials,
-  mockListUsers,
   mockCreateUser,
   mockGenerateRandomPassword,
 } = vi.hoisted(() => ({
@@ -24,7 +23,6 @@ const {
   mockSendOrderConfirmationToAdmin: vi.fn(),
   mockGetCustomerByEmail: vi.fn(),
   mockSendPortalCredentials: vi.fn(),
-  mockListUsers: vi.fn(),
   mockCreateUser: vi.fn(),
   mockGenerateRandomPassword: vi.fn(),
 }));
@@ -50,7 +48,6 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
     auth: {
       admin: {
-        listUsers: mockListUsers,
         createUser: mockCreateUser,
       },
     },
@@ -98,7 +95,6 @@ beforeEach(() => {
   mockSendOrderConfirmationToAdmin.mockResolvedValue(undefined);
   mockGetCustomerByEmail.mockResolvedValue(null);
   mockSendPortalCredentials.mockResolvedValue(undefined);
-  mockListUsers.mockResolvedValue({ data: { users: [] } });
   mockCreateUser.mockResolvedValue({ error: null });
   mockGenerateRandomPassword.mockReturnValue("generated-password");
 });
@@ -180,8 +176,6 @@ describe("processInvoicePaymentSucceeded()", () => {
   });
 
   it("creates a portal account with a generated password and emails the credentials when none exists", async () => {
-    mockListUsers.mockResolvedValue({ data: { users: [] } });
-
     await processInvoicePaymentSucceeded(makeInvoice());
 
     expect(mockCreateUser).toHaveBeenCalledWith(
@@ -199,12 +193,11 @@ describe("processInvoicePaymentSucceeded()", () => {
     );
   });
 
-  it("skips account creation and sends a passwordless email when the account already exists", async () => {
-    mockListUsers.mockResolvedValue({ data: { users: [{ email: "test@example.com" }] } });
+  it("sends a passwordless email when createUser reports the account already exists", async () => {
+    mockCreateUser.mockResolvedValue({ error: { code: "email_exists", message: "A user with this email address has already been registered" } });
 
     await processInvoicePaymentSucceeded(makeInvoice());
 
-    expect(mockCreateUser).not.toHaveBeenCalled();
     expect(mockSendPortalCredentials).toHaveBeenCalledWith(
       "test@example.com",
       "en",

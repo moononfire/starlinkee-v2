@@ -12,7 +12,7 @@ import { getCustomerByEmail } from "../db/portal";
 import { getCustomerById } from "../db/customers";
 import { assignPlateToSubscription } from "../db/plates";
 import { issueActivationCode } from "./activation";
-import { createAdminClient } from "../supabase/admin";
+import { createConfirmedPortalUser } from "./portal-account";
 import { generateRandomPassword } from "../password";
 
 // Product IDs match the seeded products table
@@ -264,23 +264,10 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
   const customer = await getCustomerById(customerId);
   const language = customer?.preferred_language ?? countryLanguage;
 
-  const supabaseAdmin = createAdminClient();
-  const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-  const existingAccount = existingUsers?.users?.some((u) => u.email === email) ?? false;
-
-  let portalPassword: string | null = null;
-  if (!existingAccount) {
-    portalPassword = generateRandomPassword();
-    const { error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password: portalPassword,
-      email_confirm: true,
-    });
-    if (createError) {
-      console.error("[stripe] Failed to create portal user:", createError);
-      portalPassword = null;
-    }
-  }
+  const generatedPassword = generateRandomPassword();
+  const accountResult = await createConfirmedPortalUser(email, generatedPassword);
+  const existingAccount = accountResult === "exists";
+  const portalPassword: string | null = accountResult === "created" ? generatedPassword : null;
 
   await sendPortalCredentials(email, language, {
     customerName: invoice.customer_name ?? email,
