@@ -8,7 +8,7 @@ import { generateRandomPassword } from "@/lib/password";
 import { sendQuickPlateCredentialsToAdmin } from "@/lib/email";
 import { uploadLogo } from "@/lib/storage";
 import { createConfirmedPortalUser } from "@/lib/services/portal-account";
-import { isSafeGoogleReviewUrl } from "@/lib/urls";
+import { isSafeGoogleReviewUrl, isSafeHttpUrl } from "@/lib/urls";
 
 export async function POST(request: NextRequest) {
   const authError = await requireAdmin();
@@ -35,6 +35,9 @@ export async function POST(request: NextRequest) {
   }
   if (googleReviewLink && !isSafeGoogleReviewUrl(googleReviewLink)) {
     return NextResponse.json({ error: "Invalid Google review link" }, { status: 400 });
+  }
+  if (menuLink && !isSafeHttpUrl(menuLink)) {
+    return NextResponse.json({ error: "Menu link must start with http:// or https://" }, { status: 400 });
   }
 
   const validDurations = [8, 15, 33];

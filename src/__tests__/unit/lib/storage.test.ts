@@ -16,8 +16,14 @@ vi.mock("@/lib/supabase/admin", () => ({
 
 import { uploadLogo } from "@/lib/storage";
 
-function makeFile(type: string, sizeBytes: number): File {
+const SIGNATURES: Record<string, number[]> = {
+  "image/png": [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+  "image/jpeg": [0xff, 0xd8, 0xff],
+};
+
+function makeFile(type: string, sizeBytes: number, withSignature = true): File {
   const buffer = new Uint8Array(sizeBytes);
+  if (withSignature) buffer.set((SIGNATURES[type] ?? []).slice(0, sizeBytes));
   return new File([buffer], "test.img", { type });
 }
 
@@ -42,6 +48,18 @@ describe("uploadLogo()", () => {
   it("rejects files larger than 5MB", async () => {
     const file = makeFile("image/png", 5 * 1024 * 1024 + 1);
     await expect(uploadLogo(file)).rejects.toThrow("5MB");
+  });
+
+  it("rejects content that is not really a PNG/JPEG even if the declared type says so", async () => {
+    const html = new File(["<html><script>alert(1)</script></html>"], "x.png", { type: "image/png" });
+    await expect(uploadLogo(html)).rejects.toThrow("does not match");
+    await expect(uploadLogo(makeFile("image/jpeg", 100, false))).rejects.toThrow("does not match");
+    expect(mockUpload).not.toHaveBeenCalled();
+  });
+
+  it("rejects a JPEG body declared as PNG", async () => {
+    const jpegAsPng = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0])], "x.png", { type: "image/png" });
+    await expect(uploadLogo(jpegAsPng)).rejects.toThrow("does not match");
   });
 
   it("accepts a PNG file under 5MB and returns path and publicUrl", async () => {
