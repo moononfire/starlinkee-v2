@@ -75,12 +75,21 @@ export default function LocationSettings({
           className="space-y-3"
           lang={lang}
           errorMessages={{
+            wrong_current: t("portal_password_wrong_current", lang),
             mismatch: t("portal_password_mismatch", lang),
             short: t("portal_password_too_short", lang),
             failed: t("portal_password_failed", lang),
           }}
         >
           <input type="hidden" name="subscription_id" value={subscriptionId} />
+          <input
+            name="current_password"
+            required
+            type="password"
+            autoComplete="current-password"
+            placeholder={t("portal_password_current", lang)}
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
           <div className="flex flex-col sm:flex-row gap-3">
             <input
               name="password"

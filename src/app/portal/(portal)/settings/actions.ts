@@ -2,6 +2,8 @@
 
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
+import { rateLimit } from "@/lib/rate-limit";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCustomerByEmail, getCustomerSubscriptions } from "@/lib/db/portal";
@@ -38,6 +40,7 @@ export async function updatePortalPassword(formData: FormData): Promise<ActionRe
   if (!user?.email) redirect("/portal/login");
 
   const subscriptionId = Number(formData.get("subscription_id"));
+  const currentPassword = formData.get("current_password") as string;
   const password = formData.get("password") as string;
   const passwordConfirm = formData.get("password_confirm") as string;
 
@@ -50,6 +53,22 @@ export async function updatePortalPassword(formData: FormData): Promise<ActionRe
   if (password.length < 8) {
     return { ok: false, error: "short" };
   }
+
+  // A stolen session cookie alone must not be enough to take the account over:
+  // re-check the current password (on a cookie-less client, so the session is untouched).
+  if (!currentPassword || !rateLimit(`portal-pw-change:${user.id}`, 5, 15 * 60_000)) {
+    return { ok: false, error: "wrong_current" };
+  }
+  const verifier = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  );
+  const { error: verifyError } = await verifier.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  });
+  if (verifyError) return { ok: false, error: "wrong_current" };
 
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
