@@ -440,7 +440,9 @@
     "portal_loyalty_stats_title": "Loyalty statistics",
     "portal_loyalty_total_users": "Total loyalty users",
     "portal_loyalty_total_stamps": "Total stamps collected",
-    "email_required_input": "Email (required)"
+    "email_required_input": "Email (required)",
+    "setup_form_activation_code": "Activation code",
+    "setup_form_activation_code_hint": "The code from the email we sent you when your plate was assigned to your account."
   },
   "de": {
     "back_button": "Zurück",
@@ -884,7 +886,9 @@
     "portal_loyalty_stats_title": "Treuestatistiken",
     "portal_loyalty_total_users": "Gesamtzahl der Treuenutzer",
     "portal_loyalty_total_stamps": "Gesammelte Stempel",
-    "email_required_input": "E-Mail (erforderlich)"
+    "email_required_input": "E-Mail (erforderlich)",
+    "setup_form_activation_code": "Aktivierungscode",
+    "setup_form_activation_code_hint": "Der Code aus der E-Mail, die wir Ihnen bei der Zuordnung Ihres Schilds zu Ihrem Konto geschickt haben."
   },
   "pl": {
     "back_button": "Powrót",
@@ -1327,7 +1331,9 @@
     "portal_loyalty_stats_title": "Statystyki programu",
     "portal_loyalty_total_users": "Liczba użytkowników (kart)",
     "portal_loyalty_total_stamps": "Rozdane pieczątki",
-    "email_required_input": "Adres e-mail (wymagany)"
+    "email_required_input": "Adres e-mail (wymagany)",
+    "setup_form_activation_code": "Kod aktywacyjny",
+    "setup_form_activation_code_hint": "Kod z wiadomości e-mail, którą wysłaliśmy po przypisaniu tabliczki do Twojego konta."
   },
   "zh": {
     "proxy_page_title": "您如何评价您的体验？",

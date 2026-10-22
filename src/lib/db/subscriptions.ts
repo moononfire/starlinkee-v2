@@ -26,6 +26,15 @@ export async function getSubscriptionById(id: number): Promise<Subscription | nu
   return data;
 }
 
+export async function setActivationCodeHash(subscriptionId: number, hash: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({ activation_code_hash: hash })
+    .eq("subscription_id", subscriptionId);
+  if (error) throw new Error(`Failed to store activation code: ${error.message}`);
+}
+
 export async function deactivateExpiredSubscriptions(): Promise<number> {
   const supabase = createAdminClient();
   const { data, error } = await supabase

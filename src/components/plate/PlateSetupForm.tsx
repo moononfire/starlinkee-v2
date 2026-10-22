@@ -289,6 +289,23 @@ export default function PlateSetupForm({ plateNumber, plateSecret, lang }: Props
 
             <div>
               <label className="block text-base font-semibold mb-0.5" style={{ color: "#111827" }}>
+                {t("setup_form_activation_code", currentLang)} *
+              </label>
+              <p className="text-xs mb-2" style={{ color: "#6b7280" }}>
+                {t("setup_form_activation_code_hint", currentLang)}
+              </p>
+              <input
+                name="activation_code"
+                required
+                autoComplete="off"
+                autoCapitalize="characters"
+                className="w-full rounded-lg p-3 text-sm uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-gray-400"
+                style={{ border: "1px solid #d1d5db", color: "#111827", backgroundColor: "#ffffff" }}
+              />
+            </div>
+
+            <div>
+              <label className="block text-base font-semibold mb-0.5" style={{ color: "#111827" }}>
                 {t("setup_form_support_email", currentLang)} *
               </label>
               <p className="text-xs mb-2" style={{ color: "#6b7280" }}>

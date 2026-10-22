@@ -618,3 +618,52 @@ export async function sendPlateImportLinks(data: {
     `Plate import — ${data.plateCount} plates\n\n${data.fileContent}`
   );
 }
+
+const activationStrings = {
+  en: {
+    subject: "Your Starlinkee activation code",
+    title: "Activate your Starlinkee plate",
+    body: "Your Starlinkee plate has been assigned to your account. To set it up, scan the plate and enter this activation code when asked:",
+    plates: "Plate(s)",
+    codeLabel: "Activation code",
+    footer: "Keep this code private. If you did not order a Starlinkee plate, please ignore this email.",
+  },
+  de: {
+    subject: "Ihr Starlinkee-Aktivierungscode",
+    title: "Starlinkee-Schild aktivieren",
+    body: "Ihr Starlinkee-Schild wurde Ihrem Konto zugeordnet. Scannen Sie zur Einrichtung das Schild und geben Sie bei Aufforderung diesen Aktivierungscode ein:",
+    plates: "Schild(er)",
+    codeLabel: "Aktivierungscode",
+    footer: "Halten Sie diesen Code geheim. Wenn Sie kein Starlinkee-Schild bestellt haben, ignorieren Sie diese E-Mail.",
+  },
+  pl: {
+    subject: "Twój kod aktywacyjny Starlinkee",
+    title: "Aktywuj swoją tabliczkę Starlinkee",
+    body: "Twoja tabliczka Starlinkee została przypisana do Twojego konta. Aby ją skonfigurować, zeskanuj tabliczkę i wpisz ten kod aktywacyjny, gdy zostaniesz o to poproszony:",
+    plates: "Tabliczki",
+    codeLabel: "Kod aktywacyjny",
+    footer: "Nie udostępniaj tego kodu. Jeśli nie zamawiałeś tabliczki Starlinkee, zignoruj tę wiadomość.",
+  },
+} satisfies Record<Lang, object>;
+
+export async function sendPlateActivationCode(
+  to: string,
+  language: string,
+  data: { plateNumbers: string[]; code: string }
+) {
+  const s = activationStrings[toLang(language)];
+  const plates = data.plateNumbers.join(", ");
+  const html = layout(
+    h1(s.title) +
+      para(s.body) +
+      dataTable([s.plates, esc(plates)], [s.codeLabel, `<strong style="font-size:20px;letter-spacing:2px;">${esc(data.code)}</strong>`]) +
+      divider() +
+      para(s.footer)
+  );
+  await sendMail(
+    to,
+    s.subject,
+    html,
+    [s.title, "", s.body, "", `${s.plates}: ${plates}`, `${s.codeLabel}: ${data.code}`, "", s.footer].join("\n")
+  );
+}

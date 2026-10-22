@@ -11,6 +11,7 @@ import {
 import { getCustomerByEmail } from "../db/portal";
 import { getCustomerById } from "../db/customers";
 import { assignPlateToSubscription } from "../db/plates";
+import { issueActivationCode } from "./activation";
 import { createAdminClient } from "../supabase/admin";
 import { generateRandomPassword } from "../password";
 
@@ -141,6 +142,7 @@ export async function processRenewalInvoicePaid(invoice: Stripe.Invoice): Promis
   });
 
   await assignPlateToSubscription(plateId, subscription.subscription_id);
+  await issueActivationCode(subscription.subscription_id);
 
   await sendRenewalConfirmationToAdmin({ plateNumber, customerEmail: email, interval }).catch((err) =>
     console.error("[stripe] renewal admin email failed:", err)

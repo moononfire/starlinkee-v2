@@ -57,6 +57,16 @@ export async function assignPlateToSubscription(
     .eq("plate_id", plateId);
 }
 
+export async function listPlateNumbersBySubscription(subscriptionId: number): Promise<string[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("plates")
+    .select("plate_number")
+    .eq("subscription_id", subscriptionId)
+    .order("plate_id");
+  return (data ?? []).map((p) => p.plate_number);
+}
+
 export async function assignNfcToPlate(
   plateNumber: string,
   nfcUid: string

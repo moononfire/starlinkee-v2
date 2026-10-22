@@ -6,6 +6,8 @@ import { createLocation } from "@/lib/db/locations";
 import { uploadLogo } from "@/lib/storage";
 import { isSafeGoogleReviewUrl } from "@/lib/urls";
 import { sendPlateSetupConfirmation } from "@/lib/email";
+import { verifyActivationCode } from "@/lib/activation-code";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   const form = await request.formData();
@@ -37,6 +39,19 @@ export async function POST(request: NextRequest) {
   const subscription = await getSubscriptionById(plate.subscription_id);
   if (!subscription || subscription.status !== "pending") {
     return NextResponse.json({ error: "Subscription is not pending" }, { status: 400 });
+  }
+
+  // The plate secret is printed on the plate (and was publicly leaked), so
+  // setting up a pending subscription also needs the activation code that was
+  // emailed to the customer when the plate was assigned to them.
+  if (
+    !rateLimit(`plate-setup-code:${plate.plate_number}`, 5, 15 * 60_000) ||
+    !rateLimit(`plate-setup-ip:${clientIp(request)}`, 20, 15 * 60_000)
+  ) {
+    return NextResponse.json({ error: "Too many attempts" }, { status: 429 });
+  }
+  if (!verifyActivationCode(form.get("activation_code"), subscription.activation_code_hash)) {
+    return NextResponse.json({ error: "Invalid activation code" }, { status: 403 });
   }
 
   // Upload logo if provided

@@ -22,6 +22,7 @@ export interface Subscription {
   activation_datetime: string | null;
   expiration_datetime: string | null;
   status: "pending" | "active" | "inactive";
+  activation_code_hash?: string | null;
   created_at: string;
   updated_at: string;
 }

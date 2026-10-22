@@ -5,6 +5,7 @@ import { listUnassignedPlates } from "@/lib/db/plates";
 import { createOrderManual, createOrderItem, createShipment } from "@/lib/db/orders";
 import { createSubscription } from "@/lib/db/subscriptions";
 import { assignPlateToSubscription } from "@/lib/db/plates";
+import { issueActivationCode } from "@/lib/services/activation";
 import { sendOrderConfirmationToAdmin } from "@/lib/email";
 import { createAdminClient } from "@/lib/supabase/admin";
 import PlatesPicker from "@/components/admin/PlatesPicker";
@@ -57,6 +58,7 @@ async function createOrderAction(formData: FormData) {
   for (const plateId of plateNumbers) {
     await assignPlateToSubscription(plateId, sub.subscription_id);
   }
+  if (plateNumbers.length > 0) await issueActivationCode(sub.subscription_id);
 
   if (withShipment) {
     await createShipment({
