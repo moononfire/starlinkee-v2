@@ -22,6 +22,7 @@ const {
   mockGetSubscriptionById,
   mockGetPlateById,
   mockAssignPlate,
+  mockIssueCode,
 } = vi.hoisted(() => ({
   mockUpsertCustomerByEmail: vi.fn(),
   mockGetCustomerById: vi.fn(),
@@ -43,6 +44,7 @@ const {
   mockGetSubscriptionById: vi.fn(),
   mockGetPlateById: vi.fn(),
   mockAssignPlate: vi.fn(),
+  mockIssueCode: vi.fn(),
 }));
 
 vi.mock("@/lib/db/customers", () => ({
@@ -71,7 +73,7 @@ vi.mock("@/lib/db/plates", () => ({
   assignPlateToSubscription: mockAssignPlate,
   getPlateById: mockGetPlateById,
 }));
-vi.mock("@/lib/services/activation", () => ({ issueActivationCode: vi.fn() }));
+vi.mock("@/lib/services/activation", () => ({ issueActivationCode: mockIssueCode }));
 vi.mock("@/lib/email", () => ({
   sendOrderConfirmationToAdmin: mockSendOrderConfirmationToAdmin,
   sendPortalCredentials: mockSendPortalCredentials,
@@ -376,11 +378,31 @@ describe("processStripeInvoice() routing by billing_reason", () => {
       expect(mockAssignPlate).not.toHaveBeenCalled();
     });
 
-    it("a retried first invoice does not create a second subscription", async () => {
-      mockListSubsByInvoice.mockResolvedValue([{ subscription_id: 50 }]);
+    it("a retried first invoice does not create a second subscription when everything is already in place", async () => {
+      mockListSubsByInvoice.mockResolvedValue([{ subscription_id: 50, status: "pending", activation_code_hash: "h" }]);
+      mockGetPlateById.mockResolvedValue({ plate_id: 7, subscription_id: 50 });
       await processStripeInvoice(renewal("subscription_create"));
       expect(mockCreateSubscription).not.toHaveBeenCalled();
       expect(mockAssignPlate).not.toHaveBeenCalled();
+      expect(mockIssueCode).not.toHaveBeenCalled();
+    });
+
+    it("resumes a first attempt that died after createSubscription: attaches the plate and issues the code", async () => {
+      // 1st attempt: subscription created, then assign throws
+      mockAssignPlate.mockRejectedValueOnce(new Error("db down"));
+      await expect(processStripeInvoice(renewal("subscription_create"))).rejects.toThrow("db down");
+      expect(mockCreateSubscription).toHaveBeenCalledTimes(1);
+
+      // Stripe retries: the subscription for this invoice now exists, the plate is not attached yet
+      mockListSubsByInvoice.mockResolvedValue([{ subscription_id: 50, status: "pending", activation_code_hash: null }]);
+      mockGetPlateById.mockResolvedValue({ plate_id: 7, subscription_id: null });
+      mockAssignPlate.mockResolvedValue(undefined);
+
+      await processStripeInvoice(renewal("subscription_create"));
+
+      expect(mockCreateSubscription).toHaveBeenCalledTimes(1); // no second subscription
+      expect(mockAssignPlate).toHaveBeenLastCalledWith(7, 50);
+      expect(mockIssueCode).toHaveBeenCalledWith(50);
     });
   });
 });

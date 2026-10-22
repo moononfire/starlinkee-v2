@@ -220,41 +220,55 @@ export async function processRenewalInvoicePaid(
     return;
   }
 
-  // Retry safety: the first invoice may already have created the subscription.
-  if ((await listSubscriptionsByStripeInvoice(invoice.id!)).length > 0) return;
+  // Retry safety: a previous attempt may have died part-way, so resume instead
+  // of starting over or giving up: reuse the subscription already created for
+  // this invoice and complete whatever is still missing.
+  const existing = invoice.id ? (await listSubscriptionsByStripeInvoice(invoice.id))[0] ?? null : null;
+  let subscription: Subscription | null = existing;
+  const created = !existing;
 
-  if (!email) {
-    console.error(`[stripe] renewal invoice ${invoice.id} has no customer_email — skipping`);
-    return;
+  if (!subscription) {
+    if (!email) {
+      console.error(`[stripe] renewal invoice ${invoice.id} has no customer_email — skipping`);
+      return;
+    }
+
+    const customerId = await upsertCustomerByEmail({
+      email,
+      customer_name: invoice.customer_name ?? email,
+      customer_type: "individual",
+      source: "Stripe",
+      country: invoice.customer_address?.country ?? undefined,
+      phone: invoice.customer_phone ?? undefined,
+      preferred_language: toCustomerLanguage(metadata.plate_language),
+    });
+
+    // Left as "pending" — the plate page will show the setup form so the
+    // customer can fill in their location before the subscription goes active.
+    subscription = await createSubscription({
+      customer_id: customerId,
+      subscription_name: "Subskrypcja",
+      duration_in_days: durationDays,
+      is_free: false,
+      stripe_subscription_id: stripeSubscriptionId,
+      stripe_invoice_id: invoice.id ?? undefined,
+    });
   }
 
-  const customerId = await upsertCustomerByEmail({
-    email,
-    customer_name: invoice.customer_name ?? email,
-    customer_type: "individual",
-    source: "Stripe",
-    country: invoice.customer_address?.country ?? undefined,
-    phone: invoice.customer_phone ?? undefined,
-    preferred_language: toCustomerLanguage(metadata.plate_language),
-  });
+  const plate = await getPlateById(plateId);
+  if (plate?.subscription_id !== subscription.subscription_id) {
+    await assignPlateToSubscription(plateId, subscription.subscription_id);
+  }
+  // Without the code the customer cannot set the plate up (/api/plate/setup).
+  if (!subscription.activation_code_hash && subscription.status === "pending") {
+    await issueActivationCode(subscription.subscription_id);
+  }
 
-  // Left as "pending" — the plate page will show the setup form so the
-  // customer can fill in their location before the subscription goes active.
-  const subscription = await createSubscription({
-    customer_id: customerId,
-    subscription_name: "Subskrypcja",
-    duration_in_days: durationDays,
-    is_free: false,
-    stripe_subscription_id: stripeSubscriptionId,
-    stripe_invoice_id: invoice.id ?? undefined,
-  });
-
-  await assignPlateToSubscription(plateId, subscription.subscription_id);
-  await issueActivationCode(subscription.subscription_id);
-
-  await sendRenewalConfirmationToAdmin({ plateNumber, customerEmail: email, interval }).catch((err) =>
-    console.error("[stripe] renewal admin email failed:", err)
-  );
+  if (created && email) {
+    await sendRenewalConfirmationToAdmin({ plateNumber, customerEmail: email, interval }).catch((err) =>
+      console.error("[stripe] renewal admin email failed:", err)
+    );
+  }
 }
 
 export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
