@@ -109,6 +109,13 @@ describe("POST /api/promo/send", () => {
     expect(mockSendSms).toHaveBeenCalledOnce();
   });
 
+  it("normalizes the phone before dedup, storing and texting (same person, different spellings)", async () => {
+    await POST(makeRequest({ ...validBody, phone: "600 000 000" }));
+    expect(mockCheckLeadExists).toHaveBeenCalledWith(location.location_id, ["600 000 000", "+48600000000"]);
+    expect(mockCreateLead.mock.calls[0][1]).toBe("+48600000000");
+    expect(mockSendSms.mock.calls[0][0]).toBe("+48600000000");
+  });
+
   it("SMS contains claim URL with app URL prefix", async () => {
     await POST(makeRequest(validBody));
     const [, message] = mockSendSms.mock.calls[0];
