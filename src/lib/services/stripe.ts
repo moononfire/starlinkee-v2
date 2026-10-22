@@ -386,7 +386,6 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
 
   const generatedPassword = generateRandomPassword();
   const accountResult = await createConfirmedPortalUser(email, generatedPassword);
-  const existingAccount = accountResult === "exists";
   const portalPassword: string | null = accountResult === "created" ? generatedPassword : null;
 
   await sendPortalCredentials(email, language, {
