@@ -1,10 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { safeRedirectPath } from "@/lib/urls";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/portal/dashboard";
+  const next = safeRedirectPath(searchParams.get("next"), "/portal/dashboard");
 
   if (!code) {
     return NextResponse.redirect(new URL("/portal/login?error=missing_code", request.url));
