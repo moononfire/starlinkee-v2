@@ -30,6 +30,29 @@ export async function claimLinktreeVisit(
   return (data?.length ?? 0) > 0;
 }
 
+export type ScanTokenPurpose = "promo" | "loyalty";
+
+/**
+ * Spends a scan token for one purpose. Returns true only for the first caller;
+ * every later attempt with the same token (replay without a new tap) gets false.
+ */
+export async function consumeScanToken(
+  token: string,
+  locationId: number,
+  purpose: ScanTokenPurpose
+): Promise<boolean> {
+  const supabase = createAdminClient();
+  const column = purpose === "promo" ? "promo_used_at" : "loyalty_used_at";
+  const { data } = await supabase
+    .from("scan_tokens")
+    .update({ [column]: new Date().toISOString() })
+    .eq("token", token)
+    .eq("location_id", locationId)
+    .is(column, null)
+    .select("id");
+  return (data?.length ?? 0) > 0;
+}
+
 export async function validateScanToken(
   token: string
 ): Promise<{ valid: boolean; locationId?: number }> {

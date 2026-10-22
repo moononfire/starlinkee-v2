@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getLocationBySlug } from "@/lib/db/locations";
 import { checkLeadExists, createLead, generateCouponCode } from "@/lib/db/leads";
-import { validateScanToken } from "@/lib/db/scan-tokens";
+import { validateScanToken, consumeScanToken } from "@/lib/db/scan-tokens";
 import { sendSms } from "@/lib/sms";
 import { sendPromoEmail } from "@/lib/email";
 import { clientIp } from "@/lib/rate-limit";
@@ -52,6 +52,11 @@ export async function POST(request: NextRequest) {
   const exists = await checkLeadExists(location.location_id, [phone, normalizedPhone]);
   if (exists) {
     return NextResponse.json({ error: "Already claimed" }, { status: 409 });
+  }
+
+  // One tap, one promo: the scan token can be spent for a promo only once.
+  if (!(await consumeScanToken(scanToken, location.location_id, "promo"))) {
+    return NextResponse.json({ error: "Invalid or expired scan token" }, { status: 403 });
   }
 
   const claimToken = crypto.randomUUID();

@@ -8,6 +8,7 @@ const {
   mockSendSms,
   mockSendPromoEmail,
   mockValidateScanToken,
+  mockConsumeScanToken,
   mockGenerateCouponCode,
 } = vi.hoisted(() => ({
   mockGetLocationBySlug: vi.fn(),
@@ -16,6 +17,7 @@ const {
   mockSendSms: vi.fn(),
   mockSendPromoEmail: vi.fn(),
   mockValidateScanToken: vi.fn(),
+  mockConsumeScanToken: vi.fn(),
   mockGenerateCouponCode: vi.fn(),
 }));
 
@@ -25,7 +27,10 @@ vi.mock("@/lib/db/leads", () => ({
   createLead: mockCreateLead,
   generateCouponCode: mockGenerateCouponCode,
 }));
-vi.mock("@/lib/db/scan-tokens", () => ({ validateScanToken: mockValidateScanToken }));
+vi.mock("@/lib/db/scan-tokens", () => ({
+  validateScanToken: mockValidateScanToken,
+  consumeScanToken: mockConsumeScanToken,
+}));
 vi.mock("@/lib/sms", () => ({ sendSms: mockSendSms }));
 vi.mock("@/lib/email", () => ({ sendPromoEmail: mockSendPromoEmail }));
 
@@ -62,6 +67,7 @@ beforeEach(() => {
   mockCreateLead.mockResolvedValue({ id: 1, claim_token: "tok" });
   mockSendSms.mockResolvedValue(undefined);
   mockSendPromoEmail.mockResolvedValue(undefined);
+  mockConsumeScanToken.mockResolvedValue(true);
   mockValidateScanToken.mockResolvedValue({ valid: true, locationId: location.location_id });
   mockGenerateCouponCode.mockReturnValue("COUPON1");
 });
@@ -92,6 +98,14 @@ describe("POST /api/promo/send", () => {
     mockGetLocationBySlug.mockResolvedValue({ ...location, has_promo_enabled: false });
     const res = await POST(makeRequest(validBody));
     expect(res.status).toBe(404);
+  });
+
+  it("returns 403 and sends nothing when the scan token was already spent on a promo (replay)", async () => {
+    mockConsumeScanToken.mockResolvedValue(false);
+    const res = await POST(makeRequest(validBody));
+    expect(res.status).toBe(403);
+    expect(mockCreateLead).not.toHaveBeenCalled();
+    expect(mockSendSms).not.toHaveBeenCalled();
   });
 
   it("returns 409 when phone already claimed the promo", async () => {
