@@ -20,6 +20,28 @@ export async function createOrder(data: {
   return order.order_id;
 }
 
+export async function getOrderIdByStripePaymentId(stripePaymentId: string): Promise<number | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("orders")
+    .select("order_id")
+    .eq("stripe_payment_id", stripePaymentId)
+    .limit(1);
+  return data?.[0]?.order_id ?? null;
+}
+
+export async function orderHasItems(orderId: number): Promise<boolean> {
+  const supabase = createAdminClient();
+  const { data } = await supabase.from("order_items").select("order_item_id").eq("order_id", orderId).limit(1);
+  return (data?.length ?? 0) > 0;
+}
+
+export async function orderHasShipment(orderId: number): Promise<boolean> {
+  const supabase = createAdminClient();
+  const { data } = await supabase.from("shipments").select("order_id").eq("order_id", orderId).limit(1);
+  return (data?.length ?? 0) > 0;
+}
+
 export async function createOrderItem(
   orderId: number,
   productId: number,

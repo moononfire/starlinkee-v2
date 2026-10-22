@@ -1,13 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const { mockProcessInvoicePaymentSucceeded, mockConstructEvent } = vi.hoisted(() => ({
-  mockProcessInvoicePaymentSucceeded: vi.fn(),
+const { mockProcessStripeInvoice, mockConstructEvent, mockClaim, mockDone, mockFailed } = vi.hoisted(() => ({
+  mockProcessStripeInvoice: vi.fn(),
   mockConstructEvent: vi.fn(),
+  mockClaim: vi.fn(),
+  mockDone: vi.fn(),
+  mockFailed: vi.fn(),
 }));
 
 vi.mock("@/lib/services/stripe", () => ({
-  processInvoicePaymentSucceeded: mockProcessInvoicePaymentSucceeded,
+  processStripeInvoice: mockProcessStripeInvoice,
+}));
+vi.mock("@/lib/db/stripe-events", () => ({
+  claimStripeEvent: mockClaim,
+  markStripeEventDone: mockDone,
+  markStripeEventFailed: mockFailed,
 }));
 
 vi.mock("stripe", () => ({
@@ -15,11 +23,6 @@ vi.mock("stripe", () => ({
     this.webhooks = { constructEvent: mockConstructEvent };
   }),
 }));
-
-vi.mock("next/server", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("next/server")>();
-  return { ...actual, after: vi.fn((fn: () => Promise<void>) => fn()) };
-});
 
 import { POST } from "@/app/api/stripe/webhook/route";
 
@@ -37,7 +40,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   process.env.STRIPE_SECRET_KEY = "sk_test_key";
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test_secret";
-  mockProcessInvoicePaymentSucceeded.mockResolvedValue(undefined);
+  mockProcessStripeInvoice.mockResolvedValue(undefined);
+  mockClaim.mockResolvedValue("claimed");
+  mockDone.mockResolvedValue(undefined);
+  mockFailed.mockResolvedValue(undefined);
 });
 
 describe("POST /api/stripe/webhook", () => {
@@ -59,31 +65,44 @@ describe("POST /api/stripe/webhook", () => {
     expect(body.error).toContain("No signatures found");
   });
 
-  it("returns 200 for unknown event types without calling processInvoice", async () => {
-    mockConstructEvent.mockReturnValue({
-      type: "customer.created",
-      data: { object: {} },
-    });
+  it("returns 200 for unknown event types without claiming or processing", async () => {
+    mockConstructEvent.mockReturnValue({ id: "evt_1", type: "customer.created", data: { object: {} } });
 
     const res = await POST(makeRequest("{}", "valid-sig"));
     expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.received).toBe(true);
-    expect(mockProcessInvoicePaymentSucceeded).not.toHaveBeenCalled();
+    expect((await res.json()).received).toBe(true);
+    expect(mockClaim).not.toHaveBeenCalled();
+    expect(mockProcessStripeInvoice).not.toHaveBeenCalled();
   });
 
-  it("returns 200 and calls processInvoicePaymentSucceeded for invoice.payment_succeeded", async () => {
+  it("processes invoice.payment_succeeded synchronously and marks the event done", async () => {
     const invoice = { id: "in_test123", customer_email: "test@example.com" };
-    mockConstructEvent.mockReturnValue({
-      type: "invoice.payment_succeeded",
-      data: { object: invoice },
-    });
+    mockConstructEvent.mockReturnValue({ id: "evt_1", type: "invoice.payment_succeeded", data: { object: invoice } });
 
     const res = await POST(makeRequest("{}", "valid-sig"));
     expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.received).toBe(true);
-    expect(mockProcessInvoicePaymentSucceeded).toHaveBeenCalledOnce();
-    expect(mockProcessInvoicePaymentSucceeded).toHaveBeenCalledWith(invoice);
+    expect(mockClaim).toHaveBeenCalledWith("evt_1");
+    expect(mockProcessStripeInvoice).toHaveBeenCalledWith(invoice);
+    expect(mockDone).toHaveBeenCalledWith("evt_1");
+  });
+
+  it("does not process a redelivered event twice", async () => {
+    mockClaim.mockResolvedValue("duplicate");
+    mockConstructEvent.mockReturnValue({ id: "evt_1", type: "invoice.payment_succeeded", data: { object: { id: "in_1" } } });
+
+    const res = await POST(makeRequest("{}", "valid-sig"));
+    expect(res.status).toBe(200);
+    expect(mockProcessStripeInvoice).not.toHaveBeenCalled();
+    expect(mockDone).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 and marks the event failed when processing throws, so Stripe retries", async () => {
+    mockProcessStripeInvoice.mockRejectedValue(new Error("db down"));
+    mockConstructEvent.mockReturnValue({ id: "evt_1", type: "invoice.payment_succeeded", data: { object: { id: "in_1" } } });
+
+    const res = await POST(makeRequest("{}", "valid-sig"));
+    expect(res.status).toBe(500);
+    expect(mockFailed).toHaveBeenCalledWith("evt_1", "db down");
+    expect(mockDone).not.toHaveBeenCalled();
   });
 });

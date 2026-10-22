@@ -13,6 +13,15 @@ const {
   mockSendPortalCredentials,
   mockCreateUser,
   mockGenerateRandomPassword,
+  mockGetOrderId,
+  mockOrderHasItems,
+  mockOrderHasShipment,
+  mockListSubsByInvoice,
+  mockListSubsByStripeSub,
+  mockSetSubscriptionActive,
+  mockGetSubscriptionById,
+  mockGetPlateById,
+  mockAssignPlate,
 } = vi.hoisted(() => ({
   mockUpsertCustomerByEmail: vi.fn(),
   mockGetCustomerById: vi.fn(),
@@ -25,6 +34,15 @@ const {
   mockSendPortalCredentials: vi.fn(),
   mockCreateUser: vi.fn(),
   mockGenerateRandomPassword: vi.fn(),
+  mockGetOrderId: vi.fn(),
+  mockOrderHasItems: vi.fn(),
+  mockOrderHasShipment: vi.fn(),
+  mockListSubsByInvoice: vi.fn(),
+  mockListSubsByStripeSub: vi.fn(),
+  mockSetSubscriptionActive: vi.fn(),
+  mockGetSubscriptionById: vi.fn(),
+  mockGetPlateById: vi.fn(),
+  mockAssignPlate: vi.fn(),
 }));
 
 vi.mock("@/lib/db/customers", () => ({
@@ -38,11 +56,27 @@ vi.mock("@/lib/db/orders", () => ({
   createOrder: mockCreateOrder,
   createOrderItem: mockCreateOrderItem,
   createShipment: mockCreateShipment,
+  getOrderIdByStripePaymentId: mockGetOrderId,
+  orderHasItems: mockOrderHasItems,
+  orderHasShipment: mockOrderHasShipment,
 }));
-vi.mock("@/lib/db/subscriptions", () => ({ createSubscription: mockCreateSubscription }));
+vi.mock("@/lib/db/subscriptions", () => ({
+  createSubscription: mockCreateSubscription,
+  setSubscriptionActive: mockSetSubscriptionActive,
+  getSubscriptionById: mockGetSubscriptionById,
+  listSubscriptionsByStripeInvoice: mockListSubsByInvoice,
+  listSubscriptionsByStripeSubscription: mockListSubsByStripeSub,
+}));
+vi.mock("@/lib/db/plates", () => ({
+  assignPlateToSubscription: mockAssignPlate,
+  getPlateById: mockGetPlateById,
+}));
+vi.mock("@/lib/services/activation", () => ({ issueActivationCode: vi.fn() }));
 vi.mock("@/lib/email", () => ({
   sendOrderConfirmationToAdmin: mockSendOrderConfirmationToAdmin,
   sendPortalCredentials: mockSendPortalCredentials,
+  sendRenewalConfirmation: vi.fn().mockResolvedValue(undefined),
+  sendRenewalConfirmationToAdmin: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
@@ -57,7 +91,7 @@ vi.mock("@/lib/password", () => ({
   generateRandomPassword: mockGenerateRandomPassword,
 }));
 
-import { processInvoicePaymentSucceeded } from "@/lib/services/stripe";
+import { processInvoicePaymentSucceeded, processStripeInvoice } from "@/lib/services/stripe";
 
 const TEST_PRICE_ID = "price_test_1year";
 
@@ -97,6 +131,15 @@ beforeEach(() => {
   mockSendPortalCredentials.mockResolvedValue(undefined);
   mockCreateUser.mockResolvedValue({ error: null });
   mockGenerateRandomPassword.mockReturnValue("generated-password");
+  mockGetOrderId.mockResolvedValue(null);
+  mockOrderHasItems.mockResolvedValue(false);
+  mockOrderHasShipment.mockResolvedValue(false);
+  mockListSubsByInvoice.mockResolvedValue([]);
+  mockListSubsByStripeSub.mockResolvedValue([]);
+  mockSetSubscriptionActive.mockResolvedValue(undefined);
+  mockGetSubscriptionById.mockResolvedValue(null);
+  mockGetPlateById.mockResolvedValue(null);
+  mockAssignPlate.mockResolvedValue(undefined);
 });
 
 describe("processInvoicePaymentSucceeded()", () => {
@@ -203,5 +246,141 @@ describe("processInvoicePaymentSucceeded()", () => {
       "en",
       expect.objectContaining({ password: null })
     );
+  });
+});
+
+
+describe("idempotency and resume", () => {
+  it("does not create a second order for an invoice that already has one, and only fills in what is missing", async () => {
+    mockGetOrderId.mockResolvedValue(100);
+    mockOrderHasItems.mockResolvedValue(true);
+    mockOrderHasShipment.mockResolvedValue(true);
+    mockListSubsByInvoice.mockResolvedValue([{ subscription_id: 50 }]);
+
+    await processInvoicePaymentSucceeded(makeInvoice());
+
+    expect(mockCreateOrder).not.toHaveBeenCalled();
+    expect(mockCreateOrderItem).not.toHaveBeenCalled();
+    expect(mockCreateSubscription).not.toHaveBeenCalled();
+    expect(mockCreateShipment).not.toHaveBeenCalled();
+  });
+
+  it("resumes after a partial failure: creates only the subscriptions that are still missing", async () => {
+    mockGetOrderId.mockResolvedValue(100);
+    mockOrderHasItems.mockResolvedValue(true);
+    mockListSubsByInvoice.mockResolvedValue([{ subscription_id: 50 }]);
+    const invoice = makeInvoice({
+      lines: { data: [{ pricing: { price_details: { price: TEST_PRICE_ID } }, quantity: 3 }] },
+    });
+
+    await processInvoicePaymentSucceeded(invoice);
+
+    expect(mockCreateSubscription).toHaveBeenCalledTimes(2);
+    expect(mockCreateShipment).toHaveBeenCalledOnce();
+  });
+
+  it("links created subscriptions to the invoice and the Stripe subscription", async () => {
+    await processInvoicePaymentSucceeded(
+      makeInvoice({ parent: { subscription_details: { subscription: "sub_stripe_1", metadata: {} } } })
+    );
+    expect(mockCreateSubscription).toHaveBeenCalledWith(
+      expect.objectContaining({ stripe_invoice_id: "in_test123", stripe_subscription_id: "sub_stripe_1" })
+    );
+  });
+});
+
+describe("processStripeInvoice() routing by billing_reason", () => {
+  const cycleInvoice = (extra: Record<string, unknown> = {}) =>
+    makeInvoice({
+      billing_reason: "subscription_cycle",
+      parent: { subscription_details: { subscription: "sub_stripe_1", metadata: {} } },
+      lines: {
+        data: [{ pricing: { price_details: { price: TEST_PRICE_ID } }, quantity: 1, period: { end: 1_900_000_000 } }],
+      },
+      ...extra,
+    });
+
+  it("creates the order for subscription_create", async () => {
+    await processStripeInvoice(makeInvoice({ billing_reason: "subscription_create" }));
+    expect(mockCreateOrder).toHaveBeenCalledOnce();
+  });
+
+  it("does NOT create an order, subscriptions or shipment for subscription_cycle; extends the linked subscription to the paid-through date", async () => {
+    mockListSubsByStripeSub.mockResolvedValue([{ subscription_id: 50, status: "active", duration_in_days: 365 }]);
+
+    await processStripeInvoice(cycleInvoice());
+
+    expect(mockCreateOrder).not.toHaveBeenCalled();
+    expect(mockCreateSubscription).not.toHaveBeenCalled();
+    expect(mockCreateShipment).not.toHaveBeenCalled();
+    expect(mockSetSubscriptionActive).toHaveBeenCalledWith(
+      50,
+      expect.any(String),
+      new Date(1_900_000_000 * 1000).toISOString()
+    );
+  });
+
+  it("leaves pending (never set up) subscriptions alone on a cycle", async () => {
+    mockListSubsByStripeSub.mockResolvedValue([{ subscription_id: 50, status: "pending", duration_in_days: 365 }]);
+    await processStripeInvoice(cycleInvoice());
+    expect(mockSetSubscriptionActive).not.toHaveBeenCalled();
+  });
+
+  it("ignores unpaid invoices and unknown billing reasons", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await processStripeInvoice(makeInvoice({ billing_reason: "subscription_create", status: "open" }));
+    await processStripeInvoice(makeInvoice({ billing_reason: "subscription_update" }));
+    expect(mockCreateOrder).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  describe("renewal checkout for a plate without a subscription (renewal_plate_id)", () => {
+    const renewal = (reason: string) =>
+      makeInvoice({
+        billing_reason: reason,
+        parent: {
+          subscription_details: {
+            subscription: "sub_stripe_9",
+            metadata: { renewal_plate_id: "7", plate_number: "ABCDEF", renewal_duration_days: "30", renewal_interval: "month" },
+          },
+        },
+        lines: { data: [{ period: { end: 1_900_000_000 } }] },
+      });
+
+    it("first invoice creates the subscription and assigns the plate", async () => {
+      await processStripeInvoice(renewal("subscription_create"));
+      expect(mockCreateSubscription).toHaveBeenCalledWith(
+        expect.objectContaining({ stripe_subscription_id: "sub_stripe_9", stripe_invoice_id: "in_test123" })
+      );
+      expect(mockAssignPlate).toHaveBeenCalledWith(7, 50);
+    });
+
+    it("each later cycle extends the original subscription and never creates one or moves the plate", async () => {
+      mockListSubsByStripeSub.mockResolvedValue([{ subscription_id: 50, status: "active" }]);
+
+      await processStripeInvoice(renewal("subscription_cycle"));
+
+      expect(mockCreateSubscription).not.toHaveBeenCalled();
+      expect(mockAssignPlate).not.toHaveBeenCalled();
+      expect(mockSetSubscriptionActive).toHaveBeenCalledWith(50, expect.any(String), expect.any(String));
+    });
+
+    it("falls back to the plate's current subscription for renewals created before Stripe ids were stored", async () => {
+      mockGetPlateById.mockResolvedValue({ plate_id: 7, subscription_id: 33 });
+      mockGetSubscriptionById.mockResolvedValue({ subscription_id: 33, status: "active" });
+
+      await processStripeInvoice(renewal("subscription_cycle"));
+
+      expect(mockSetSubscriptionActive).toHaveBeenCalledWith(33, expect.any(String), expect.any(String));
+      expect(mockCreateSubscription).not.toHaveBeenCalled();
+      expect(mockAssignPlate).not.toHaveBeenCalled();
+    });
+
+    it("a retried first invoice does not create a second subscription", async () => {
+      mockListSubsByInvoice.mockResolvedValue([{ subscription_id: 50 }]);
+      await processStripeInvoice(renewal("subscription_create"));
+      expect(mockCreateSubscription).not.toHaveBeenCalled();
+      expect(mockAssignPlate).not.toHaveBeenCalled();
+    });
   });
 });

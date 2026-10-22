@@ -23,6 +23,8 @@ export interface Subscription {
   expiration_datetime: string | null;
   status: "pending" | "active" | "inactive";
   activation_code_hash?: string | null;
+  stripe_subscription_id?: string | null;
+  stripe_invoice_id?: string | null;
   created_at: string;
   updated_at: string;
 }
