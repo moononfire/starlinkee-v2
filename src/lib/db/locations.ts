@@ -1,4 +1,5 @@
 import { createAdminClient } from "../supabase/admin";
+import { ilikeValue } from "./search";
 import { plateScanCount } from "../plate-scans";
 import { isSafeGoogleReviewUrl } from "../urls";
 import type { CustomerLocation, CustomerLocationLink } from "../types";
@@ -165,8 +166,9 @@ export async function listLocations(search?: string): Promise<LocationWithCustom
     .order("created_at", { ascending: false });
 
   if (search) {
+    const pattern = ilikeValue(search);
     query = query.or(
-      `location_name.ilike.%${search}%,google_business_name.ilike.%${search}%,city.ilike.%${search}%,linktree_slug.ilike.%${search}%`
+      `location_name.ilike.${pattern},google_business_name.ilike.${pattern},city.ilike.${pattern},linktree_slug.ilike.${pattern}`
     );
   }
 

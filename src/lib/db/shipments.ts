@@ -1,4 +1,5 @@
 import { createAdminClient } from "../supabase/admin";
+import { ilikeValue } from "./search";
 import type { Shipment } from "../types";
 
 export interface ShipmentWithCustomer extends Shipment {
@@ -13,8 +14,9 @@ export async function listShipments(search?: string): Promise<ShipmentWithCustom
     .order("created_at", { ascending: false });
 
   if (search) {
+    const pattern = ilikeValue(search);
     query = query.or(
-      `tracking_number.ilike.%${search}%,recipient_name.ilike.%${search}%,batch_label.ilike.%${search}%,city.ilike.%${search}%`
+      `tracking_number.ilike.${pattern},recipient_name.ilike.${pattern},batch_label.ilike.${pattern},city.ilike.${pattern}`
     );
   }
 

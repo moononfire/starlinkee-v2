@@ -1,4 +1,5 @@
 import { createAdminClient } from "../supabase/admin";
+import { ilikeValue } from "./search";
 import type { Customer } from "../types";
 
 interface CustomerInsert {
@@ -70,8 +71,9 @@ export async function listCustomers(search?: string): Promise<Customer[]> {
     .order("created_at", { ascending: false });
 
   if (search) {
+    const pattern = ilikeValue(search);
     query = query.or(
-      `customer_name.ilike.%${search}%,email.ilike.%${search}%,company_name.ilike.%${search}%`
+      `customer_name.ilike.${pattern},email.ilike.${pattern},company_name.ilike.${pattern}`
     );
   }
 

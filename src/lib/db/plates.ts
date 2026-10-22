@@ -1,4 +1,5 @@
 import { createAdminClient } from "../supabase/admin";
+import { likePattern } from "./search";
 import type { Plate } from "../types";
 
 export async function getPlateByNumber(plateNumber: string): Promise<Plate | null> {
@@ -100,7 +101,7 @@ export async function listPlates(search?: string): Promise<PlateWithSubscription
     .order("created_at", { ascending: false });
 
   if (search) {
-    query = query.ilike("plate_number", `%${search}%`);
+    query = query.ilike("plate_number", likePattern(search));
   }
 
   const { data, error } = await query;

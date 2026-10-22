@@ -1,4 +1,5 @@
 import { createAdminClient } from "../supabase/admin";
+import { ilikeValue } from "./search";
 import type { Review } from "../types";
 
 export interface ReviewWithLocation extends Review {
@@ -16,8 +17,9 @@ export async function listReviews(search?: string): Promise<ReviewWithLocation[]
     .limit(500);
 
   if (search) {
+    const pattern = ilikeValue(search);
     query = query.or(
-      `feedback_message.ilike.%${search}%,contact_email.ilike.%${search}%,contact_phone.ilike.%${search}%`
+      `feedback_message.ilike.${pattern},contact_email.ilike.${pattern},contact_phone.ilike.${pattern}`
     );
   }
 

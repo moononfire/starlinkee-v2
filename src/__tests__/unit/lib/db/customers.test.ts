@@ -6,7 +6,7 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => supabaseMock,
 }));
 
-import { upsertCustomerByEmail } from "@/lib/db/customers";
+import { upsertCustomerByEmail, listCustomers } from "@/lib/db/customers";
 
 const customerData = {
   customer_type: "business" as const,
@@ -139,5 +139,22 @@ describe("upsertCustomerByEmail()", () => {
     });
 
     await expect(upsertCustomerByEmail(customerData)).rejects.toThrow("Failed to create customer");
+  });
+});
+
+describe("listCustomers() search", () => {
+  it("quotes the term so commas/parentheses cannot add PostgREST filters", async () => {
+    const orFn = vi.fn().mockResolvedValue({ data: [], error: null });
+    supabaseMock.from.mockReturnValue({
+      select: vi.fn(() => ({ order: vi.fn(() => ({ or: orFn })) })),
+    });
+
+    await listCustomers('x,id.gt.0)"');
+
+    const filter = orFn.mock.calls[0][0] as string;
+    // the term sits inside a double-quoted value (with its own quote escaped), once per column
+    expect(filter).toContain('customer_name.ilike."%x,id.gt.0)\\"%"');
+    expect(filter).toContain('email.ilike."%x,id.gt.0)\\"%"');
+    expect(filter).toContain('company_name.ilike."%x,id.gt.0)\\"%"');
   });
 });
