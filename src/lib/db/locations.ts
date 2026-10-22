@@ -225,6 +225,9 @@ export async function updateLocation(
     promo_sms_text?: string | null;
     promo_sms_text_en?: string | null;
     promo_sms_text_de?: string | null;
+    has_wifi_enabled?: boolean;
+    wifi_ssid?: string | null;
+    wifi_password?: string | null;
     wifi_banner_text_en?: string | null;
     wifi_banner_text_de?: string | null;
     has_menu_enabled?: boolean;

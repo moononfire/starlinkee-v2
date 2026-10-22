@@ -3,6 +3,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { getCustomerByEmail, getCustomerSubscriptions } from "@/lib/db/portal";
+import { updateLocation } from "@/lib/db/locations";
 
 export async function updateWifiSettingsAction(
   formData: FormData
@@ -29,7 +31,7 @@ export async function updateWifiSettingsAction(
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (!user?.email) {
     return { ok: false, error: "Unauthorized" };
   }
 
@@ -40,16 +42,21 @@ export async function updateWifiSettingsAction(
 
   if (!locationId) return { ok: false, error: "Invalid location ID" };
 
-  const { error } = await supabase
-    .from("customer_locations")
-    .update({
+  const customer = await getCustomerByEmail(user.email);
+  if (!customer) return { ok: false, error: "Unauthorized" };
+
+  const subscriptions = await getCustomerSubscriptions(customer.customer_id);
+  if (!subscriptions.some((s) => s.location?.location_id === locationId)) {
+    return { ok: false, error: "generic" };
+  }
+
+  try {
+    await updateLocation(locationId, {
       has_wifi_enabled: hasWifiEnabled,
       wifi_ssid: wifiSsid || null,
       wifi_password: wifiPassword || null,
-    })
-    .eq("location_id", locationId);
-
-  if (error) {
+    });
+  } catch {
     return { ok: false, error: "generic" };
   }
 
