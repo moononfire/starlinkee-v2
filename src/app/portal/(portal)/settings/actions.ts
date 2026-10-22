@@ -37,7 +37,7 @@ export async function updatePortalPassword(formData: FormData): Promise<ActionRe
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user?.email) redirect("/portal/login");
+  if (!user?.email || !user.email_confirmed_at) redirect("/portal/login");
 
   const subscriptionId = Number(formData.get("subscription_id"));
   const currentPassword = formData.get("current_password") as string;
@@ -85,7 +85,7 @@ export async function updateScanRedirectMode(formData: FormData): Promise<Action
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user?.email) redirect("/portal/login");
+  if (!user?.email || !user.email_confirmed_at) redirect("/portal/login");
 
   const customer = await getCustomerByEmail(user.email);
   if (!customer) redirect("/portal/login");
@@ -117,7 +117,7 @@ export async function updateFourStarRedirect(formData: FormData): Promise<Action
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user?.email) redirect("/portal/login");
+  if (!user?.email || !user.email_confirmed_at) redirect("/portal/login");
 
   const customer = await getCustomerByEmail(user.email);
   if (!customer) redirect("/portal/login");
@@ -147,7 +147,7 @@ export async function updateLinktreeSlug(formData: FormData): Promise<ActionResu
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user?.email) redirect("/portal/login");
+  if (!user?.email || !user.email_confirmed_at) redirect("/portal/login");
 
   const customer = await getCustomerByEmail(user.email);
   if (!customer) redirect("/portal/login");
@@ -184,7 +184,7 @@ export async function updateGoogleLocation(formData: FormData): Promise<ActionRe
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user?.email) redirect("/portal/login");
+  if (!user?.email || !user.email_confirmed_at) redirect("/portal/login");
 
   const customer = await getCustomerByEmail(user.email);
   if (!customer) redirect("/portal/login");

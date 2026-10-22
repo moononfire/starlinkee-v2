@@ -30,7 +30,7 @@ function form(locationId: string) {
 describe("updateWifiSettingsAction()", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetUser.mockResolvedValue({ data: { user: { email: "me@x.pl" } } });
+    mockGetUser.mockResolvedValue({ data: { user: { email: "me@x.pl", email_confirmed_at: "2026-01-01" } } });
     mockGetCustomerByEmail.mockResolvedValue({ customer_id: 1 });
     mockGetSubs.mockResolvedValue([{ location: { location_id: 5 } }]);
     mockUpdateLocation.mockResolvedValue({});

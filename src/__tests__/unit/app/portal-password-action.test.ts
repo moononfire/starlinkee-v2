@@ -31,7 +31,7 @@ const valid = { subscription_id: "1", current_password: "oldpass12", password: "
 beforeEach(() => {
   vi.clearAllMocks();
   resetRateLimits();
-  mockGetUser.mockResolvedValue({ data: { user: { id: "u1", email: "me@x.pl" } } });
+  mockGetUser.mockResolvedValue({ data: { user: { id: "u1", email: "me@x.pl", email_confirmed_at: "2026-01-01" } } });
   mockSignIn.mockResolvedValue({ error: null });
   mockUpdateUser.mockResolvedValue({ error: null });
 });

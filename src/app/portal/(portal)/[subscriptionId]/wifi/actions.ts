@@ -31,7 +31,7 @@ export async function updateWifiSettingsAction(
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user?.email) {
+  if (!user?.email || !user.email_confirmed_at) {
     return { ok: false, error: "Unauthorized" };
   }
 
