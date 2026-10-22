@@ -47,25 +47,34 @@ export async function getSmsQuota(customerId: number): Promise<SmsQuota> {
  */
 export async function consumeSmsCredit(customerId: number): Promise<boolean> {
   const supabase = createAdminClient();
-  const { data } = await supabase
-    .from("customers")
-    .select("sms_credits_used, sms_credits_reset_at")
-    .eq("customer_id", customerId)
-    .single<QuotaRow>();
-  if (!data) return false;
 
-  const due = isDue(data.sms_credits_reset_at);
-  const used = due ? 0 : data.sms_credits_used;
-  if (used >= MONTHLY_SMS_LIMIT) return false;
+  // Compare-and-swap on the counter we read: a concurrent consumer that got in
+  // first changes it, our update matches no row, and we re-read and try again.
+  // (A plain read-then-write let parallel replies overshoot the monthly limit.)
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { data } = await supabase
+      .from("customers")
+      .select("sms_credits_used, sms_credits_reset_at")
+      .eq("customer_id", customerId)
+      .single<QuotaRow>();
+    if (!data) return false;
 
-  const { error } = await supabase
-    .from("customers")
-    .update({
-      sms_credits_used: used + 1,
-      ...(due ? { sms_credits_reset_at: nextReset() } : {}),
-    })
-    .eq("customer_id", customerId);
-  if (error) throw new Error(`Failed to update SMS credits: ${error.message}`);
+    const due = isDue(data.sms_credits_reset_at);
+    const used = due ? 0 : data.sms_credits_used;
+    if (used >= MONTHLY_SMS_LIMIT) return false;
 
-  return true;
+    const { data: updated, error } = await supabase
+      .from("customers")
+      .update({
+        sms_credits_used: used + 1,
+        ...(due ? { sms_credits_reset_at: nextReset() } : {}),
+      })
+      .eq("customer_id", customerId)
+      .eq("sms_credits_used", data.sms_credits_used)
+      .eq("sms_credits_reset_at", data.sms_credits_reset_at)
+      .select("customer_id");
+    if (error) throw new Error(`Failed to update SMS credits: ${error.message}`);
+    if ((updated?.length ?? 0) > 0) return true;
+  }
+  return false;
 }
