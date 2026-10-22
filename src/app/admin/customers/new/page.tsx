@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
+import { assertAdmin } from "@/lib/api-auth";
 import { createCustomer } from "@/lib/db/customers";
 import { sendCustomerRegistration } from "@/lib/email";
 
 async function createCustomerAction(formData: FormData) {
   "use server";
+  await assertAdmin();
 
   const customerName = formData.get("customer_name") as string;
   const email = formData.get("email") as string;

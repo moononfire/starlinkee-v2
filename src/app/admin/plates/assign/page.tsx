@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
+import { assertAdmin } from "@/lib/api-auth";
 import { listUnassignedPlates, assignPlateToSubscription } from "@/lib/db/plates";
 import { listSubscriptions } from "@/lib/db/subscriptions";
 
 async function assignPlateAction(formData: FormData) {
   "use server";
+  await assertAdmin();
 
   const plateId = parseInt(formData.get("plate_id") as string);
   const subscriptionId = parseInt(formData.get("subscription_id") as string);

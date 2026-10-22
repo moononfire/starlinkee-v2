@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { assertAdmin } from "@/lib/api-auth";
 import { listCustomers } from "@/lib/db/customers";
 import { listUnassignedPlates } from "@/lib/db/plates";
 import { createOrderManual, createOrderItem, createShipment } from "@/lib/db/orders";
@@ -18,6 +19,7 @@ const PRODUCTS = [
 
 async function createOrderAction(formData: FormData) {
   "use server";
+  await assertAdmin();
 
   const customerId = parseInt(formData.get("customer_id") as string);
   const productId = parseInt(formData.get("product_id") as string);
