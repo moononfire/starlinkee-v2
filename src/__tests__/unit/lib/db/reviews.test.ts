@@ -84,21 +84,33 @@ describe("getReviewByScanId()", () => {
 });
 
 describe("updateFeedback()", () => {
+  function mockUpdate(result: { data?: unknown[] | null; error: { message: string } | null }) {
+    const selectFn = vi.fn().mockResolvedValue(result);
+    const isFn = vi.fn(() => ({ select: selectFn }));
+    supabaseMock.from.mockReturnValue({ update: vi.fn(() => ({ eq: vi.fn(() => ({ is: isFn })) })) });
+    return isFn;
+  }
+
   it("throws when Supabase returns error", async () => {
-    const eqFn = vi.fn().mockResolvedValue({ error: { message: "constraint" } });
-    supabaseMock.from.mockReturnValue({ update: vi.fn(() => ({ eq: eqFn })) });
+    mockUpdate({ data: null, error: { message: "constraint" } });
 
     await expect(
       updateFeedback("scan-1", { feedback_message: "bad service" })
     ).rejects.toThrow("Failed to update feedback");
   });
 
-  it("resolves on success", async () => {
-    const eqFn = vi.fn().mockResolvedValue({ error: null });
-    supabaseMock.from.mockReturnValue({ update: vi.fn(() => ({ eq: eqFn })) });
+  it("returns true when the first feedback is stored, only touching rows without feedback_time", async () => {
+    const isFn = mockUpdate({ data: [{ review_id: 1 }], error: null });
 
     await expect(
       updateFeedback("scan-1", { feedback_message: "great place", user_name: "Jan" })
-    ).resolves.toBeUndefined();
+    ).resolves.toBe(true);
+    expect(isFn).toHaveBeenCalledWith("feedback_time", null);
+  });
+
+  it("returns false when feedback was already submitted for the scan", async () => {
+    mockUpdate({ data: [], error: null });
+
+    await expect(updateFeedback("scan-1", { feedback_message: "again" })).resolves.toBe(false);
   });
 });

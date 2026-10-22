@@ -11,22 +11,29 @@ import { checkLeadExists, createLead, getLeadByToken, markLeadAsUsed } from "@/l
 beforeEach(() => vi.clearAllMocks());
 
 describe("checkLeadExists()", () => {
-  it("returns false when no lead found", async () => {
+  function mockLeadQuery(data: unknown[] | null) {
+    const limit = vi.fn().mockResolvedValue({ data });
+    const inFn = vi.fn(() => ({ limit }));
     supabaseMock.from.mockReturnValue({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: null }) })) })),
-      })),
+      select: vi.fn(() => ({ eq: vi.fn(() => ({ in: inFn })) })),
     });
+    return inFn;
+  }
+
+  it("returns false when no lead found", async () => {
+    mockLeadQuery([]);
     expect(await checkLeadExists(1, "+48600000000")).toBe(false);
   });
 
   it("returns true when lead exists", async () => {
-    supabaseMock.from.mockReturnValue({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { id: 1 } }) })) })),
-      })),
-    });
+    mockLeadQuery([{ id: 1 }]);
     expect(await checkLeadExists(1, "+48600000000")).toBe(true);
+  });
+
+  it("matches any of several spellings of the number", async () => {
+    const inFn = mockLeadQuery([{ id: 1 }]);
+    expect(await checkLeadExists(1, ["600 000 000", "+48600000000"])).toBe(true);
+    expect(inFn).toHaveBeenCalledWith("phone", ["600 000 000", "+48600000000"]);
   });
 });
 
