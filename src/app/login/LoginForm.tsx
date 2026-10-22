@@ -16,7 +16,11 @@ export default function LoginForm({ error }: { error?: string }) {
     <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-8 space-y-5">
       {error && (
         <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded px-3 py-2">
-          {error === "invalid_credentials" ? "Nieprawidłowy email lub hasło." : error}
+          {error === "invalid_credentials"
+            ? "Nieprawidłowy email lub hasło."
+            : error === "too_many_attempts"
+              ? "Zbyt wiele prób logowania. Spróbuj ponownie za kilka minut."
+              : "Wystąpił błąd. Spróbuj ponownie."}
         </div>
       )}
       <div>

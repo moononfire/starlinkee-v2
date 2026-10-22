@@ -18,9 +18,11 @@ export default function LoginForm({ error }: { error?: string }) {
             ? "Nieprawidłowy email lub hasło."
             : error === "change_password"
               ? "Zaloguj się nowym hasłem."
-              : error === "unconfirmed"
-                ? "Potwierdź adres email, klikając link z wiadomości, którą wysłaliśmy."
-                : "Wystąpił błąd. Spróbuj ponownie."}
+              : error === "too_many_attempts"
+                ? "Zbyt wiele prób logowania. Spróbuj ponownie za kilka minut."
+                : error === "unconfirmed"
+                  ? "Potwierdź adres email, klikając link z wiadomości, którą wysłaliśmy."
+                  : "Wystąpił błąd. Spróbuj ponownie."}
         </p>
       )}
       <div>
