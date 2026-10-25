@@ -6,8 +6,7 @@ import { LinkIconGlyph } from "@/lib/linkIcons";
 import { getTileBackground } from "@/lib/linkBackgrounds";
 import { getPageBackground } from "@/lib/pageBackgrounds";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import { linktreeLanguages } from "@/lib/languages";
-import { getModuleText } from "@/lib/promo-i18n";
+import { getModuleText, getLinkTitle } from "@/lib/promo-i18n";
 
 interface Props {
   location: CustomerLocation;
@@ -17,18 +16,11 @@ interface Props {
   lang: string;
 }
 
-function getLinkTitle(link: CustomerLocationLink, lang: string): string {
-  if (lang === "pl") return link.title_pl || link.title_en || link.title_de || link.title;
-  if (lang === "en") return link.title_en || link.title_pl || link.title_de || link.title;
-  if (lang === "de") return link.title_de || link.title_pl || link.title_en || link.title;
-  return link.title;
-}
-
 export default function LinktreeProfile({ location, links, slug, scanToken, lang }: Props) {
   return (
     <main className={`min-h-screen flex flex-col p-6 ${getPageBackground(location.page_background).page}`}>
       <div className="flex justify-end w-full max-w-sm mx-auto mb-3 shrink-0">
-        <LanguageSwitcher currentLang={lang} scopeKey={slug} availableLanguages={linktreeLanguages(location.active_languages)} />
+        <LanguageSwitcher currentLang={lang} scopeKey={slug} availableLanguages={location.active_languages} />
       </div>
       <div className="max-w-sm w-full mx-auto flex flex-col items-center gap-6 my-auto pb-8">
 

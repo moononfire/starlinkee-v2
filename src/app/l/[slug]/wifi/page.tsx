@@ -7,7 +7,7 @@ import PageTracker from "@/components/tracking/PageTracker";
 import { getLanguage } from "@/lib/language";
 import { t } from "@/lib/translations";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import { linktreeLanguages, firstPlateLanguage } from "@/lib/languages";
+import { firstPlateLanguage } from "@/lib/languages";
 import { getPageBackground } from "@/lib/pageBackgrounds";
 
 interface Props {
@@ -24,7 +24,7 @@ export default async function WifiPage({ params, searchParams }: Props) {
 
   const plates = await getPlatesBySubscriptionId(location.subscription_id);
   const plateLanguage = firstPlateLanguage(plates);
-  const lang = await getLanguage(slug, plateLanguage, linktreeLanguages(location.active_languages));
+  const lang = await getLanguage(slug, plateLanguage, location.active_languages);
 
   return (
     <>
@@ -37,7 +37,7 @@ export default async function WifiPage({ params, searchParams }: Props) {
           >
             ← {t("back_button", lang)}
           </Link>
-          <LanguageSwitcher currentLang={lang} scopeKey={slug} availableLanguages={linktreeLanguages(location.active_languages)} />
+          <LanguageSwitcher currentLang={lang} scopeKey={slug} availableLanguages={location.active_languages} />
         </div>
         <div className="w-full max-w-sm">
           {location.logo_link && (
