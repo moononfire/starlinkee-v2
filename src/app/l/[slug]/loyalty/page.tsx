@@ -7,6 +7,7 @@ import PageTracker from "@/components/tracking/PageTracker";
 import { getLanguage } from "@/lib/language";
 import { t } from "@/lib/translations";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { linktreeLanguages } from "@/lib/languages";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -23,7 +24,7 @@ export default async function LoyaltyPage({ params, searchParams }: Props) {
   const plates = await getPlatesBySubscriptionId(location.subscription_id);
 
   const plateLanguage = plates[0]?.plate_language ?? "pl";
-  const lang = await getLanguage(slug, plateLanguage, location.active_languages);
+  const lang = await getLanguage(slug, plateLanguage, linktreeLanguages(location.active_languages));
 
   const maxStamps = location.loyalty_stamps_required ?? 10;
   const customText =
@@ -45,7 +46,7 @@ export default async function LoyaltyPage({ params, searchParams }: Props) {
           >
             ← {t("back_button", lang)}
           </Link>
-          <LanguageSwitcher currentLang={lang} scopeKey={slug} availableLanguages={location.active_languages} />
+          <LanguageSwitcher currentLang={lang} scopeKey={slug} availableLanguages={linktreeLanguages(location.active_languages)} />
         </div>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-full max-w-sm">
           {location.logo_link && (

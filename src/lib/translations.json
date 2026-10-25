@@ -444,7 +444,8 @@
     "setup_form_activation_code": "Activation code",
     "setup_form_activation_code_hint": "The code from the email we sent you when your plate was assigned to your account.",
     "portal_password_current": "Current password",
-    "portal_password_wrong_current": "The current password is incorrect."
+    "portal_password_wrong_current": "The current password is incorrect.",
+    "portal_lang_it_plate_only": "Italian is shown on the plate screen only (rating and feedback), not on the link page."
   },
   "de": {
     "back_button": "Zurück",
@@ -892,7 +893,8 @@
     "setup_form_activation_code": "Aktivierungscode",
     "setup_form_activation_code_hint": "Der Code aus der E-Mail, die wir Ihnen bei der Zuordnung Ihres Schilds zu Ihrem Konto geschickt haben.",
     "portal_password_current": "Aktuelles Passwort",
-    "portal_password_wrong_current": "Das aktuelle Passwort ist falsch."
+    "portal_password_wrong_current": "Das aktuelle Passwort ist falsch.",
+    "portal_lang_it_plate_only": "Italienisch wird nur auf dem Plättchen-Bildschirm angezeigt (Bewertung und Feedback), nicht auf der Link-Seite."
   },
   "pl": {
     "back_button": "Powrót",
@@ -1339,7 +1341,44 @@
     "setup_form_activation_code": "Kod aktywacyjny",
     "setup_form_activation_code_hint": "Kod z wiadomości e-mail, którą wysłaliśmy po przypisaniu tabliczki do Twojego konta.",
     "portal_password_current": "Obecne hasło",
-    "portal_password_wrong_current": "Obecne hasło jest nieprawidłowe."
+    "portal_password_wrong_current": "Obecne hasło jest nieprawidłowe.",
+    "portal_lang_it_plate_only": "Włoski jest widoczny tylko na ekranie płytki (ocena i opinia), nie na stronie z linkami."
+  },
+  "it": {
+    "appreciate_feedback": "Apprezziamo il tuo feedback.",
+    "conversation_reply_placeholder": "Scrivi una risposta...",
+    "conversation_send_btn": "Invia",
+    "email_required_input": "E-mail (obbligatoria)",
+    "message_placeholder": "Il tuo messaggio...",
+    "name_optional": "Il tuo nome (facoltativo)",
+    "phone_optional": "Telefono (facoltativo)",
+    "plate_inactive_exception": "Nessun abbonamento attivo trovato per questa targhetta.",
+    "plate_inactive_title": "Targhetta non attiva",
+    "plate_renew_button_monthly": "Rinnova — 1 mese",
+    "plate_renew_button_yearly": "Rinnova — 1 anno",
+    "plate_renew_description": "Rinnova l'abbonamento per riattivare questa targhetta.",
+    "proxy_page_title": "Come valuti la tua esperienza?",
+    "send_feedback_btn": "Invia feedback",
+    "sending_feedback": "Invio in corso...",
+    "sorry_share_feedback": "Ci dispiace molto. Condividi con noi il tuo feedback.",
+    "thank_you_short": "Grazie!",
+    "we_will_be_in_touch": "Ti risponderemo presto.",
+    "setup_form_activation_code": "Codice di attivazione",
+    "setup_form_activation_code_hint": "Il codice contenuto nell'e-mail che ti abbiamo inviato quando la targhetta è stata assegnata al tuo account.",
+    "setup_form_business_name": "Nome dell'attività",
+    "setup_form_business_name_hint": "È il nome che apparirà quando i clienti scansionano la tua targhetta.",
+    "setup_form_choose_file": "Scegli file",
+    "setup_form_google_search": "Trova la tua attività su Google",
+    "setup_form_google_search_hint": "Digita il nome o l'indirizzo della tua attività e scegli dai suggerimenti per collegare la scheda di Google Maps.",
+    "setup_form_google_selected": "Attività selezionata",
+    "setup_form_logo": "Logo",
+    "setup_form_logo_hint": "Il logo apparirà sopra il nome della tua attività quando i clienti scansionano la targhetta.",
+    "setup_form_no_file": "Nessun file selezionato",
+    "setup_form_submit": "Attiva la targhetta",
+    "setup_form_submitting": "Configurazione in corso...",
+    "setup_form_support_email": "E-mail di assistenza",
+    "setup_form_support_email_hint": "Se un cliente non è soddisfatto e invia un reclamo, riceverai una notifica a questo indirizzo.",
+    "setup_form_title": "Configura la tua targhetta"
   },
   "zh": {
     "proxy_page_title": "您如何评价您的体验？",

@@ -1,3 +1,4 @@
+import { linktreeLanguages } from "@/lib/languages";
 import { notFound, redirect } from "next/navigation";
 import { getPortalSession } from "@/lib/portal-session";
 import { getLeadsByLocationId } from "@/lib/db/leads";
@@ -85,7 +86,7 @@ export default async function PromoPortalPage({ params }: Props) {
             }}
             logoLink={location.logo_link}
             locationName={locationName}
-            activeLanguages={location.active_languages}
+            activeLanguages={linktreeLanguages(location.active_languages)}
             lang={lang}
           />
         </SavableForm>

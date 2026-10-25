@@ -42,6 +42,8 @@ import { getPlateByNumber, incrementPlateVisits } from "@/lib/db/plates";
 import { getSubscriptionById } from "@/lib/db/subscriptions";
 import { getLocationBySubscriptionId } from "@/lib/db/locations";
 import { createScanRecord, findScanIdByDevice } from "@/lib/db/reviews";
+import { getLanguage } from "@/lib/language";
+import { PLATE_LANGUAGES } from "@/lib/languages";
 
 const IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1";
 
@@ -97,5 +99,15 @@ describe("plate scan page — scan counting", () => {
     vi.mocked(getSubscriptionById).mockResolvedValue({ status } as any);
     await render().catch(() => {});
     expect(after).not.toHaveBeenCalled();
+  });
+});
+
+describe("plate page — Italian", () => {
+  it("lets the inactive/pending screens use every plate language", async () => {
+    vi.mocked(getPlateByNumber).mockResolvedValue({
+      plate_id: 7, plate_number: "ABC123", secret_key: "s3cret", subscription_id: null, plate_language: "it",
+    } as any);
+    await render();
+    expect(getLanguage).toHaveBeenCalledWith("ABC123", "it", PLATE_LANGUAGES);
   });
 });

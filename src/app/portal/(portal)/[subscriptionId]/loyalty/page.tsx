@@ -1,3 +1,4 @@
+import { linktreeLanguages } from "@/lib/languages";
 import { notFound, redirect } from "next/navigation";
 import { getPortalSession } from "@/lib/portal-session";
 import { getLanguage } from "@/lib/language";
@@ -84,7 +85,7 @@ export default async function LoyaltyPortalPage({ params }: Props) {
           initialStampsRequired={location.loyalty_stamps_required ?? 10}
           logoLink={location.logo_link}
           locationName={location.location_name}
-          activeLanguages={location.active_languages}
+          activeLanguages={linktreeLanguages(location.active_languages)}
           lang={lang}
         />
 

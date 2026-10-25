@@ -13,6 +13,7 @@ import { rateLimitPersistent } from "@/lib/rate-limit-persistent";
 import { t } from "@/lib/translations";
 import { getLanguage } from "@/lib/language";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { PLATE_LANGUAGES } from "@/lib/languages";
 import PlateSetupForm from "@/components/plate/PlateSetupForm";
 
 interface Props {
@@ -28,7 +29,7 @@ export default async function PlatePage({ params }: Props) {
   // Strict secret key validation
   if (!safeEqual(secret, plate.secret_key)) notFound();
 
-  const lang = await getLanguage(plate.plate_number, plate.plate_language);
+  const lang = await getLanguage(plate.plate_number, plate.plate_language, PLATE_LANGUAGES);
 
   if (!plate.subscription_id) {
     return <InactivePage lang={lang} plateNumber={plate.plate_number} plateSecret={plate.secret_key} />;
@@ -115,7 +116,7 @@ function InactivePage({
       style={{ backgroundColor: "#f9fafb", color: "#111827" }}>
       <div className="max-w-sm w-full text-center">
         <div className="mb-4 flex justify-center">
-          <LanguageSwitcher currentLang={lang} scopeKey={plateNumber} />
+          <LanguageSwitcher currentLang={lang} scopeKey={plateNumber} availableLanguages={PLATE_LANGUAGES} />
         </div>
         <p className="text-lg font-medium" style={{ color: "#1f2937" }}>
           {t("plate_inactive_title", lang)}

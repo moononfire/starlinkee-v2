@@ -1,3 +1,4 @@
+import { linktreeLanguages } from "@/lib/languages";
 import type { CustomerLocation, CustomerLocationLink } from "@/lib/types";
 import { isLinkIconKey } from "@/lib/linkIcons";
 import { isTileBackgroundKey } from "@/lib/linkBackgrounds";
@@ -91,7 +92,7 @@ export default function LinktreeSettings({
             background: isTileBackgroundKey(l.background) ? l.background : null,
           }))}
           initialPageBackground={isPageBackgroundKey(location.page_background) ? location.page_background : null}
-          activeLanguages={location.active_languages}
+          activeLanguages={linktreeLanguages(location.active_languages)}
           lang={lang}
           locationName={location.location_name}
           logoUrl={location.logo_link}

@@ -5,6 +5,7 @@ import { claimLinktreeVisit } from "@/lib/db/scan-tokens";
 import LinktreeProfile from "@/components/linktree/LinktreeProfile";
 import PageTracker from "@/components/tracking/PageTracker";
 import { getLanguage } from "@/lib/language";
+import { linktreeLanguages } from "@/lib/languages";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -23,7 +24,7 @@ export default async function LinktreePage({ params, searchParams }: Props) {
     getPlatesBySubscriptionId(location.subscription_id),
   ]);
   const plateLanguage = plates[0]?.plate_language ?? "pl";
-  const lang = await getLanguage(slug, plateLanguage, location.active_languages);
+  const lang = await getLanguage(slug, plateLanguage, linktreeLanguages(location.active_languages));
 
   // Count a linktree visit only once per physical scan — revisits with the
   // same token (e.g. via the back button) and tokenless visits don't count.

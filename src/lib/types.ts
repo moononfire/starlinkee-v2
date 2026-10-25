@@ -1,4 +1,4 @@
-import type { Language } from "./language";
+import type { PlateLanguage } from "./language";
 
 export interface Plate {
   plate_id: number;
@@ -91,7 +91,7 @@ export interface CustomerLocation {
   module_order: string[] | null;
   redirect_four_star_reviews: boolean;
   owner_email: string | null;
-  active_languages: Language[];
+  active_languages: PlateLanguage[];
   created_at: string;
   updated_at: string;
 }

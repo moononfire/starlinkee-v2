@@ -2,12 +2,21 @@
 
 import { useRouter } from "next/navigation";
 import { LanguageFlag } from "./flags";
+import { SUPPORTED_LANGUAGES } from "@/lib/languages";
 
 const languages = [
   { code: "en", label: "EN" },
   { code: "de", label: "DE" },
   { code: "pl", label: "PL" },
+  { code: "it", label: "IT" },
 ] as const;
+
+// Without an explicit list only the portal languages show; Italian exists on plate screens only,
+// which pass PLATE_LANGUAGES (or the location's active languages) themselves.
+export function visibleSwitcherLanguages(availableLanguages?: readonly string[]) {
+  const allowed: readonly string[] = availableLanguages ?? SUPPORTED_LANGUAGES;
+  return languages.filter((l) => allowed.includes(l.code));
+}
 
 interface Props {
   currentLang: string;
@@ -24,9 +33,7 @@ export default function LanguageSwitcher({ currentLang, scopeKey, availableLangu
     router.refresh();
   }
 
-  const visibleLanguages = availableLanguages
-    ? languages.filter((l) => availableLanguages.includes(l.code))
-    : languages;
+  const visibleLanguages = visibleSwitcherLanguages(availableLanguages);
 
   return (
     <div className="flex items-center gap-1.5">

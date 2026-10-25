@@ -29,10 +29,21 @@ export function FlagGB({ className = "w-6 h-[18px] rounded-sm shadow-sm" }: { cl
   );
 }
 
+export function FlagIT({ className = "w-6 h-[18px] rounded-sm shadow-sm" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 32 24" className={className}>
+      <rect width="11" height="24" fill="#009246" />
+      <rect x="10.67" width="10.67" height="24" fill="#fff" />
+      <rect x="21.33" width="10.67" height="24" fill="#ce2b37" />
+    </svg>
+  );
+}
+
 const FLAG_MAP: Record<string, (props: { className?: string }) => React.JSX.Element> = {
   en: FlagGB,
   de: FlagDE,
   pl: FlagPL,
+  it: FlagIT,
 };
 
 export function LanguageFlag({ lang, className }: { lang: string; className?: string }) {

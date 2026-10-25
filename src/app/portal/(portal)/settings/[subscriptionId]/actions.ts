@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import { getCustomerByEmail, getCustomerSubscriptions } from "@/lib/db/portal";
 import { updateLocation, upsertLocationLinks } from "@/lib/db/locations";
 import { isSafeHttpUrl } from "@/lib/urls";
-import { SUPPORTED_LANGUAGES } from "@/lib/language";
+import { SUPPORTED_LANGUAGES, PLATE_LANGUAGES } from "@/lib/language";
 import { isLinkIconKey } from "@/lib/linkIcons";
 import { isTileBackgroundKey } from "@/lib/linkBackgrounds";
 import { isPageBackgroundKey } from "@/lib/pageBackgrounds";
@@ -257,7 +257,7 @@ export async function updateActiveLanguages(formData: FormData): Promise<ActionR
   const ok = await verifyOwnership(customer.customer_id, subscriptionId, locationId);
   if (!ok) return { ok: false, error: "failed" };
 
-  const selected = SUPPORTED_LANGUAGES.filter((l) => formData.get(`lang_${l}`) === "on");
+  const selected = PLATE_LANGUAGES.filter((l) => formData.get(`lang_${l}`) === "on");
   if (selected.length === 0) {
     // Minimum jeden aktywny język musi zostać — odrzucamy zmianę.
     return { ok: false, error: "min_one" };

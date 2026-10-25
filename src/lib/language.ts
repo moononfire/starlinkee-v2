@@ -1,22 +1,22 @@
 import { cookies } from "next/headers";
-import { SUPPORTED_LANGUAGES, type Language } from "@/lib/languages";
+import { SUPPORTED_LANGUAGES, PLATE_LANGUAGES, type Language, type PlateLanguage } from "@/lib/languages";
 
-export { SUPPORTED_LANGUAGES, type Language };
+export { SUPPORTED_LANGUAGES, PLATE_LANGUAGES, type Language, type PlateLanguage };
 
 export async function getLanguage(
   scopeKey?: string,
   fallback: string = "en",
   allowedLanguages: readonly string[] = SUPPORTED_LANGUAGES
-): Promise<Language> {
+): Promise<PlateLanguage> {
   const jar = await cookies();
   const cookieName = scopeKey ? `lang_${scopeKey}` : "lang";
   const cookie = jar.get(cookieName)?.value;
-  if (cookie && allowedLanguages.includes(cookie) && SUPPORTED_LANGUAGES.includes(cookie as Language)) {
-    return cookie as Language;
+  if (cookie && allowedLanguages.includes(cookie) && PLATE_LANGUAGES.includes(cookie as PlateLanguage)) {
+    return cookie as PlateLanguage;
   }
-  if (allowedLanguages.includes(fallback) && SUPPORTED_LANGUAGES.includes(fallback as Language)) {
-    return fallback as Language;
+  if (allowedLanguages.includes(fallback) && PLATE_LANGUAGES.includes(fallback as PlateLanguage)) {
+    return fallback as PlateLanguage;
   }
-  const firstAllowed = allowedLanguages.find((l) => SUPPORTED_LANGUAGES.includes(l as Language));
-  return (firstAllowed as Language) ?? "en";
+  const firstAllowed = allowedLanguages.find((l) => PLATE_LANGUAGES.includes(l as PlateLanguage));
+  return (firstAllowed as PlateLanguage) ?? "en";
 }

@@ -74,7 +74,7 @@ export async function createRenewalCheckoutSession(params: {
   const session = await getStripe().checkout.sessions.create({
     mode: "subscription",
     line_items: [{ price: priceId, quantity: 1 }],
-    locale: ["en", "de", "pl"].includes(lang) ? (lang as Stripe.Checkout.SessionCreateParams.Locale) : "auto",
+    locale: ["en", "de", "pl", "it"].includes(lang) ? (lang as Stripe.Checkout.SessionCreateParams.Locale) : "auto",
     success_url: plateUrl,
     cancel_url: plateUrl,
     subscription_data: {

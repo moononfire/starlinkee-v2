@@ -8,6 +8,7 @@ import { getLanguage } from "@/lib/language";
 import { t } from "@/lib/translations";
 import { getPromoText } from "@/lib/promo-i18n";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { linktreeLanguages } from "@/lib/languages";
 
 interface Props {
   params: Promise<{ slug: string; token: string }>;
@@ -24,14 +25,14 @@ export default async function ClaimPage({ params }: Props) {
 
   const plates = await getPlatesBySubscriptionId(location.subscription_id);
   const plateLanguage = plates[0]?.plate_language ?? "pl";
-  const lang = await getLanguage(slug, plateLanguage, location.active_languages);
+  const lang = await getLanguage(slug, plateLanguage, linktreeLanguages(location.active_languages));
 
   return (
     <>
       <PageTracker locationId={location.location_id} pagePath={`/l/${slug}/promo/claim`} pageType="promo_claim" />
       <main className="min-h-screen bg-gray-50 flex flex-col items-center pt-4 px-4">
         <div className="flex justify-end w-full max-w-sm mb-3">
-          <LanguageSwitcher currentLang={lang} scopeKey={slug} availableLanguages={location.active_languages} />
+          <LanguageSwitcher currentLang={lang} scopeKey={slug} availableLanguages={linktreeLanguages(location.active_languages)} />
         </div>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-full max-w-sm">
           {location.logo_link && (

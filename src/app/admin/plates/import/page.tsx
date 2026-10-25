@@ -3,6 +3,7 @@ import { assertAdmin } from "@/lib/api-auth";
 import { randomBytes } from "crypto";
 import { insertPlatesBatch } from "@/lib/db/plates";
 import { sendPlateImportLinks } from "@/lib/email";
+import { PLATE_LANGUAGES, type PlateLanguage } from "@/lib/languages";
 
 async function importPlatesAction(formData: FormData) {
   "use server";
@@ -24,6 +25,9 @@ async function importPlatesAction(formData: FormData) {
   for (const line of lines) {
     const [number, lang] = line.split(",").map((s) => s.trim());
     if (!number || !lang) continue;
+    if (!PLATE_LANGUAGES.includes(lang as PlateLanguage)) {
+      throw new Error(`Nieobsługiwany język "${lang}" (dozwolone: ${PLATE_LANGUAGES.join(", ")})`);
+    }
 
     const plateNumber = number.toUpperCase();
     const secretKey = randomBytes(16).toString("hex");
