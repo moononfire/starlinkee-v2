@@ -36,7 +36,7 @@ export default function PromoPreviewEditor({
   lang,
 }: Props) {
   const editableLanguages = SUPPORTED_LANGUAGES.filter((l) => activeLanguages.includes(l));
-  const [editLang, setEditLang] = useState<Language>(editableLanguages[0] ?? "pl");
+  const [editLang, setEditLang] = useState<Language>(editableLanguages[0] ?? "en");
   const [description, setDescription] = useState<LocalizedText>(initialDescription);
   const [bannerText, setBannerText] = useState<LocalizedText>(initialBannerText);
   const [smsText, setSmsText] = useState<LocalizedText>(initialSmsText);

@@ -7,7 +7,7 @@ import PageTracker from "@/components/tracking/PageTracker";
 import { getLanguage } from "@/lib/language";
 import { t } from "@/lib/translations";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import { linktreeLanguages } from "@/lib/languages";
+import { linktreeLanguages, firstPlateLanguage } from "@/lib/languages";
 import { getPageBackground } from "@/lib/pageBackgrounds";
 
 interface Props {
@@ -23,7 +23,7 @@ export default async function WifiPage({ params, searchParams }: Props) {
   if (!location || !location.has_wifi_enabled || !location.wifi_ssid) notFound();
 
   const plates = await getPlatesBySubscriptionId(location.subscription_id);
-  const plateLanguage = plates[0]?.plate_language ?? "pl";
+  const plateLanguage = firstPlateLanguage(plates);
   const lang = await getLanguage(slug, plateLanguage, linktreeLanguages(location.active_languages));
 
   return (

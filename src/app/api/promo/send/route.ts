@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
   try {
     await createLead(location.location_id, normalizedPhone, email ?? null, agreed, claimToken, couponCode);
 
-    const currentLang = typeof lang === "string" ? lang : "pl";
+    const currentLang = typeof lang === "string" ? lang : "en";
     const localizedSmsText = getPromoText(location, currentLang, "promo_sms_text");
     const defaultSms = t("portal_promo_sms_placeholder", currentLang);
 

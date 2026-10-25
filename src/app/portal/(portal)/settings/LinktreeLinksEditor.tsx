@@ -91,8 +91,8 @@ export default function LinktreeLinksEditor({
 
   const [expandedStyleIdx, setExpandedStyleIdx] = useState<number | null>(null);
   const linkLangs = SUPPORTED_LANGUAGES.filter((l) => activeLanguages.includes(l));
-  // Use portal lang if it's in activeLanguages, otherwise fallback to the first active language or "pl"
-  const defaultLang = (linkLangs.includes(lang as LinkLang) ? lang : linkLangs[0]) as LinkLang ?? "pl";
+  // Use portal lang if it's in activeLanguages, otherwise fallback to the first active language or "en"
+  const defaultLang = (linkLangs.includes(lang as LinkLang) ? lang : linkLangs[0]) as LinkLang ?? "en";
   const [previewLang, setPreviewLang] = useState<LinkLang>(defaultLang);
 
   const [state, formAction, isPending] = useActionState(

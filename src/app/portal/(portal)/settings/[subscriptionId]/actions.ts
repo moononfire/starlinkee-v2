@@ -109,7 +109,7 @@ export async function upsertLinktreeLinks(formData: FormData): Promise<ActionRes
   const location = await getOwnedLocation(customer.customer_id, subscriptionId, locationId);
   if (!location) return { ok: false, error: "failed" };
 
-  const primaryLang = SUPPORTED_LANGUAGES.find((l) => location.active_languages.includes(l)) ?? "pl";
+  const primaryLang = SUPPORTED_LANGUAGES.find((l) => location.active_languages.includes(l)) ?? "en";
   const primaryField = `title_${primaryLang}` as const;
 
   let rawLinks: { title_pl: string; title_en: string; title_de: string; url: string; icon?: string | null; background?: string | null }[];

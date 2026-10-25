@@ -7,7 +7,7 @@ import PageTracker from "@/components/tracking/PageTracker";
 import { getLanguage } from "@/lib/language";
 import { t } from "@/lib/translations";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import { linktreeLanguages } from "@/lib/languages";
+import { linktreeLanguages, firstPlateLanguage } from "@/lib/languages";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -23,7 +23,7 @@ export default async function LoyaltyPage({ params, searchParams }: Props) {
 
   const plates = await getPlatesBySubscriptionId(location.subscription_id);
 
-  const plateLanguage = plates[0]?.plate_language ?? "pl";
+  const plateLanguage = firstPlateLanguage(plates);
   const lang = await getLanguage(slug, plateLanguage, linktreeLanguages(location.active_languages));
 
   const maxStamps = location.loyalty_stamps_required ?? 10;

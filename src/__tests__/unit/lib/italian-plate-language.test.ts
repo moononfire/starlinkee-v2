@@ -94,3 +94,16 @@ describe("LanguageSwitcher visibility", () => {
     expect(visibleSwitcherLanguages(["it", "pl"]).map((l) => l.code)).toEqual(["pl", "it"]);
   });
 });
+
+describe("default page language", () => {
+  it("is English for a location without plates", async () => {
+    const { firstPlateLanguage } = await import("@/lib/languages");
+    const plateLanguage = firstPlateLanguage([]);
+    expect(plateLanguage).toBe("en");
+    expect(await getLanguage("slug", plateLanguage, linktreeLanguages(["pl", "en", "de"]))).toBe("en");
+  });
+  it("uses the first plate's language when there is one", async () => {
+    const { firstPlateLanguage } = await import("@/lib/languages");
+    expect(firstPlateLanguage([{ plate_language: "de" }])).toBe("de");
+  });
+});

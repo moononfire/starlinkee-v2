@@ -38,7 +38,7 @@ export default function LoyaltyPreviewEditor({
   lang,
 }: Props) {
   const editableLanguages = SUPPORTED_LANGUAGES.filter((l) => activeLanguages.includes(l));
-  const [editLang, setEditLang] = useState<Language>(editableLanguages[0] ?? "pl");
+  const [editLang, setEditLang] = useState<Language>(editableLanguages[0] ?? "en");
   const [cardText, setCardText] = useState<LocalizedText>(initialCardText);
   const [rewardText, setRewardText] = useState<LocalizedText>(initialRewardText);
   const [stampsRequired, setStampsRequired] = useState(initialStampsRequired);
