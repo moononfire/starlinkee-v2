@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import translationsJson from "@/lib/translations.json";
 import { t } from "@/lib/translations";
-import { SUPPORTED_LANGUAGES, PLATE_LANGUAGES, linktreeLanguages } from "@/lib/languages";
+import { PLATE_LANGUAGES } from "@/lib/languages";
 
 let cookieValue: string | undefined;
 vi.mock("next/headers", () => ({
@@ -25,6 +25,16 @@ const SETUP_FORM_KEYS = [
   "setup_form_no_file", "setup_form_submit", "setup_form_submitting", "setup_form_support_email",
   "setup_form_support_email_hint", "setup_form_title",
 ];
+const LINKTREE_KEYS = [
+  "back_button", "check_messages", "claim_code_btn", "collect_promo_btn", "collect_promo_default",
+  "collect_your_promo", "consent_required", "consent_text", "coupon_already_used", "coupon_code_label",
+  "download_app_link", "email_optional_placeholder", "leave_review", "link_expired", "loyalty_app_prompt",
+  "loyalty_card_link", "open_in_app_button", "opening_app", "phone_already_claimed",
+  "portal_linktree_preview_hint", "portal_loyalty_card_text_placeholder", "portal_tab_menu", "portal_tab_wifi",
+  "portal_wifi_copy", "portal_wifi_copy_success", "portal_wifi_qr_title", "processing", "promo_sent_sms",
+  "scan_nfc_for_promo", "sending", "show_to_staff", "something_went_wrong", "your_promo", "your_promo_coupon",
+  "portal_promo_sms_placeholder",
+];
 
 beforeEach(() => {
   cookieValue = undefined;
@@ -33,7 +43,7 @@ beforeEach(() => {
 describe("Italian translations", () => {
   const it_ = (translationsJson as Record<string, Record<string, string>>).it;
 
-  it.each([...PLATE_SCREEN_KEYS, ...SETUP_FORM_KEYS])("has a non-empty Italian text for %s", (key) => {
+  it.each([...PLATE_SCREEN_KEYS, ...SETUP_FORM_KEYS, ...LINKTREE_KEYS])("has a non-empty Italian text for %s", (key) => {
     expect(it_[key]?.trim().length).toBeGreaterThan(0);
   });
 
@@ -47,9 +57,6 @@ describe("Italian translations", () => {
     expect(t("portal_password_title", "it")).toBe(t("portal_password_title", "en"));
   });
 
-  it("labels the plate-only Italian toggle in every portal language", () => {
-    for (const l of SUPPORTED_LANGUAGES) expect(t("portal_lang_it_plate_only", l)).not.toBe("portal_lang_it_plate_only");
-  });
 });
 
 describe("getLanguage with Italian", () => {
@@ -73,13 +80,17 @@ describe("getLanguage with Italian", () => {
   });
 });
 
-describe("linktreeLanguages", () => {
-  it("drops it", () => {
-    expect(linktreeLanguages(["pl", "it"])).toEqual(["pl"]);
+describe("/l/* pages with Italian", () => {
+  it("keeps it for an Italian-only location instead of falling back to en", async () => {
+    expect(await getLanguage("slug", "en", ["it"])).toBe("it");
   });
-  it("gives an empty list for an Italian-only location, which getLanguage turns into en", async () => {
-    expect(linktreeLanguages(["it"])).toEqual([]);
-    expect(await getLanguage("slug", "it", linktreeLanguages(["it"]))).toBe("en");
+  it("honours an it cookie when it is active for the location", async () => {
+    cookieValue = "it";
+    expect(await getLanguage("slug", "pl", ["pl", "it"])).toBe("it");
+  });
+  it("ignores an it cookie when the location did not activate it", async () => {
+    cookieValue = "it";
+    expect(await getLanguage("slug", "pl", ["pl", "en"])).toBe("pl");
   });
 });
 
@@ -100,7 +111,7 @@ describe("default page language", () => {
     const { firstPlateLanguage } = await import("@/lib/languages");
     const plateLanguage = firstPlateLanguage([]);
     expect(plateLanguage).toBe("en");
-    expect(await getLanguage("slug", plateLanguage, linktreeLanguages(["pl", "en", "de"]))).toBe("en");
+    expect(await getLanguage("slug", plateLanguage, ["pl", "en", "de"])).toBe("en");
   });
   it("uses the first plate's language when there is one", async () => {
     const { firstPlateLanguage } = await import("@/lib/languages");

@@ -170,3 +170,32 @@ describe("POST /api/promo/send", () => {
     expect(res.status).toBe(500);
   });
 });
+
+describe("POST /api/promo/send — SMS language", () => {
+  const smsText = () => mockSendSms.mock.calls[0][1] as string;
+
+  it("sends the Italian SMS text for lang it", async () => {
+    mockGetLocationBySlug.mockResolvedValue({ ...location, promo_sms_text_it: "Sconto del 10%!" });
+    const res = await POST(makeRequest({ ...validBody, lang: "it" }));
+    expect(res.status).toBe(200);
+    expect(smsText()).toContain("Sconto del 10%!");
+  });
+
+  it("uses the Italian default SMS when the venue has no Italian text", async () => {
+    mockGetLocationBySlug.mockResolvedValue({ ...location, promo_sms_text: null });
+    await POST(makeRequest({ ...validBody, lang: "it" }));
+    expect(smsText()).toMatch(/^Ciao! La tua promozione/);
+  });
+
+  it("falls back to English for an unknown lang", async () => {
+    mockGetLocationBySlug.mockResolvedValue({ ...location, promo_sms_text: null, promo_sms_text_en: "English text" });
+    await POST(makeRequest({ ...validBody, lang: "xx" }));
+    expect(smsText()).toContain("English text");
+  });
+
+  it("keeps every Italian SMS default inside GSM-7", async () => {
+    const { t } = await import("@/lib/translations");
+    // GSM-7 basic set (letters used by Italian) — no curly quotes, no ’, no exotic symbols
+    expect(t("portal_promo_sms_placeholder", "it")).toMatch(/^[A-Za-z0-9 !"#%&'()*+,\-./:;<=>?@_{}èéùìòà]+$/);
+  });
+});
