@@ -11,8 +11,8 @@ const languages = [
   { code: "it", label: "IT" },
 ] as const;
 
-// Without an explicit list only the portal languages show; Italian exists on plate screens only,
-// which pass PLATE_LANGUAGES (or the location's active languages) themselves.
+// Without an explicit list only the portal UI languages show (portal, /verify); public pages
+// pass the location's active languages (or PLATE_LANGUAGES) themselves.
 export function visibleSwitcherLanguages(availableLanguages?: readonly string[]) {
   const allowed: readonly string[] = availableLanguages ?? SUPPORTED_LANGUAGES;
   return languages.filter((l) => allowed.includes(l.code));
