@@ -1,4 +1,3 @@
-import { linktreeLanguages } from "@/lib/languages";
 import { notFound, redirect } from "next/navigation";
 import { getPortalSession } from "@/lib/portal-session";
 import { getLeadsByLocationId } from "@/lib/db/leads";
@@ -73,20 +72,23 @@ export default async function PromoPortalPage({ params }: Props) {
               pl: location.promo_description ?? "",
               en: location.promo_description_en ?? "",
               de: location.promo_description_de ?? "",
+              it: location.promo_description_it ?? "",
             }}
             initialBannerText={{
               pl: location.promo_banner_text ?? "",
               en: location.promo_banner_text_en ?? "",
               de: location.promo_banner_text_de ?? "",
+              it: location.promo_banner_text_it ?? "",
             }}
             initialSmsText={{
               pl: location.promo_sms_text ?? "",
               en: location.promo_sms_text_en ?? "",
               de: location.promo_sms_text_de ?? "",
+              it: location.promo_sms_text_it ?? "",
             }}
             logoLink={location.logo_link}
             locationName={locationName}
-            activeLanguages={linktreeLanguages(location.active_languages)}
+            activeLanguages={location.active_languages}
             lang={lang}
           />
         </SavableForm>

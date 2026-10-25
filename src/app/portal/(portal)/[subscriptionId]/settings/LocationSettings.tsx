@@ -55,11 +55,6 @@ export default function LocationSettings({
               />
               <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                 {l.toUpperCase()}
-                {l === "it" && (
-                  <span className="block text-xs font-normal text-gray-500 dark:text-gray-400">
-                    {t("portal_lang_it_plate_only", lang)}
-                  </span>
-                )}
               </span>
             </label>
           ))}

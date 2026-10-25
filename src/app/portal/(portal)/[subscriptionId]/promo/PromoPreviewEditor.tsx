@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import { t } from "@/lib/translations";
-import { SUPPORTED_LANGUAGES, type Language } from "@/lib/languages";
+import { PLATE_LANGUAGES, type PlateLanguage } from "@/lib/languages";
+import { localizedFieldName, hiddenLanguageFields } from "@/lib/localized-fields";
 
-const LANGUAGE_LABELS: Record<Language, string> = {
+const LANGUAGE_LABELS: Record<PlateLanguage, string> = {
   pl: "Polski",
   en: "English",
   de: "Deutsch",
+  it: "Italiano",
 };
 
-type LocalizedText = Record<Language, string>;
+type LocalizedText = Record<PlateLanguage, string>;
 
 interface Props {
   initialDescription: LocalizedText;
@@ -18,12 +20,8 @@ interface Props {
   initialSmsText: LocalizedText;
   logoLink: string | null;
   locationName: string;
-  activeLanguages: Language[];
+  activeLanguages: PlateLanguage[];
   lang: string;
-}
-
-function fieldName(base: string, editLang: Language): string {
-  return editLang === "pl" ? base : `${base}_${editLang}`;
 }
 
 export default function PromoPreviewEditor({
@@ -35,15 +33,15 @@ export default function PromoPreviewEditor({
   activeLanguages,
   lang,
 }: Props) {
-  const editableLanguages = SUPPORTED_LANGUAGES.filter((l) => activeLanguages.includes(l));
-  const [editLang, setEditLang] = useState<Language>(editableLanguages[0] ?? "en");
+  const editableLanguages = PLATE_LANGUAGES.filter((l) => activeLanguages.includes(l));
+  const [editLang, setEditLang] = useState<PlateLanguage>(editableLanguages[0] ?? "en");
   const [description, setDescription] = useState<LocalizedText>(initialDescription);
   const [bannerText, setBannerText] = useState<LocalizedText>(initialBannerText);
   const [smsText, setSmsText] = useState<LocalizedText>(initialSmsText);
 
-  function hiddenInputsFor(base: string, values: LocalizedText, active: Language) {
-    return SUPPORTED_LANGUAGES.filter((l) => l !== active).map((l) => (
-      <input key={l} type="hidden" name={fieldName(base, l)} value={values[l]} />
+  function hiddenInputsFor(base: string, values: LocalizedText, active: PlateLanguage) {
+    return hiddenLanguageFields(base, values, active).map(({ name, value }) => (
+      <input key={name} type="hidden" name={name} value={value} />
     ));
   }
 
@@ -95,7 +93,7 @@ export default function PromoPreviewEditor({
 
             {hiddenInputsFor("promo_description", description, editLang)}
             <textarea
-              name={fieldName("promo_description", editLang)}
+              name={localizedFieldName("promo_description", editLang)}
               value={description[editLang]}
               onChange={(e) => setDescription({ ...description, [editLang]: e.target.value })}
               placeholder={t("portal_promo_description_placeholder", editLang)}
@@ -150,7 +148,7 @@ export default function PromoPreviewEditor({
             <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 mb-5">
               {hiddenInputsFor("promo_banner_text", bannerText, editLang)}
               <textarea
-                name={fieldName("promo_banner_text", editLang)}
+                name={localizedFieldName("promo_banner_text", editLang)}
                 value={bannerText[editLang]}
                 onChange={(e) => setBannerText({ ...bannerText, [editLang]: e.target.value })}
                 placeholder={t("portal_promo_banner_placeholder", editLang)}
@@ -198,7 +196,7 @@ export default function PromoPreviewEditor({
 
         {hiddenInputsFor("promo_sms_text", smsText, editLang)}
         <textarea
-          name={fieldName("promo_sms_text", editLang)}
+          name={localizedFieldName("promo_sms_text", editLang)}
           value={smsText[editLang]}
           onChange={(e) => setSmsText({ ...smsText, [editLang]: e.target.value })}
           placeholder={t("portal_promo_sms_placeholder", editLang)}
