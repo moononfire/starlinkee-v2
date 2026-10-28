@@ -3,13 +3,16 @@
 import { useEffect, useState } from "react";
 import { t } from "@/lib/translations";
 import { postDemoStep } from "@/lib/demoTour";
+import { isSafeGoogleReviewUrl } from "@/lib/urls";
 
 interface Props {
   scanId: string;
   lang: string;
+  googleReviewLink?: string | null;
 }
 
-export default function FeedbackForm({ scanId, lang }: Props) {
+export default function FeedbackForm({ scanId, lang, googleReviewLink }: Props) {
+  const googleLink = googleReviewLink && isSafeGoogleReviewUrl(googleReviewLink) ? googleReviewLink : null;
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -94,6 +97,19 @@ export default function FeedbackForm({ scanId, lang }: Props) {
       >
         {loading ? t("sending_feedback", lang) : t("send_feedback_btn", lang)}
       </button>
+
+      {googleLink && (
+        <p className="text-center text-xs">
+          <a
+            href={googleLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 underline"
+          >
+            {t("prefer_google_review_link", lang)}
+          </a>
+        </p>
+      )}
     </form>
   );
 }

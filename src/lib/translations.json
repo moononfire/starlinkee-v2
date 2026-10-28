@@ -444,7 +444,8 @@
     "portal_password_current": "Current password",
     "portal_password_wrong_current": "The current password is incorrect.",
     "plate_unavailable_title": "This plate is temporarily unavailable",
-    "plate_unavailable_message": "Please try again later."
+    "plate_unavailable_message": "Please try again later.",
+    "prefer_google_review_link": "Prefer to leave a review on Google?"
   },
   "de": {
     "back_button": "Zurück",
@@ -892,7 +893,8 @@
     "portal_password_current": "Aktuelles Passwort",
     "portal_password_wrong_current": "Das aktuelle Passwort ist falsch.",
     "plate_unavailable_title": "Dieses Schild ist vorübergehend nicht verfügbar",
-    "plate_unavailable_message": "Bitte versuchen Sie es später noch einmal."
+    "plate_unavailable_message": "Bitte versuchen Sie es später noch einmal.",
+    "prefer_google_review_link": "Lieber eine Bewertung bei Google hinterlassen?"
   },
   "pl": {
     "back_button": "Powrót",
@@ -1339,7 +1341,8 @@
     "portal_password_current": "Obecne hasło",
     "portal_password_wrong_current": "Obecne hasło jest nieprawidłowe.",
     "plate_unavailable_title": "Ta tabliczka jest chwilowo niedostępna",
-    "plate_unavailable_message": "Spróbuj ponownie później."
+    "plate_unavailable_message": "Spróbuj ponownie później.",
+    "prefer_google_review_link": "Wolisz zostawić opinię w Google?"
   },
   "it": {
     "appreciate_feedback": "Apprezziamo il tuo feedback.",
@@ -1424,7 +1427,8 @@
     "portal_loyalty_show_staff": "Mostralo al personale",
     "portal_promo_description_placeholder": "Descrizione della promozione — es. \"Caffè gratis con ogni acquisto!\"",
     "plate_unavailable_title": "Questa targhetta è temporaneamente non disponibile",
-    "plate_unavailable_message": "Riprova più tardi."
+    "plate_unavailable_message": "Riprova più tardi.",
+    "prefer_google_review_link": "Preferisci lasciare una recensione su Google?"
   },
   "zh": {
     "proxy_page_title": "您如何评价您的体验？",

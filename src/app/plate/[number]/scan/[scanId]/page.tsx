@@ -91,7 +91,7 @@ export default async function ScanPage({ params }: Props) {
             <h2 className="text-lg font-bold text-gray-900 text-center">
               {location.location_name}
             </h2>
-            <FeedbackForm scanId={scanId} lang={lang} />
+            <FeedbackForm scanId={scanId} lang={lang} googleReviewLink={location.google_review_link} />
           </div>
         </main>
       </>
