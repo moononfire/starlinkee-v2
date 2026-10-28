@@ -32,14 +32,14 @@ export default async function PlatePage({ params }: Props) {
   const lang = await getLanguage(plate.plate_number, plate.plate_language, PLATE_LANGUAGES);
 
   if (!plate.subscription_id) {
-    return <InactivePage lang={lang} plateNumber={plate.plate_number} plateSecret={plate.secret_key} />;
+    return <InactivePage lang={lang} reason="unassigned" plateNumber={plate.plate_number} plateSecret={plate.secret_key} />;
   }
 
   const subscription = await getSubscriptionById(plate.subscription_id);
   if (!subscription) notFound();
 
   if (subscription.status === "inactive") {
-    return <InactivePage lang={lang} plateNumber={plate.plate_number} plateSecret={plate.secret_key} />;
+    return <InactivePage lang={lang} reason="expired" plateNumber={plate.plate_number} plateSecret={plate.secret_key} />;
   }
 
   if (subscription.status === "pending") {
@@ -104,10 +104,13 @@ export default async function PlatePage({ params }: Props) {
 
 function InactivePage({
   lang,
+  reason,
   plateNumber,
   plateSecret,
 }: {
   lang: string;
+  // "unassigned": plate never attached to a venue; "expired": its subscription ran out.
+  reason: "unassigned" | "expired";
   plateNumber?: string;
   plateSecret?: string;
 }) {
@@ -121,7 +124,7 @@ function InactivePage({
         <p className="text-lg font-medium" style={{ color: "#1f2937" }}>
           {t("plate_inactive_title", lang)}
         </p>
-        <p className="mt-2" style={{ color: "#374151" }}>{t("plate_inactive_exception", lang)}</p>
+        <p className="mt-2" style={{ color: "#374151" }}>{t(reason === "expired" ? "plate_inactive_exception" : "plate_unassigned_exception", lang)}</p>
 
         {plateNumber && plateSecret && (
           <div className="mt-6">

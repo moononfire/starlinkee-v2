@@ -111,3 +111,18 @@ describe("plate page — Italian", () => {
     expect(getLanguage).toHaveBeenCalledWith("ABC123", "it", PLATE_LANGUAGES);
   });
 });
+
+describe("plate page — inactive reason", () => {
+  it("tells an unassigned plate apart from an expired one", async () => {
+    vi.mocked(getPlateByNumber).mockResolvedValue({
+      plate_id: 7, plate_number: "ABC123", secret_key: "s3cret", subscription_id: null, plate_language: "en",
+    } as any);
+    expect(((await render()) as any).props.reason).toBe("unassigned");
+
+    vi.mocked(getPlateByNumber).mockResolvedValue({
+      plate_id: 7, plate_number: "ABC123", secret_key: "s3cret", subscription_id: 3, plate_language: "en",
+    } as any);
+    vi.mocked(getSubscriptionById).mockResolvedValue({ status: "inactive" } as any);
+    expect(((await render()) as any).props.reason).toBe("expired");
+  });
+});

@@ -444,7 +444,8 @@
     "setup_form_activation_code": "Activation code",
     "setup_form_activation_code_hint": "The code from the email we sent you when your plate was assigned to your account.",
     "portal_password_current": "Current password",
-    "portal_password_wrong_current": "The current password is incorrect."
+    "portal_password_wrong_current": "The current password is incorrect.",
+    "plate_unassigned_exception": "This plate isn't linked to a venue yet."
   },
   "de": {
     "back_button": "Zurück",
@@ -892,7 +893,8 @@
     "setup_form_activation_code": "Aktivierungscode",
     "setup_form_activation_code_hint": "Der Code aus der E-Mail, die wir Ihnen bei der Zuordnung Ihres Schilds zu Ihrem Konto geschickt haben.",
     "portal_password_current": "Aktuelles Passwort",
-    "portal_password_wrong_current": "Das aktuelle Passwort ist falsch."
+    "portal_password_wrong_current": "Das aktuelle Passwort ist falsch.",
+    "plate_unassigned_exception": "Dieses Schild ist noch keinem Lokal zugeordnet."
   },
   "pl": {
     "back_button": "Powrót",
@@ -1339,7 +1341,8 @@
     "setup_form_activation_code": "Kod aktywacyjny",
     "setup_form_activation_code_hint": "Kod z wiadomości e-mail, którą wysłaliśmy po przypisaniu tabliczki do Twojego konta.",
     "portal_password_current": "Obecne hasło",
-    "portal_password_wrong_current": "Obecne hasło jest nieprawidłowe."
+    "portal_password_wrong_current": "Obecne hasło jest nieprawidłowe.",
+    "plate_unassigned_exception": "Ta tabliczka nie jest jeszcze przypisana do żadnego lokalu."
   },
   "it": {
     "appreciate_feedback": "Apprezziamo il tuo feedback.",
@@ -1424,7 +1427,8 @@
     "portal_loyalty_reward_placeholder": "Caffè gratis",
     "portal_loyalty_redeem_code_label": "Codice di riscatto",
     "portal_loyalty_show_staff": "Mostralo al personale",
-    "portal_promo_description_placeholder": "Descrizione della promozione — es. \"Caffè gratis con ogni acquisto!\""
+    "portal_promo_description_placeholder": "Descrizione della promozione — es. \"Caffè gratis con ogni acquisto!\"",
+    "plate_unassigned_exception": "Questa targhetta non è ancora collegata a nessun locale."
   },
   "zh": {
     "proxy_page_title": "您如何评价您的体验？",
