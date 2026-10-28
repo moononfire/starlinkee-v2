@@ -127,9 +127,7 @@
     "plate_not_found_exception": "Plate not found.",
     "invalid_plate_secret_exception": "Invalid plate secret key.",
     "plate_processing_failed_exception": "Failed to process the plate.",
-    "plate_inactive_exception": "This venue's subscription has expired, so reviews are on hold for now. Nothing serious — it just needs renewing.",
     "subscription_not_found": "No subscription found for this plate.",
-    "plate_inactive_title": "This plate is paused for now",
     "plate_renew_description": "Renew the subscription and the plate will start collecting reviews again. It only takes a moment.",
     "plate_renew_button_monthly": "Renew for a month",
     "plate_renew_button_yearly": "Renew for a year",
@@ -445,7 +443,8 @@
     "setup_form_activation_code_hint": "The code from the email we sent you when your plate was assigned to your account.",
     "portal_password_current": "Current password",
     "portal_password_wrong_current": "The current password is incorrect.",
-    "plate_unassigned_exception": "This plate isn't linked to a venue yet."
+    "plate_unavailable_title": "This plate is temporarily unavailable",
+    "plate_unavailable_message": "Please try again later."
   },
   "de": {
     "back_button": "Zurück",
@@ -575,9 +574,7 @@
     "plate_not_found_exception": "Kennzeichen nicht gefunden.",
     "invalid_plate_secret_exception": "Ungültiger Kennzeichenschlüssel.",
     "plate_processing_failed_exception": "Verarbeitung des Kennzeichens fehlgeschlagen.",
-    "plate_inactive_exception": "Das Abonnement dieses Lokals ist abgelaufen, deshalb sind Bewertungen vorerst pausiert. Nichts Schlimmes – es muss nur verlängert werden.",
     "subscription_not_found": "Keine Abonnement für dieses Kennzeichen gefunden.",
-    "plate_inactive_title": "Dieses Schild ist vorübergehend pausiert",
     "plate_renew_description": "Verlängern Sie das Abonnement, und das Schild sammelt wieder Bewertungen. Das dauert nur einen Moment.",
     "plate_renew_button_monthly": "Für einen Monat verlängern",
     "plate_renew_button_yearly": "Für ein Jahr verlängern",
@@ -894,7 +891,8 @@
     "setup_form_activation_code_hint": "Der Code aus der E-Mail, die wir Ihnen bei der Zuordnung Ihres Schilds zu Ihrem Konto geschickt haben.",
     "portal_password_current": "Aktuelles Passwort",
     "portal_password_wrong_current": "Das aktuelle Passwort ist falsch.",
-    "plate_unassigned_exception": "Dieses Schild ist noch keinem Lokal zugeordnet."
+    "plate_unavailable_title": "Dieses Schild ist vorübergehend nicht verfügbar",
+    "plate_unavailable_message": "Bitte versuchen Sie es später noch einmal."
   },
   "pl": {
     "back_button": "Powrót",
@@ -1023,9 +1021,7 @@
     "plate_not_found_exception": "Nie znaleziono tablicy.",
     "invalid_plate_secret_exception": "Nieprawidłowy klucz tablicy.",
     "plate_processing_failed_exception": "Nie udało się przetworzyć tablicy.",
-    "plate_inactive_exception": "Subskrypcja tego lokalu wygasła, więc opinie są teraz wstrzymane. To nic poważnego, wystarczy ją odnowić.",
     "subscription_not_found": "Nie znaleziono subskrypcji dla tej tablicy.",
-    "plate_inactive_title": "Ta tabliczka jest chwilowo wyłączona",
     "plate_renew_description": "Odnów subskrypcję, a tabliczka znów zacznie zbierać opinie. Zajmie to chwilę.",
     "plate_renew_button_monthly": "Odnów na miesiąc",
     "plate_renew_button_yearly": "Odnów na rok",
@@ -1342,7 +1338,8 @@
     "setup_form_activation_code_hint": "Kod z wiadomości e-mail, którą wysłaliśmy po przypisaniu tabliczki do Twojego konta.",
     "portal_password_current": "Obecne hasło",
     "portal_password_wrong_current": "Obecne hasło jest nieprawidłowe.",
-    "plate_unassigned_exception": "Ta tabliczka nie jest jeszcze przypisana do żadnego lokalu."
+    "plate_unavailable_title": "Ta tabliczka jest chwilowo niedostępna",
+    "plate_unavailable_message": "Spróbuj ponownie później."
   },
   "it": {
     "appreciate_feedback": "Apprezziamo il tuo feedback.",
@@ -1352,8 +1349,6 @@
     "message_placeholder": "Il tuo messaggio...",
     "name_optional": "Il tuo nome (facoltativo)",
     "phone_optional": "Telefono (facoltativo)",
-    "plate_inactive_exception": "L'abbonamento di questo locale è scaduto, quindi per ora le recensioni sono in pausa. Nulla di grave: basta rinnovarlo.",
-    "plate_inactive_title": "Questa targhetta è temporaneamente sospesa",
     "plate_renew_button_monthly": "Rinnova per un mese",
     "plate_renew_button_yearly": "Rinnova per un anno",
     "plate_renew_description": "Rinnova l'abbonamento e la targhetta tornerà a raccogliere recensioni. Ci vuole un attimo.",
@@ -1428,7 +1423,8 @@
     "portal_loyalty_redeem_code_label": "Codice di riscatto",
     "portal_loyalty_show_staff": "Mostralo al personale",
     "portal_promo_description_placeholder": "Descrizione della promozione — es. \"Caffè gratis con ogni acquisto!\"",
-    "plate_unassigned_exception": "Questa targhetta non è ancora collegata a nessun locale."
+    "plate_unavailable_title": "Questa targhetta è temporaneamente non disponibile",
+    "plate_unavailable_message": "Riprova più tardi."
   },
   "zh": {
     "proxy_page_title": "您如何评价您的体验？",
@@ -1538,9 +1534,7 @@
     "plate_not_found_exception": "未找到平台。",
     "invalid_plate_secret_exception": "无效的平台密钥。",
     "plate_processing_failed_exception": "平台处理失败。",
-    "plate_inactive_exception": "未找到此平台的有效订阅。",
     "subscription_not_found": "未找到此平台的订阅。",
-    "plate_inactive_title": "平台未激活",
     "plate_renew_description": "续订订阅以重新激活此平台。",
     "plate_renew_button_monthly": "续订 — 1个月",
     "plate_renew_button_yearly": "续订 — 1年",

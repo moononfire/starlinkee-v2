@@ -32,14 +32,14 @@ export default async function PlatePage({ params }: Props) {
   const lang = await getLanguage(plate.plate_number, plate.plate_language, PLATE_LANGUAGES);
 
   if (!plate.subscription_id) {
-    return <InactivePage lang={lang} reason="unassigned" plateNumber={plate.plate_number} plateSecret={plate.secret_key} />;
+    return <InactivePage lang={lang} plateNumber={plate.plate_number} />;
   }
 
   const subscription = await getSubscriptionById(plate.subscription_id);
   if (!subscription) notFound();
 
   if (subscription.status === "inactive") {
-    return <InactivePage lang={lang} reason="expired" plateNumber={plate.plate_number} plateSecret={plate.secret_key} />;
+    return <InactivePage lang={lang} plateNumber={plate.plate_number} />;
   }
 
   if (subscription.status === "pending") {
@@ -102,18 +102,10 @@ export default async function PlatePage({ params }: Props) {
   redirect(`/plate/${plate.plate_number}/scan/${scanId}`);
 }
 
-function InactivePage({
-  lang,
-  reason,
-  plateNumber,
-  plateSecret,
-}: {
-  lang: string;
-  // "unassigned": plate never attached to a venue; "expired": its subscription ran out.
-  reason: "unassigned" | "expired";
-  plateNumber?: string;
-  plateSecret?: string;
-}) {
+// What any guest sees for a plate that is not serving reviews (never assigned, or subscription
+// lapsed). Deliberately neutral: no hint about expiry and no payment buttons — renewing is the
+// owner's job, in the portal.
+function InactivePage({ lang, plateNumber }: { lang: string; plateNumber?: string }) {
   return (
     <main className="min-h-screen flex items-center justify-center p-6"
       style={{ backgroundColor: "#f9fafb", color: "#111827" }}>
@@ -122,41 +114,9 @@ function InactivePage({
           <LanguageSwitcher currentLang={lang} scopeKey={plateNumber} availableLanguages={PLATE_LANGUAGES} />
         </div>
         <p className="text-lg font-medium" style={{ color: "#1f2937" }}>
-          {t("plate_inactive_title", lang)}
+          {t("plate_unavailable_title", lang)}
         </p>
-        <p className="mt-2" style={{ color: "#374151" }}>{t(reason === "expired" ? "plate_inactive_exception" : "plate_unassigned_exception", lang)}</p>
-
-        {plateNumber && plateSecret && (
-          <div className="mt-6">
-            <p className="mb-3 text-sm" style={{ color: "#374151" }}>
-              {t("plate_renew_description", lang)}
-            </p>
-            <form action="/api/plate/renew" method="POST">
-              <input type="hidden" name="plateNumber" value={plateNumber} />
-              <input type="hidden" name="plateSecret" value={plateSecret} />
-              <input type="hidden" name="interval" value="month" />
-              <button
-                type="submit"
-                className="w-full rounded-lg px-4 py-3 font-medium text-white"
-                style={{ backgroundColor: "#111827" }}
-              >
-                {t("plate_renew_button_monthly", lang)}
-              </button>
-            </form>
-            <form action="/api/plate/renew" method="POST" className="mt-3">
-              <input type="hidden" name="plateNumber" value={plateNumber} />
-              <input type="hidden" name="plateSecret" value={plateSecret} />
-              <input type="hidden" name="interval" value="year" />
-              <button
-                type="submit"
-                className="w-full rounded-lg px-4 py-3 font-medium"
-                style={{ backgroundColor: "#e5e7eb", color: "#111827" }}
-              >
-                {t("plate_renew_button_yearly", lang)}
-              </button>
-            </form>
-          </div>
-        )}
+        <p className="mt-2" style={{ color: "#374151" }}>{t("plate_unavailable_message", lang)}</p>
       </div>
     </main>
   );

@@ -53,14 +53,13 @@ const RENEWAL_DURATION_DAYS: Record<"month" | "year", number> = {
 };
 
 export async function createRenewalCheckoutSession(params: {
-  plateId: number;
-  subscriptionId: number | null;
+  subscriptionId: number;
   plateNumber: string;
-  plateSecret: string;
+  returnUrl: string;
   lang: string;
   interval: "month" | "year";
 }): Promise<string> {
-  const { plateId, subscriptionId, plateNumber, plateSecret, lang, interval } = params;
+  const { subscriptionId, plateNumber, returnUrl, lang, interval } = params;
   const priceId = interval === "year"
     ? process.env.STRIPE_PRICE_ID_RENEWAL_YEARLY
     : process.env.STRIPE_PRICE_ID_RENEWAL_MONTHLY;
@@ -68,20 +67,15 @@ export async function createRenewalCheckoutSession(params: {
     throw new Error(`STRIPE_PRICE_ID_RENEWAL_${interval === "year" ? "YEARLY" : "MONTHLY"} is not configured`);
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://starlinkee.com";
-  const plateUrl = `${appUrl}/plate/${plateNumber}/${plateSecret}`;
-
   const session = await getStripe().checkout.sessions.create({
     mode: "subscription",
     line_items: [{ price: priceId, quantity: 1 }],
     locale: ["en", "de", "pl", "it"].includes(lang) ? (lang as Stripe.Checkout.SessionCreateParams.Locale) : "auto",
-    success_url: plateUrl,
-    cancel_url: plateUrl,
+    success_url: returnUrl,
+    cancel_url: returnUrl,
     subscription_data: {
       metadata: {
-        ...(subscriptionId
-          ? { renewal_subscription_id: String(subscriptionId) }
-          : { renewal_plate_id: String(plateId) }),
+        renewal_subscription_id: String(subscriptionId),
         plate_number: plateNumber,
         renewal_duration_days: String(RENEWAL_DURATION_DAYS[interval]),
         renewal_interval: interval,

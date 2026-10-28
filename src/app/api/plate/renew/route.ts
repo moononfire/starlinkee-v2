@@ -1,32 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPlateByNumber } from "@/lib/db/plates";
+import { getPortalSession } from "@/lib/portal-session";
+import { getPlatesBySubscriptionId } from "@/lib/db/plates";
 import { createRenewalCheckoutSession } from "@/lib/services/stripe";
-import { safeEqual } from "@/lib/secure-compare";
 
+// Renewal is for the venue owner only: it needs a confirmed portal session whose customer owns the
+// subscription. The plate URL (and its secret) is printed on the plate and reachable by any guest.
 export async function POST(request: NextRequest) {
+  const origin = request.headers.get("origin");
+  if (origin && origin !== request.nextUrl.origin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { user, customer, subscriptions } = await getPortalSession();
+  if (!user || !customer) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const form = await request.formData();
-
-  const plateNumber = form.get("plateNumber") as string;
-  const plateSecret = form.get("plateSecret") as string;
+  const subscriptionId = Number(form.get("subscriptionId"));
   const interval = form.get("interval") === "year" ? "year" : "month";
-
-  if (!plateNumber || !plateSecret) {
+  if (!subscriptionId) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  // Re-verify plate and secret
-  const plate = await getPlateByNumber(plateNumber);
-  if (!plate || !safeEqual(plateSecret, plate.secret_key)) {
-    return NextResponse.json({ error: "Invalid plate" }, { status: 403 });
+  const subscription = subscriptions.find((s) => s.subscription_id === subscriptionId);
+  if (!subscription || subscription.status === "pending") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
+    const plates = await getPlatesBySubscriptionId(subscriptionId);
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
     const checkoutUrl = await createRenewalCheckoutSession({
-      plateId: plate.plate_id,
-      subscriptionId: plate.subscription_id,
-      plateNumber: plate.plate_number,
-      plateSecret: plate.secret_key,
-      lang: plate.plate_language,
+      subscriptionId,
+      plateNumber: plates[0]?.plate_number ?? "",
+      returnUrl: `${appUrl}/portal/${subscriptionId}`,
+      lang: customer.preferred_language,
       interval,
     });
     return NextResponse.redirect(checkoutUrl, 303);

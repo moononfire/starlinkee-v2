@@ -14,7 +14,7 @@ import { visibleSwitcherLanguages } from "@/components/LanguageSwitcher";
 
 const PLATE_SCREEN_KEYS = [
   "appreciate_feedback", "conversation_reply_placeholder", "conversation_send_btn", "email_required_input",
-  "message_placeholder", "name_optional", "phone_optional", "plate_inactive_exception", "plate_unassigned_exception", "plate_inactive_title",
+  "message_placeholder", "name_optional", "phone_optional", "plate_unavailable_title", "plate_unavailable_message",
   "plate_renew_button_monthly", "plate_renew_button_yearly", "plate_renew_description", "proxy_page_title",
   "send_feedback_btn", "sending_feedback", "sorry_share_feedback", "thank_you_short", "we_will_be_in_touch",
 ];

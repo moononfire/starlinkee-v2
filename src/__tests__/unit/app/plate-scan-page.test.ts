@@ -112,17 +112,24 @@ describe("plate page — Italian", () => {
   });
 });
 
-describe("plate page — inactive reason", () => {
-  it("tells an unassigned plate apart from an expired one", async () => {
-    vi.mocked(getPlateByNumber).mockResolvedValue({
-      plate_id: 7, plate_number: "ABC123", secret_key: "s3cret", subscription_id: null, plate_language: "en",
-    } as any);
-    expect(((await render()) as any).props.reason).toBe("unassigned");
+describe("plate page — guest on a plate that is not serving", () => {
+  async function guestHtml() {
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    return renderToStaticMarkup((await render()) as any);
+  }
 
+  it.each([
+    ["unassigned", null, null],
+    ["expired", 3, "inactive"],
+  ])("shows a neutral message without payment buttons (%s)", async (_name, subscriptionId, status) => {
     vi.mocked(getPlateByNumber).mockResolvedValue({
-      plate_id: 7, plate_number: "ABC123", secret_key: "s3cret", subscription_id: 3, plate_language: "en",
+      plate_id: 7, plate_number: "ABC123", secret_key: "s3cret", subscription_id: subscriptionId, plate_language: "en",
     } as any);
-    vi.mocked(getSubscriptionById).mockResolvedValue({ status: "inactive" } as any);
-    expect(((await render()) as any).props.reason).toBe("expired");
+    if (status) vi.mocked(getSubscriptionById).mockResolvedValue({ status } as any);
+
+    const html = await guestHtml();
+    expect(html).toContain("temporarily unavailable");
+    expect(html).not.toMatch(/<form|<button|api\/plate\/renew|s3cret/);
+    expect(html).not.toMatch(/expire|subscription|renew/i);
   });
 });
