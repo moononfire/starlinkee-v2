@@ -28,6 +28,7 @@ const owner = {
   subscriptions: [
     { subscription_id: 5, status: "inactive" },
     { subscription_id: 6, status: "pending" },
+    { subscription_id: 7, status: "active" },
   ],
 };
 
@@ -55,6 +56,12 @@ describe("POST /api/plate/renew", () => {
   it("rejects a pending subscription", async () => {
     const res = await POST(makeRequest({ subscriptionId: "6" }));
     expect(res.status).toBe(403);
+  });
+
+  it("rejects an active subscription (no touching paid time)", async () => {
+    const res = await POST(makeRequest({ subscriptionId: "7" }));
+    expect(res.status).toBe(403);
+    expect(mockCheckout).not.toHaveBeenCalled();
   });
 
   it("rejects a cross-site form post", async () => {

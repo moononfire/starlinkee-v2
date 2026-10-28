@@ -3,6 +3,7 @@ import { getPortalSession } from "@/lib/portal-session";
 import { getPlatesBySubscriptionId } from "@/lib/db/plates";
 import { createRenewalCheckoutSession } from "@/lib/services/stripe";
 
+// Only a lapsed ("inactive") subscription can be renewed here, so a direct POST cannot touch paid time.
 // Renewal is for the venue owner only: it needs a confirmed portal session whose customer owns the
 // subscription. The plate URL (and its secret) is printed on the plate and reachable by any guest.
 export async function POST(request: NextRequest) {
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
   }
 
   const subscription = subscriptions.find((s) => s.subscription_id === subscriptionId);
-  if (!subscription || subscription.status === "pending") {
+  if (!subscription || subscription.status !== "inactive") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
