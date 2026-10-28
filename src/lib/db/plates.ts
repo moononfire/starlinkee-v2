@@ -1,4 +1,5 @@
 import { createAdminClient } from "../supabase/admin";
+import { likePattern } from "./search";
 import type { Plate } from "../types";
 
 export async function getPlateByNumber(plateNumber: string): Promise<Plate | null> {
@@ -57,16 +58,33 @@ export async function assignPlateToSubscription(
     .eq("plate_id", plateId);
 }
 
+export async function listPlateNumbersBySubscription(subscriptionId: number): Promise<string[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("plates")
+    .select("plate_number")
+    .eq("subscription_id", subscriptionId)
+    .order("plate_id");
+  return (data ?? []).map((p) => p.plate_number);
+}
+
+/**
+ * Binds an NFC UID to a plate only if it is still untagged. Returns false when
+ * another request tagged it first (two parallel assignments must not both win).
+ */
 export async function assignNfcToPlate(
   plateNumber: string,
   nfcUid: string
-): Promise<void> {
+): Promise<boolean> {
   const supabase = createAdminClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("plates")
-    .update({ nfc_uid: nfcUid })
-    .eq("plate_number", plateNumber.toUpperCase());
+    .update({ nfc_uid: nfcUid, nfc_assigned_at: new Date().toISOString() })
+    .eq("plate_number", plateNumber.toUpperCase())
+    .is("nfc_uid", null)
+    .select("plate_id");
   if (error) throw new Error(`Failed to assign NFC: ${error.message}`);
+  return (data?.length ?? 0) > 0;
 }
 
 export async function insertPlatesBatch(
@@ -90,7 +108,7 @@ export async function listPlates(search?: string): Promise<PlateWithSubscription
     .order("created_at", { ascending: false });
 
   if (search) {
-    query = query.ilike("plate_number", `%${search}%`);
+    query = query.ilike("plate_number", likePattern(search));
   }
 
   const { data, error } = await query;

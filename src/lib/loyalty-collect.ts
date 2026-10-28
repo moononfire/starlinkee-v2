@@ -1,6 +1,6 @@
 import { getLoyaltyCard, createLoyaltyCard, incrementStamp, setRedeemCode } from "./db/loyalty";
 import { getLocationById } from "./db/locations";
-import { validateScanToken } from "./db/scan-tokens";
+import { validateScanToken, consumeScanToken } from "./db/scan-tokens";
 import { generateCouponCode } from "./db/leads";
 
 // Matches location_leads' CLAIM_WINDOW_MS — staff has 15 minutes to confirm
@@ -23,6 +23,11 @@ export async function collectLoyaltyStamp(
   // could be reused remotely without ever visiting the location.
   const scanResult = scanToken ? await validateScanToken(String(scanToken)) : { valid: false as const };
   if (!scanResult.valid || scanResult.locationId !== locationId) {
+    return { ok: false, status: 403, error: "scan_required" };
+  }
+
+  // One tap, one stamp attempt: a token cannot be replayed remotely.
+  if (!(await consumeScanToken(String(scanToken), locationId, "loyalty"))) {
     return { ok: false, status: 403, error: "scan_required" };
   }
 

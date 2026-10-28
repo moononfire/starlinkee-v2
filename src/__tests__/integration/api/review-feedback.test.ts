@@ -37,7 +37,7 @@ function makeRequest(body: unknown) {
 }
 
 beforeEach(() => {
-  mockUpdateFeedback.mockReset().mockResolvedValue(undefined);
+  mockUpdateFeedback.mockReset().mockResolvedValue(true);
   mockGetReviewByScanId.mockReset().mockResolvedValue(null);
 });
 
@@ -82,6 +82,13 @@ describe("POST /api/review/feedback", () => {
       "scan-1",
       expect.objectContaining({ user_name: "Anna", contact_email: "a@b.com", contact_phone: "+48600000000" })
     );
+  });
+
+  it("returns 409 and does nothing else when feedback was already submitted for the scan", async () => {
+    mockUpdateFeedback.mockResolvedValue(false);
+    const res = await POST(makeRequest({ scanId: "scan-1", feedback_message: "again", contact_email: "t@e.com" }));
+    expect(res.status).toBe(409);
+    expect(mockGetReviewByScanId).not.toHaveBeenCalled();
   });
 
   it("returns 500 when updateFeedback throws", async () => {

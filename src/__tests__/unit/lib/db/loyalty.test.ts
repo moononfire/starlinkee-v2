@@ -17,6 +17,7 @@ import {
   upsertOtp,
   getOtp,
   deleteOtp,
+  registerOtpAttempt,
 } from "@/lib/db/loyalty";
 
 beforeEach(() => vi.clearAllMocks());
@@ -174,6 +175,30 @@ describe("upsertOtp()", () => {
       upsert: vi.fn().mockResolvedValue({ error: null }),
     });
     await expect(upsertOtp("+48600000000", "5678", new Date())).resolves.toBeUndefined();
+  });
+});
+
+describe("upsertOtp() resets attempts", () => {
+  it("stores attempts: 0 with every new code", async () => {
+    const upsert = vi.fn().mockResolvedValue({ error: null });
+    supabaseMock.from.mockReturnValue({ upsert });
+    await upsertOtp("+48600000000", "5678", new Date());
+    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ attempts: 0 }));
+  });
+});
+
+describe("registerOtpAttempt()", () => {
+  it("returns the attempt number from the database function", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: 3, error: null });
+    (supabaseMock as unknown as { rpc: typeof rpc }).rpc = rpc;
+    expect(await registerOtpAttempt("+48600000000", 5)).toBe(3);
+    expect(rpc).toHaveBeenCalledWith("loyalty_otp_attempt", { p_phone: "+48600000000", p_max: 5 });
+  });
+
+  it("keeps login working (reports 1) if the function is unavailable", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    (supabaseMock as unknown as { rpc: unknown }).rpc = vi.fn().mockResolvedValue({ data: null, error: { message: "missing" } });
+    expect(await registerOtpAttempt("+48600000000", 5)).toBe(1);
   });
 });
 

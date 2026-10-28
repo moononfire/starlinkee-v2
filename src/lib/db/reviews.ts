@@ -1,4 +1,5 @@
 import { createAdminClient } from "../supabase/admin";
+import { ilikeValue } from "./search";
 import type { Review } from "../types";
 
 export interface ReviewWithLocation extends Review {
@@ -16,8 +17,9 @@ export async function listReviews(search?: string): Promise<ReviewWithLocation[]
     .limit(500);
 
   if (search) {
+    const pattern = ilikeValue(search);
     query = query.or(
-      `feedback_message.ilike.%${search}%,contact_email.ilike.%${search}%,contact_phone.ilike.%${search}%`
+      `feedback_message.ilike.${pattern},contact_email.ilike.${pattern},contact_phone.ilike.${pattern}`
     );
   }
 
@@ -128,11 +130,15 @@ export async function updateFeedback(
     contact_email?: string;
     contact_phone?: string;
   }
-): Promise<void> {
+): Promise<boolean> {
   const supabase = createAdminClient();
-  const { error } = await supabase
+  // Feedback is accepted once per scan; follow-ups go through the message thread.
+  const { data: updated, error } = await supabase
     .from("reviews")
     .update({ ...data, feedback_time: new Date().toISOString() })
-    .eq("scan_id", scanId);
+    .eq("scan_id", scanId)
+    .is("feedback_time", null)
+    .select("review_id");
   if (error) throw new Error(`Failed to update feedback: ${error.message}`);
+  return (updated?.length ?? 0) > 0;
 }

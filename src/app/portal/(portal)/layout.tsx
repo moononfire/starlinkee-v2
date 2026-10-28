@@ -14,7 +14,7 @@ export default async function PortalLayout({
 }) {
   const { user, customer, subscriptions } = await getPortalSession();
 
-  if (!user?.email) {
+  if (!user?.email || !user.email_confirmed_at) {
     redirect("/portal/login");
   }
 

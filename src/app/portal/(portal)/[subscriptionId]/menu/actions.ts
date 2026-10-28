@@ -8,6 +8,7 @@ import { getCustomerByEmail, getCustomerSubscriptions } from "@/lib/db/portal";
 import { updateLocation } from "@/lib/db/locations";
 import type { ActionResult } from "../../action-result";
 import { uploadLogo } from "@/lib/storage";
+import { isSafeHttpUrl } from "@/lib/urls";
 
 function makeSupabase(cookieStore: Awaited<ReturnType<typeof cookies>>) {
   return createServerClient(
@@ -35,7 +36,7 @@ export async function updateMenuSettingsAction(formData: FormData): Promise<Acti
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user?.email) redirect("/portal/login");
+  if (!user?.email || !user.email_confirmed_at) redirect("/portal/login");
 
   const customer = await getCustomerByEmail(user.email);
   if (!customer) redirect("/portal/login");
@@ -61,6 +62,12 @@ export async function updateMenuSettingsAction(formData: FormData): Promise<Acti
       return { ok: false, error: "failed to upload image" };
     }
   }
+
+  // menu_link becomes a redirect target and menu_image_url an <img> source, so
+  // only accept http(s) links and images hosted in our own storage bucket.
+  const publicBase = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/`;
+  if (menu_link && !isSafeHttpUrl(menu_link)) return { ok: false, error: "failed" };
+  if (menu_image_url && !menu_image_url.startsWith(publicBase)) return { ok: false, error: "failed" };
 
   await updateLocation(locationId, {
     has_menu_enabled,

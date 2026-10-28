@@ -6,7 +6,7 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => supabaseMock,
 }));
 
-import { upsertCustomerByEmail } from "@/lib/db/customers";
+import { upsertCustomerByEmail, listCustomers } from "@/lib/db/customers";
 
 const customerData = {
   customer_type: "business" as const,
@@ -34,6 +34,60 @@ describe("upsertCustomerByEmail()", () => {
 
     const result = await upsertCustomerByEmail(customerData);
     expect(result).toBe(42);
+  });
+
+  it("never overwrites an existing customer's data, only fills empty fields", async () => {
+    const update = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }));
+    supabaseMock.from.mockReturnValue({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: vi.fn().mockResolvedValue({
+            data: {
+              customer_id: 42,
+              customer_name: "Real Owner",
+              customer_type: "individual",
+              tax_id: "PL111",
+              billing_address: null,
+              phone: "",
+              is_activated: false,
+            },
+          }),
+        })),
+      })),
+      update,
+    });
+
+    await upsertCustomerByEmail({
+      ...customerData,
+      customer_name: "Attacker",
+      tax_id: "PL999",
+      billing_address: "New street 1",
+      phone: "+48600000000",
+      is_activated: true,
+    });
+
+    expect(update).toHaveBeenCalledWith({
+      billing_address: "New street 1",
+      phone: "+48600000000",
+      is_activated: true,
+    });
+  });
+
+  it("does not write at all when nothing is missing", async () => {
+    const update = vi.fn();
+    supabaseMock.from.mockReturnValue({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: vi.fn().mockResolvedValue({
+            data: { customer_id: 42, customer_name: "Real Owner", customer_type: "business", is_activated: true },
+          }),
+        })),
+      })),
+      update,
+    });
+
+    await upsertCustomerByEmail({ ...customerData, customer_name: "Attacker" });
+    expect(update).not.toHaveBeenCalled();
   });
 
   it("inserts a new customer and returns its customer_id when not found", async () => {
@@ -85,5 +139,22 @@ describe("upsertCustomerByEmail()", () => {
     });
 
     await expect(upsertCustomerByEmail(customerData)).rejects.toThrow("Failed to create customer");
+  });
+});
+
+describe("listCustomers() search", () => {
+  it("quotes the term so commas/parentheses cannot add PostgREST filters", async () => {
+    const orFn = vi.fn().mockResolvedValue({ data: [], error: null });
+    supabaseMock.from.mockReturnValue({
+      select: vi.fn(() => ({ order: vi.fn(() => ({ or: orFn })) })),
+    });
+
+    await listCustomers('x,id.gt.0)"');
+
+    const filter = orFn.mock.calls[0][0] as string;
+    // the term sits inside a double-quoted value (with its own quote escaped), once per column
+    expect(filter).toContain('customer_name.ilike."%x,id.gt.0)\\"%"');
+    expect(filter).toContain('email.ilike."%x,id.gt.0)\\"%"');
+    expect(filter).toContain('company_name.ilike."%x,id.gt.0)\\"%"');
   });
 });

@@ -4,7 +4,12 @@ import { getSubscriptionById, setSubscriptionActive } from "@/lib/db/subscriptio
 import { getCustomerById } from "@/lib/db/customers";
 import { createLocation } from "@/lib/db/locations";
 import { uploadLogo } from "@/lib/storage";
+import { isSafeGoogleReviewUrl } from "@/lib/urls";
 import { sendPlateSetupConfirmation } from "@/lib/email";
+import { verifyActivationCode } from "@/lib/activation-code";
+import { clientIp } from "@/lib/rate-limit";
+import { rateLimitPersistent } from "@/lib/rate-limit-persistent";
+import { safeEqual } from "@/lib/secure-compare";
 
 export async function POST(request: NextRequest) {
   const form = await request.formData();
@@ -19,10 +24,13 @@ export async function POST(request: NextRequest) {
   if (!plateNumber || !plateSecret || !locationName || !supportEmail) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
+  if (googleReviewLink && !isSafeGoogleReviewUrl(googleReviewLink)) {
+    return NextResponse.json({ error: "Invalid Google review link" }, { status: 400 });
+  }
 
   // Re-verify plate and secret
   const plate = await getPlateByNumber(plateNumber);
-  if (!plate || plateSecret !== plate.secret_key) {
+  if (!plate || !safeEqual(plateSecret, plate.secret_key)) {
     return NextResponse.json({ error: "Invalid plate" }, { status: 403 });
   }
 
@@ -33,6 +41,19 @@ export async function POST(request: NextRequest) {
   const subscription = await getSubscriptionById(plate.subscription_id);
   if (!subscription || subscription.status !== "pending") {
     return NextResponse.json({ error: "Subscription is not pending" }, { status: 400 });
+  }
+
+  // The plate secret is printed on the plate (and was publicly leaked), so
+  // setting up a pending subscription also needs the activation code that was
+  // emailed to the customer when the plate was assigned to them.
+  if (
+    !(await rateLimitPersistent(`plate-setup-code:${plate.plate_number}`, 5, 15 * 60_000)) ||
+    !(await rateLimitPersistent(`plate-setup-ip:${clientIp(request)}`, 20, 15 * 60_000))
+  ) {
+    return NextResponse.json({ error: "Too many attempts" }, { status: 429 });
+  }
+  if (!verifyActivationCode(form.get("activation_code"), subscription.activation_code_hash)) {
+    return NextResponse.json({ error: "Invalid activation code" }, { status: 403 });
   }
 
   // Upload logo if provided

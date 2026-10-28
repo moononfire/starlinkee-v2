@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPlateByNumber } from "@/lib/db/plates";
 import { createRenewalCheckoutSession } from "@/lib/services/stripe";
+import { safeEqual } from "@/lib/secure-compare";
 
 export async function POST(request: NextRequest) {
   const form = await request.formData();
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
 
   // Re-verify plate and secret
   const plate = await getPlateByNumber(plateNumber);
-  if (!plate || plateSecret !== plate.secret_key) {
+  if (!plate || !safeEqual(plateSecret, plate.secret_key)) {
     return NextResponse.json({ error: "Invalid plate" }, { status: 403 });
   }
 

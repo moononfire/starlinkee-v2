@@ -33,6 +33,30 @@ ${content}
 </html>`;
 }
 
+/**
+ * Values that originate from users (feedback text, names, locations, links)
+ * must be escaped before they are interpolated into the HTML templates.
+ */
+function esc(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/** Only http(s) targets may become a button link; anything else is dropped. */
+function safeHref(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === "https:" || parsed.protocol === "http:") return esc(parsed.toString());
+  } catch {
+    // fall through
+  }
+  return "#";
+}
+
 const h1 = (t: string) =>
   `<h1 style="margin:0 0 16px;font-size:20px;font-weight:700;color:#18181b;line-height:1.3;">${t}</h1>`;
 
@@ -43,7 +67,7 @@ const divider = () =>
   `<hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0;">`;
 
 const btn = (href: string, label: string) =>
-  `<a href="${href}" style="display:inline-block;margin-top:8px;background:#18181b;color:#fff;padding:10px 22px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600;">${label}</a>`;
+  `<a href="${safeHref(href)}" style="display:inline-block;margin-top:8px;background:#18181b;color:#fff;padding:10px 22px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600;">${label}</a>`;
 
 function dataTable(...rows: [label: string, value: string][]): string {
   const cells = rows
@@ -187,8 +211,8 @@ export async function sendOrderConfirmationToAdmin(data: {
       para("A new order has been placed and payment was confirmed via Stripe.") +
       dataTable(
         ["Order ID", `#${data.orderId}`],
-        ["Customer", data.customerName],
-        ["Email", data.customerEmail],
+        ["Customer", esc(data.customerName)],
+        ["Email", esc(data.customerEmail)],
         ["Plates", String(data.plateCount)]
       )
   );
@@ -215,16 +239,16 @@ export async function sendQuickPlateCredentialsToAdmin(data: {
         `A plate was quickly activated for a prospective customer via Google Places lookup. It now redirects straight to their Google review page.`
       ) +
       dataTable(
-        ["Plate number", data.plateNumber],
-        ["Business", data.businessName],
-        ...(data.businessAddress ? ([["Address", data.businessAddress]] as [string, string][]) : []),
-        ["Google review link", data.googleReviewLink],
-        ["Portal email", data.customerEmail],
+        ["Plate number", esc(data.plateNumber)],
+        ["Business", esc(data.businessName)],
+        ...(data.businessAddress ? ([["Address", esc(data.businessAddress)]] as [string, string][]) : []),
+        ["Google review link", esc(data.googleReviewLink)],
+        ["Portal email", esc(data.customerEmail)],
         [
           "Portal password",
           data.existingAccount
             ? "(existing account — unchanged, use previous password or reset)"
-            : (data.portalPassword ?? "—"),
+            : esc(data.portalPassword ?? "—"),
         ]
       )
   );
@@ -256,7 +280,7 @@ export async function sendCustomerRegistration(
 ) {
   const s = strings[toLang(language)];
   const html = layout(
-    h1(s.orderGreeting(data.customerName)) +
+    h1(s.orderGreeting(esc(data.customerName))) +
       para(s.orderBody()) +
       dataTable([s.orderNumberLabel, `#${data.orderId}`]) +
       divider() +
@@ -285,7 +309,7 @@ export async function sendPlateSetupConfirmation(
   const s = strings[toLang(language)];
   const html = layout(
     h1(s.setupGreeting) +
-      para(s.setupBody(data.locationName)) +
+      para(s.setupBody(esc(data.locationName))) +
       para(s.setupBody2) +
       divider() +
       para(s.setupFooter)
@@ -313,7 +337,7 @@ export async function sendRenewalConfirmation(
   const s = strings[toLang(language)];
   const html = layout(
     h1(s.renewalGreeting) +
-      para(s.renewalBody(data.plateNumber)) +
+      para(s.renewalBody(esc(data.plateNumber))) +
       divider() +
       para(s.renewalFooter)
   );
@@ -340,8 +364,8 @@ export async function sendRenewalConfirmationToAdmin(data: {
     h1("Subscription Renewed") +
       para("A plate subscription was renewed and payment was confirmed via Stripe.") +
       dataTable(
-        ["Plate", data.plateNumber],
-        ["Customer email", data.customerEmail],
+        ["Plate", esc(data.plateNumber)],
+        ["Customer email", esc(data.customerEmail)],
         ["Interval", data.interval === "year" ? "1 year" : "1 month"]
       )
   );
@@ -409,12 +433,12 @@ export async function sendFeedbackNotification(
   const stars =
     "&#9733;".repeat(data.rating) + "&#9734;".repeat(5 - data.rating);
   const contactRows: [string, string][] = [
-    ...(data.userName ? ([[s.nameLabel, data.userName]] as [string, string][]) : []),
+    ...(data.userName ? ([[s.nameLabel, esc(data.userName)]] as [string, string][]) : []),
     ...(data.contactEmail
-      ? ([[s.emailLabel, data.contactEmail]] as [string, string][])
+      ? ([[s.emailLabel, esc(data.contactEmail)]] as [string, string][])
       : []),
     ...(data.contactPhone
-      ? ([[s.phoneLabel, data.contactPhone]] as [string, string][])
+      ? ([[s.phoneLabel, esc(data.contactPhone)]] as [string, string][])
       : []),
   ];
 
@@ -426,13 +450,13 @@ export async function sendFeedbackNotification(
     : "";
 
   const html = layout(
-    h1(s.title(data.locationName)) +
+    h1(s.title(esc(data.locationName))) +
       para(
         `<span style="font-size:18px;letter-spacing:2px;color:#f59e0b;">${stars}</span>&nbsp; ${data.rating}/5`
       ) +
       (contactRows.length ? dataTable(...contactRows) : "") +
       divider() +
-      `<blockquote style="margin:0;padding:12px 16px;background:#f4f4f5;border-left:3px solid #d4d4d8;border-radius:0 4px 4px 0;font-size:14px;line-height:1.7;color:#3f3f46;">${data.message}</blockquote>` +
+      `<blockquote style="margin:0;padding:12px 16px;background:#f4f4f5;border-left:3px solid #d4d4d8;border-radius:0 4px 4px 0;font-size:14px;line-height:1.7;color:#3f3f46;white-space:pre-wrap;">${esc(data.message)}</blockquote>` +
       btnHtml
   );
 
@@ -476,8 +500,8 @@ export async function sendReplyNotification(
   const s = replyStrings[toLang(language)];
 
   const html = layout(
-    h1(s.title(data.locationName)) +
-      `<blockquote style="margin:0;padding:12px 16px;background:#f4f4f5;border-left:3px solid #d4d4d8;border-radius:0 4px 4px 0;font-size:14px;line-height:1.7;color:#3f3f46;">${data.message}</blockquote>` +
+    h1(s.title(esc(data.locationName))) +
+      `<blockquote style="margin:0;padding:12px 16px;background:#f4f4f5;border-left:3px solid #d4d4d8;border-radius:0 4px 4px 0;font-size:14px;line-height:1.7;color:#3f3f46;white-space:pre-wrap;">${esc(data.message)}</blockquote>` +
       `<div style="margin-top:20px;">${btn(data.scanUrl, s.viewConversationBtn)}</div>`
   );
 
@@ -491,8 +515,8 @@ export async function sendPromoEmail(
   data: { locationName: string; claimUrl: string; smsText: string }
 ) {
   const html = layout(
-    h1(`Your promo from ${data.locationName}`) +
-      para(data.smsText) +
+    h1(`Your promo from ${esc(data.locationName)}`) +
+      para(esc(data.smsText)) +
       para("Click the button below to claim your promotion:") +
       btn(data.claimUrl, "Claim Promo")
   );
@@ -551,10 +575,10 @@ export async function sendPortalCredentials(
   const s = portalCredentialsStrings[toLang(language)];
   const isNew = data.password !== null;
   const html = layout(
-    h1(s.greeting(data.customerName)) +
+    h1(s.greeting(esc(data.customerName))) +
       para(isNew ? s.bodyNew() : s.bodyExisting()) +
       (isNew
-        ? dataTable([s.emailLabel, to], [s.passwordLabel, data.password!])
+        ? dataTable([s.emailLabel, esc(to)], [s.passwordLabel, esc(data.password!)])
         : "") +
       `<div style="margin-top:20px;">${btn(data.loginUrl, s.btnLabel)}</div>` +
       divider() +
@@ -585,12 +609,119 @@ export async function sendPlateImportLinks(data: {
     h1("Plate import complete") +
       para(`${data.plateCount} plates were successfully imported.`) +
       divider() +
-      `<pre style="font-family:'Courier New',monospace;font-size:12px;background:#f4f4f5;padding:16px;border-radius:6px;overflow-x:auto;white-space:pre-wrap;color:#18181b;">${data.fileContent}</pre>`
+      `<pre style="font-family:'Courier New',monospace;font-size:12px;background:#f4f4f5;padding:16px;border-radius:6px;overflow-x:auto;white-space:pre-wrap;color:#18181b;">${esc(data.fileContent)}</pre>`
   );
   await sendMail(
     process.env.ADMIN_EMAIL_FOR_PLATE_IMPORT!,
     `Plate import — ${data.plateCount} plates`,
     html,
     `Plate import — ${data.plateCount} plates\n\n${data.fileContent}`
+  );
+}
+
+const activationStrings = {
+  en: {
+    subject: "Your Starlinkee activation code",
+    title: "Activate your Starlinkee plate",
+    body: "Your Starlinkee plate has been assigned to your account. To set it up, scan the plate and enter this activation code when asked:",
+    plates: "Plate(s)",
+    codeLabel: "Activation code",
+    footer: "Keep this code private. If you did not order a Starlinkee plate, please ignore this email.",
+  },
+  de: {
+    subject: "Ihr Starlinkee-Aktivierungscode",
+    title: "Starlinkee-Schild aktivieren",
+    body: "Ihr Starlinkee-Schild wurde Ihrem Konto zugeordnet. Scannen Sie zur Einrichtung das Schild und geben Sie bei Aufforderung diesen Aktivierungscode ein:",
+    plates: "Schild(er)",
+    codeLabel: "Aktivierungscode",
+    footer: "Halten Sie diesen Code geheim. Wenn Sie kein Starlinkee-Schild bestellt haben, ignorieren Sie diese E-Mail.",
+  },
+  pl: {
+    subject: "Twój kod aktywacyjny Starlinkee",
+    title: "Aktywuj swoją tabliczkę Starlinkee",
+    body: "Twoja tabliczka Starlinkee została przypisana do Twojego konta. Aby ją skonfigurować, zeskanuj tabliczkę i wpisz ten kod aktywacyjny, gdy zostaniesz o to poproszony:",
+    plates: "Tabliczki",
+    codeLabel: "Kod aktywacyjny",
+    footer: "Nie udostępniaj tego kodu. Jeśli nie zamawiałeś tabliczki Starlinkee, zignoruj tę wiadomość.",
+  },
+} satisfies Record<Lang, object>;
+
+export async function sendPlateActivationCode(
+  to: string,
+  language: string,
+  data: { plateNumbers: string[]; code: string }
+) {
+  const s = activationStrings[toLang(language)];
+  const plates = data.plateNumbers.join(", ");
+  const html = layout(
+    h1(s.title) +
+      para(s.body) +
+      dataTable([s.plates, esc(plates)], [s.codeLabel, `<strong style="font-size:20px;letter-spacing:2px;">${esc(data.code)}</strong>`]) +
+      divider() +
+      para(s.footer)
+  );
+  await sendMail(
+    to,
+    s.subject,
+    html,
+    [s.title, "", s.body, "", `${s.plates}: ${plates}`, `${s.codeLabel}: ${data.code}`, "", s.footer].join("\n")
+  );
+}
+
+const accountLinkStrings = {
+  en: {
+    confirmSubject: "Confirm your Starlinkee account",
+    confirmTitle: "Confirm your email address",
+    confirmBody: "Thank you for signing up. Click the button below to confirm your email address and open your customer portal.",
+    confirmBtn: "Confirm email",
+    passwordSubject: "Set your Starlinkee password",
+    passwordTitle: "Set your password",
+    passwordBody: "Click the button below to choose a password and open your Starlinkee customer portal.",
+    passwordBtn: "Set password",
+    footer: "If you did not request this, you can safely ignore this email.",
+  },
+  de: {
+    confirmSubject: "Bestätigen Sie Ihr Starlinkee-Konto",
+    confirmTitle: "E-Mail-Adresse bestätigen",
+    confirmBody: "Vielen Dank für Ihre Registrierung. Klicken Sie auf die Schaltfläche, um Ihre E-Mail-Adresse zu bestätigen und Ihr Kundenportal zu öffnen.",
+    confirmBtn: "E-Mail bestätigen",
+    passwordSubject: "Legen Sie Ihr Starlinkee-Passwort fest",
+    passwordTitle: "Passwort festlegen",
+    passwordBody: "Klicken Sie auf die Schaltfläche, um ein Passwort zu wählen und Ihr Starlinkee-Kundenportal zu öffnen.",
+    passwordBtn: "Passwort festlegen",
+    footer: "Wenn Sie dies nicht angefordert haben, können Sie diese E-Mail ignorieren.",
+  },
+  pl: {
+    confirmSubject: "Potwierdź swoje konto Starlinkee",
+    confirmTitle: "Potwierdź adres e-mail",
+    confirmBody: "Dziękujemy za rejestrację. Kliknij przycisk poniżej, aby potwierdzić adres e-mail i otworzyć panel klienta.",
+    confirmBtn: "Potwierdź e-mail",
+    passwordSubject: "Ustaw hasło do konta Starlinkee",
+    passwordTitle: "Ustaw hasło",
+    passwordBody: "Kliknij przycisk poniżej, aby wybrać hasło i otworzyć panel klienta Starlinkee.",
+    passwordBtn: "Ustaw hasło",
+    footer: "Jeśli to nie Ty, zignoruj tę wiadomość.",
+  },
+} satisfies Record<Lang, object>;
+
+/** Link emails for the signup flow: confirm a new account, or set a password for an existing customer. */
+export async function sendAccountLink(
+  to: string,
+  language: string,
+  data: { kind: "confirm" | "set-password"; link: string }
+) {
+  const s = accountLinkStrings[toLang(language)];
+  const confirm = data.kind === "confirm";
+  const title = confirm ? s.confirmTitle : s.passwordTitle;
+  const body = confirm ? s.confirmBody : s.passwordBody;
+  const label = confirm ? s.confirmBtn : s.passwordBtn;
+  const html = layout(
+    h1(title) + para(body) + `<div style="margin-top:20px;">${btn(data.link, label)}</div>` + divider() + para(s.footer)
+  );
+  await sendMail(
+    to,
+    confirm ? s.confirmSubject : s.passwordSubject,
+    html,
+    [title, "", body, "", `${label}: ${data.link}`, "", s.footer].join("\n")
   );
 }

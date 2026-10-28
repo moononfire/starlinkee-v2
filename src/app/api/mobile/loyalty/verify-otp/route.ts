@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const token = await signMobileToken({ phone: result.data.phone });
+  const token = await signMobileToken({ phone: result.data.phone, method: "otp" });
 
   return NextResponse.json({ ok: true, token });
 }

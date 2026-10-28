@@ -1,12 +1,15 @@
 import { notFound, redirect } from "next/navigation";
 import { headers, cookies } from "next/headers";
 import { after } from "next/server";
+import { safeEqual } from "@/lib/secure-compare";
 import { getPlateByNumber, incrementPlateVisits } from "@/lib/db/plates";
 import { getSubscriptionById } from "@/lib/db/subscriptions";
 import { getLocationBySubscriptionId } from "@/lib/db/locations";
 import { createScanRecord, findScanIdByDevice } from "@/lib/db/reviews";
 import { isCountableScan } from "@/lib/scan-filter";
 import { createScanToken } from "@/lib/db/scan-tokens";
+import { ipFromHeaders } from "@/lib/rate-limit";
+import { rateLimitPersistent } from "@/lib/rate-limit-persistent";
 import { t } from "@/lib/translations";
 import { getLanguage } from "@/lib/language";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -23,7 +26,7 @@ export default async function PlatePage({ params }: Props) {
   if (!plate) notFound();
 
   // Strict secret key validation
-  if (secret !== plate.secret_key) notFound();
+  if (!safeEqual(secret, plate.secret_key)) notFound();
 
   const lang = await getLanguage(plate.plate_number, plate.plate_language);
 
@@ -70,6 +73,16 @@ export default async function PlatePage({ params }: Props) {
     location.has_linktree_access &&
     location.linktree_slug
   ) {
+    // The plate URL is static (printed in the QR), so anyone who has seen it can
+    // mint tokens remotely: cap minting per device and per IP. Over the cap the
+    // visitor still gets the page, just without proof-of-tap actions.
+    const mintIp = ipFromHeaders(headersList);
+    const mintDevice = cookieStore.get("_did")?.value ?? "no-device";
+    const mintAllowed =
+      (await rateLimitPersistent(`scan-mint-ip:${mintIp}`, 200, 10 * 60_000)) &&
+      (await rateLimitPersistent(`scan-mint-dev:${mintDevice}`, 20, 10 * 60_000));
+    if (!mintAllowed) redirect(`/l/${location.linktree_slug}`);
+
     const scanToken = await createScanToken(location.location_id);
     redirect(`/l/${location.linktree_slug}?scan=${scanToken}`);
   }

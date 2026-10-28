@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
+import { assertAdmin } from "@/lib/api-auth";
 import { randomBytes } from "crypto";
 import { insertPlatesBatch } from "@/lib/db/plates";
 import { sendPlateImportLinks } from "@/lib/email";
 
 async function importPlatesAction(formData: FormData) {
   "use server";
+  await assertAdmin();
 
   const file = formData.get("file") as File;
   if (!file || file.size === 0) throw new Error("Brak pliku");

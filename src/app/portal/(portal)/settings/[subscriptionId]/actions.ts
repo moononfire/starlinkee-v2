@@ -61,7 +61,7 @@ export async function updateLocationName(formData: FormData): Promise<ActionResu
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user?.email) redirect("/portal/login");
+  if (!user?.email || !user.email_confirmed_at) redirect("/portal/login");
 
   const customer = await getCustomerByEmail(user.email);
   if (!customer) redirect("/portal/login");
@@ -87,7 +87,7 @@ export async function upsertLinktreeLinks(formData: FormData): Promise<ActionRes
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user?.email) redirect("/portal/login");
+  if (!user?.email || !user.email_confirmed_at) redirect("/portal/login");
 
   const customer = await getCustomerByEmail(user.email);
   if (!customer) redirect("/portal/login");
@@ -215,7 +215,7 @@ export async function updateSupportEmail(formData: FormData): Promise<ActionResu
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user?.email) redirect("/portal/login");
+  if (!user?.email || !user.email_confirmed_at) redirect("/portal/login");
 
   const customer = await getCustomerByEmail(user.email);
   if (!customer) redirect("/portal/login");
@@ -244,7 +244,7 @@ export async function updateActiveLanguages(formData: FormData): Promise<ActionR
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user?.email) redirect("/portal/login");
+  if (!user?.email || !user.email_confirmed_at) redirect("/portal/login");
 
   const customer = await getCustomerByEmail(user.email);
   if (!customer) redirect("/portal/login");

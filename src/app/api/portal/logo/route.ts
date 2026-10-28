@@ -27,7 +27,7 @@ async function getAuthenticatedCustomer() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user?.email) return null;
+  if (!user?.email || !user.email_confirmed_at) return null;
 
   const customer = await getCustomerByEmail(user.email);
   return customer;

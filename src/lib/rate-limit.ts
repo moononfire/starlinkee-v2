@@ -36,7 +36,12 @@ export function resetRateLimits(): void {
   buckets.clear();
 }
 
-export function clientIp(request: NextRequest): string {
-  const forwarded = request.headers.get("x-forwarded-for");
+/** Client IP from platform-set headers (Vercel sets x-vercel-forwarded-for / x-real-ip itself). */
+export function ipFromHeaders(headers: Pick<Headers, "get">): string {
+  const forwarded = headers.get("x-vercel-forwarded-for") ?? headers.get("x-real-ip") ?? headers.get("x-forwarded-for");
   return forwarded?.split(",")[0]?.trim() || "unknown";
+}
+
+export function clientIp(request: NextRequest): string {
+  return ipFromHeaders(request.headers);
 }

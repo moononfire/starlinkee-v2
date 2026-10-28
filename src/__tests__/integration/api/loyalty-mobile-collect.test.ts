@@ -8,6 +8,7 @@ const {
   mockCreateLoyaltyCard,
   mockIncrementStamp,
   mockValidateScanToken,
+  mockConsumeScanToken,
 } = vi.hoisted(() => ({
   mockVerifyMobileToken: vi.fn(),
   mockGetLocationBySlug: vi.fn(),
@@ -16,6 +17,7 @@ const {
   mockCreateLoyaltyCard: vi.fn(),
   mockIncrementStamp: vi.fn(),
   mockValidateScanToken: vi.fn(),
+  mockConsumeScanToken: vi.fn(),
 }));
 
 vi.mock("@/lib/mobile-session", () => ({
@@ -31,7 +33,10 @@ vi.mock("@/lib/db/loyalty", () => ({
   createLoyaltyCard: mockCreateLoyaltyCard,
   incrementStamp: mockIncrementStamp,
 }));
-vi.mock("@/lib/db/scan-tokens", () => ({ validateScanToken: mockValidateScanToken }));
+vi.mock("@/lib/db/scan-tokens", () => ({
+  validateScanToken: mockValidateScanToken,
+  consumeScanToken: mockConsumeScanToken,
+}));
 
 import { POST } from "@/app/api/mobile/loyalty/collect/route";
 import type { NextRequest } from "next/server";
@@ -52,10 +57,18 @@ beforeEach(() => {
   mockVerifyMobileToken.mockResolvedValue(session);
   mockGetLocationBySlug.mockResolvedValue(location);
   mockGetLocationById.mockResolvedValue(location);
+  mockConsumeScanToken.mockResolvedValue(true);
   mockValidateScanToken.mockResolvedValue({ valid: true, locationId: 1 });
 });
 
 describe("POST /api/mobile/loyalty/collect", () => {
+  it("returns 403 scan_required when the scan token was already spent on a stamp (replay)", async () => {
+    mockConsumeScanToken.mockResolvedValue(false);
+    const res = await POST(requestWithToken());
+    expect(res.status).toBe(403);
+    expect(mockIncrementStamp).not.toHaveBeenCalled();
+  });
+
   it("returns 401 when not authenticated", async () => {
     mockVerifyMobileToken.mockResolvedValue(null);
     const res = await POST(requestWithToken());

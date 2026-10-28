@@ -17,7 +17,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await updateFeedback(scanId, { feedback_message, user_name, contact_email, contact_phone });
+    const saved = await updateFeedback(scanId, { feedback_message, user_name, contact_email, contact_phone });
+    if (!saved) {
+      return NextResponse.json({ error: "Feedback already submitted" }, { status: 409 });
+    }
 
     // Send notification email to the venue's support email
     await sendNotification(scanId, feedback_message, user_name, contact_email, contact_phone).catch((err) => {

@@ -12,6 +12,7 @@ import PageTracker from "@/components/tracking/PageTracker";
 import { hasOwnerReply } from "@/lib/review-thread";
 import { getLanguage } from "@/lib/language";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { isSafeGoogleReviewUrl } from "@/lib/urls";
 
 interface Props {
   params: Promise<{ number: string; scanId: string }>;
@@ -130,7 +131,11 @@ export default async function ScanPage({ params }: Props) {
 
           <RatingStars
             scanId={scanId}
-            googleReviewLink={location.google_review_link ?? ""}
+            googleReviewLink={
+              location.google_review_link && isSafeGoogleReviewUrl(location.google_review_link)
+                ? location.google_review_link
+                : ""
+            }
             lang={lang}
           />
         </div>

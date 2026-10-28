@@ -46,3 +46,13 @@ export async function requireUser(): Promise<NextResponse | null> {
   }
   return null;
 }
+
+/**
+ * For server actions, which can be invoked by a direct POST without going
+ * through the page tree (so layout/proxy checks are not a substitute). Throws
+ * unless the caller is an admin.
+ */
+export async function assertAdmin(): Promise<void> {
+  const err = await requireAdmin();
+  if (err) throw new Error("Forbidden");
+}

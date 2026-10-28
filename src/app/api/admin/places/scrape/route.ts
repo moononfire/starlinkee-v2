@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
+import { fetchPublicHtml } from "@/lib/safe-fetch";
 
 export async function GET(request: NextRequest) {
   const authError = await requireAdmin();
@@ -9,11 +10,9 @@ export async function GET(request: NextRequest) {
   if (!url) return NextResponse.json({ error: "Missing url" }, { status: 400 });
 
   try {
-    const res = await fetch(url, {
+    const html = await fetchPublicHtml(url, {
       headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" },
-      signal: AbortSignal.timeout(10000),
     });
-    const html = await res.text();
 
     let facebook = null;
     let instagram = null;
@@ -42,7 +41,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ facebook, instagram, menuLink });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: "Failed to fetch information" }, { status: 500 });
   }
 }

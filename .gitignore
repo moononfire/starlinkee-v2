@@ -48,3 +48,10 @@ next-env.d.ts
 /.openrig/
 /.claude/
 /.mcp.json
+
+# Security audit notes (repo is PUBLIC - never commit)
+/docs/security-audit/
+
+# Legacy DB dumps contain production data - never commit
+*.sql.dump
+mysql2_*.sql

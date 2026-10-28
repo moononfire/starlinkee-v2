@@ -79,7 +79,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/portal/login", request.url));
   }
 
-  if (pathname === "/portal/login" && user) {
+  // The portal identifies customers by email, so an account whose mailbox was
+  // never confirmed must not reach it.
+  if (isPortalRoute && user && !user.email_confirmed_at) {
+    return NextResponse.redirect(new URL("/portal/login?error=unconfirmed", request.url));
+  }
+
+  if (pathname === "/portal/login" && user?.email_confirmed_at) {
     return NextResponse.redirect(new URL("/portal/dashboard", request.url));
   }
 

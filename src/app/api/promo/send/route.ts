@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getLocationBySlug } from "@/lib/db/locations";
 import { checkLeadExists, createLead, generateCouponCode } from "@/lib/db/leads";
-import { validateScanToken } from "@/lib/db/scan-tokens";
+import { validateScanToken, consumeScanToken } from "@/lib/db/scan-tokens";
 import { sendSms } from "@/lib/sms";
 import { sendPromoEmail } from "@/lib/email";
-import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/rate-limit";
+import { rateLimitPersistent } from "@/lib/rate-limit-persistent";
 import { getPromoText } from "@/lib/promo-i18n";
 import { t } from "@/lib/translations";
+import { normalizePhone } from "@/lib/phone";
 
 const PHONE_PATTERN = /^\+?[0-9 ()-]{6,20}$/;
 
@@ -28,8 +30,8 @@ export async function POST(request: NextRequest) {
   // Each accepted request sends a paid SMS — one scan should yield one promo,
   // not a fan-out to arbitrary numbers within the token's lifetime.
   if (
-    !rateLimit(`promo-token:${scanToken}`, 3, 10 * 60_000) ||
-    !rateLimit(`promo-ip:${clientIp(request)}`, 5, 10 * 60_000)
+    !(await rateLimitPersistent(`promo-token:${scanToken}`, 3, 10 * 60_000)) ||
+    !(await rateLimitPersistent(`promo-ip:${clientIp(request)}`, 5, 10 * 60_000))
   ) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
@@ -44,9 +46,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid or expired scan token" }, { status: 403 });
   }
 
-  const exists = await checkLeadExists(location.location_id, phone);
+  // One person, one coupon: "+48 600 000 000", "600000000" and "0048600000000"
+  // are the same number. Older leads stored the raw input, so check both.
+  const normalizedPhone = normalizePhone(phone);
+  const exists = await checkLeadExists(location.location_id, [phone, normalizedPhone]);
   if (exists) {
     return NextResponse.json({ error: "Already claimed" }, { status: 409 });
+  }
+
+  // One tap, one promo: the scan token can be spent for a promo only once.
+  if (!(await consumeScanToken(scanToken, location.location_id, "promo"))) {
+    return NextResponse.json({ error: "Invalid or expired scan token" }, { status: 403 });
   }
 
   const claimToken = crypto.randomUUID();
@@ -55,7 +65,7 @@ export async function POST(request: NextRequest) {
   const claimUrl = `${appUrl}/l/${slug}/promo/claim/${claimToken}`;
 
   try {
-    await createLead(location.location_id, phone, email ?? null, agreed, claimToken, couponCode);
+    await createLead(location.location_id, normalizedPhone, email ?? null, agreed, claimToken, couponCode);
 
     const currentLang = typeof lang === "string" ? lang : "pl";
     const localizedSmsText = getPromoText(location, currentLang, "promo_sms_text");
@@ -66,7 +76,7 @@ export async function POST(request: NextRequest) {
       ? baseSmsText.replace("{link}", claimUrl)
       : `${baseSmsText} ${claimUrl}`;
 
-    await sendSms(phone, smsText);
+    await sendSms(normalizedPhone, smsText);
 
     if (email) {
       await sendPromoEmail(email, {

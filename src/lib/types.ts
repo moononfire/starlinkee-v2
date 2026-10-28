@@ -9,6 +9,7 @@ export interface Plate {
   scan_count_offset: number;
   secret_key: string;
   nfc_uid: string | null;
+  nfc_assigned_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -22,6 +23,9 @@ export interface Subscription {
   activation_datetime: string | null;
   expiration_datetime: string | null;
   status: "pending" | "active" | "inactive";
+  activation_code_hash?: string | null;
+  stripe_subscription_id?: string | null;
+  stripe_invoice_id?: string | null;
   created_at: string;
   updated_at: string;
 }

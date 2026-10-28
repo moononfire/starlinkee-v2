@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { after } from "next/server";
 import Stripe from "stripe";
-import { processInvoicePaymentSucceeded, processRenewalInvoicePaid } from "@/lib/services/stripe";
+import { processStripeInvoice } from "@/lib/services/stripe";
+import { claimStripeEvent, markStripeEventDone, markStripeEventFailed } from "@/lib/db/stripe-events";
 
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -23,22 +23,30 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 
-  if (event.type === "invoice.payment_succeeded") {
-    const invoice = event.data.object as Stripe.Invoice;
-    const renewalMetadata = invoice.parent?.subscription_details?.metadata;
-    const isRenewal = Boolean(renewalMetadata?.renewal_subscription_id || renewalMetadata?.renewal_plate_id);
-    // Process after response is sent — Stripe only needs a 200 ACK
-    after(async () => {
-      try {
-        if (isRenewal) {
-          await processRenewalInvoicePaid(invoice);
-        } else {
-          await processInvoicePaymentSucceeded(invoice);
-        }
-      } catch (err) {
-        console.error("[stripe webhook] processing failed:", err);
-      }
-    });
+  if (event.type !== "invoice.payment_succeeded") {
+    return NextResponse.json({ received: true });
+  }
+
+  // Stripe delivers at least once: a redelivery of an event we already
+  // handled (or are handling) must not create a second order/shipment.
+  const claim = await claimStripeEvent(event.id);
+  if (claim === "done") {
+    return NextResponse.json({ received: true, duplicate: true });
+  }
+  if (claim === "in_progress") {
+    // Another delivery is still working on it. Acknowledging here would make
+    // Stripe stop retrying even if that attempt then fails or times out.
+    return NextResponse.json({ error: "Event is being processed" }, { status: 409 });
+  }
+
+  try {
+    await processStripeInvoice(event.data.object as Stripe.Invoice);
+    await markStripeEventDone(event.id);
+  } catch (err) {
+    console.error("[stripe webhook] processing failed:", err);
+    await markStripeEventFailed(event.id, err instanceof Error ? err.message : String(err)).catch(() => {});
+    // Non-2xx makes Stripe retry; the claim + per-invoice idempotency make that safe.
+    return NextResponse.json({ error: "Processing failed" }, { status: 500 });
   }
 
   return NextResponse.json({ received: true });

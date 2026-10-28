@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import FeedbackForm from "./FeedbackForm";
 import { postDemoStep } from "@/lib/demoTour";
+import { isSafeGoogleReviewUrl } from "@/lib/urls";
 
 interface Props {
   scanId: string;
@@ -75,7 +76,7 @@ export default function RatingStars({ scanId, googleReviewLink, lang }: Props) {
     }
     const { redirectToGoogle } = await res.json();
 
-    if (redirectToGoogle && googleReviewLink) {
+    if (redirectToGoogle && googleReviewLink && isSafeGoogleReviewUrl(googleReviewLink)) {
       postDemoStep("high_rating_redirect", { rating });
       if (popup) {
         popup.location.href = googleReviewLink;

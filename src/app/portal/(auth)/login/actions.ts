@@ -1,12 +1,24 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { ipFromHeaders } from "@/lib/rate-limit";
+import { rateLimitPersistent } from "@/lib/rate-limit-persistent";
 import { createServerClient } from "@supabase/ssr";
 
 export async function portalLoginAction(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
+
+  // Supabase only sees our server's IP, so its own limits cannot tell users
+  // apart: throttle per target email and per client IP before trying the password.
+  const ip = ipFromHeaders(await headers());
+  if (
+    !(await rateLimitPersistent(`login-portal-email:${String(email).trim().toLowerCase()}`, 8, 15 * 60_000)) ||
+    !(await rateLimitPersistent(`login-portal-ip:${ip}`, 30, 15 * 60_000))
+  ) {
+    redirect("/portal/login?error=too_many_attempts");
+  }
 
   const cookieStore = await cookies();
 

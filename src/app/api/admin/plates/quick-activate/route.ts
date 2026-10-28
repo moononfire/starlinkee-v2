@@ -4,10 +4,11 @@ import { getPlateById, assignPlateToSubscription } from "@/lib/db/plates";
 import { createSubscription, setSubscriptionActive } from "@/lib/db/subscriptions";
 import { upsertCustomerByEmail } from "@/lib/db/customers";
 import { createLocation, upsertLocationLinks } from "@/lib/db/locations";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { generateRandomPassword } from "@/lib/password";
 import { sendQuickPlateCredentialsToAdmin } from "@/lib/email";
 import { uploadLogo } from "@/lib/storage";
+import { createConfirmedPortalUser } from "@/lib/services/portal-account";
+import { isSafeGoogleReviewUrl, isSafeHttpUrl } from "@/lib/urls";
 
 export async function POST(request: NextRequest) {
   const authError = await requireAdmin();
@@ -31,6 +32,12 @@ export async function POST(request: NextRequest) {
 
   if (!plateId || !businessName || !email || !googleReviewLink) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  }
+  if (googleReviewLink && !isSafeGoogleReviewUrl(googleReviewLink)) {
+    return NextResponse.json({ error: "Invalid Google review link" }, { status: 400 });
+  }
+  if (menuLink && !isSafeHttpUrl(menuLink)) {
+    return NextResponse.json({ error: "Menu link must start with http:// or https://" }, { status: 400 });
   }
 
   const validDurations = [8, 15, 33];
@@ -123,23 +130,10 @@ export async function POST(request: NextRequest) {
     expiration.setDate(expiration.getDate() + TRIAL_DAYS);
     await setSubscriptionActive(subscription.subscription_id, now.toISOString(), expiration.toISOString());
 
-    const supabaseAdmin = createAdminClient();
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-    const existingAccount = existingUsers?.users?.some((u) => u.email === email) ?? false;
-
-    let portalPassword: string | null = null;
-    if (!existingAccount) {
-      portalPassword = generateRandomPassword();
-      const { error: createError } = await supabaseAdmin.auth.admin.createUser({
-        email,
-        password: portalPassword,
-        email_confirm: true,
-      });
-      if (createError) {
-        console.error("[quick-activate] Failed to create portal user:", createError);
-        portalPassword = null;
-      }
-    }
+    const generatedPassword = generateRandomPassword();
+    const accountResult = await createConfirmedPortalUser(email, generatedPassword);
+    const existingAccount = accountResult === "exists";
+    const portalPassword: string | null = accountResult === "created" ? generatedPassword : null;
 
     try {
       await sendQuickPlateCredentialsToAdmin({

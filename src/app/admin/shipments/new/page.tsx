@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
+import { assertAdmin } from "@/lib/api-auth";
 import { listOrdersReadyToShip } from "@/lib/db/orders";
 import { createShipmentFull } from "@/lib/db/shipments";
 
 async function createShipmentAction(formData: FormData) {
   "use server";
+  await assertAdmin();
 
   const orderId = parseInt(formData.get("order_id") as string);
   const trackingNumber = (formData.get("tracking_number") as string) || undefined;

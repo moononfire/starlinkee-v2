@@ -30,8 +30,15 @@ vi.mock("@/lib/storage", () => ({ uploadLogo: mockUploadLogo }));
 vi.mock("@/lib/email", () => ({ sendPlateSetupConfirmation: mockSendPlateSetupConfirmation }));
 
 import { POST } from "@/app/api/plate/setup/route";
+import { hashActivationCode } from "@/lib/activation-code";
+import { resetRateLimits } from "@/lib/rate-limit";
 
-const pendingSubscription = { subscription_id: 10, status: "pending", duration_in_days: 365 };
+const pendingSubscription = {
+  subscription_id: 10,
+  status: "pending",
+  duration_in_days: 365,
+  activation_code_hash: hashActivationCode("ABCD-EFGH"),
+};
 const validPlate = {
   plate_id: 1,
   plate_number: "ABCDEF",
@@ -46,6 +53,7 @@ const validFields = {
   location_name: "My Restaurant",
   google_review_link: "https://g.page/myrestaurant",
   support_email: "owner@restaurant.com",
+  activation_code: "abcd-efgh",
 };
 
 function makeFormRequest(fields: Record<string, string>) {
@@ -56,6 +64,7 @@ function makeFormRequest(fields: Record<string, string>) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetRateLimits();
   mockGetPlateByNumber.mockResolvedValue(validPlate);
   mockGetSubscriptionById.mockResolvedValue(pendingSubscription);
   mockCreateLocation.mockResolvedValue({ location_id: 99 });
@@ -68,6 +77,28 @@ describe("POST /api/plate/setup", () => {
   it("returns 400 when required fields are missing", async () => {
     const res = await POST(makeFormRequest({ plateNumber: "ABCDEF" }));
     expect(res.status).toBe(400);
+  });
+
+  it("returns 403 when the activation code is missing or wrong, without creating anything", async () => {
+    const { activation_code: _omit, ...withoutCode } = validFields;
+    expect((await POST(makeFormRequest(withoutCode))).status).toBe(403);
+    expect((await POST(makeFormRequest({ ...validFields, activation_code: "WRONG-CODE" }))).status).toBe(403);
+    expect(mockCreateLocation).not.toHaveBeenCalled();
+    expect(mockSetSubscriptionActive).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 for a legacy pending subscription that has no activation code", async () => {
+    mockGetSubscriptionById.mockResolvedValue({ ...pendingSubscription, activation_code_hash: null });
+    const res = await POST(makeFormRequest(validFields));
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 429 after repeated wrong codes for the same plate", async () => {
+    for (let i = 0; i < 5; i++) {
+      await POST(makeFormRequest({ ...validFields, activation_code: `BAD${i}` }));
+    }
+    const res = await POST(makeFormRequest(validFields));
+    expect(res.status).toBe(429);
   });
 
   it("returns 403 when secret is wrong", async () => {

@@ -1,5 +1,8 @@
+import { redirect } from "next/navigation";
 import { listSubscriptions } from "@/lib/db/subscriptions";
 import SearchInput from "@/components/admin/SearchInput";
+import { assertAdmin } from "@/lib/api-auth";
+import { issueActivationCode } from "@/lib/services/activation";
 
 const statusLabel = { pending: "Oczekuje", active: "Aktywna", inactive: "Nieaktywna" };
 const statusClass = {
@@ -8,12 +11,21 @@ const statusClass = {
   inactive: "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400",
 };
 
+async function sendActivationCodeAction(formData: FormData) {
+  "use server";
+  await assertAdmin();
+
+  const subscriptionId = Number(formData.get("subscription_id"));
+  const ok = subscriptionId ? await issueActivationCode(subscriptionId) : false;
+  redirect(`/admin/subscriptions?code=${ok ? "sent" : "failed"}&sub=${subscriptionId}`);
+}
+
 export default async function SubscriptionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; code?: string; sub?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, code, sub } = await searchParams;
   const subscriptions = await listSubscriptions(q);
 
   return (
@@ -21,6 +33,17 @@ export default async function SubscriptionsPage({
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Subskrypcje</h1>
       </div>
+
+      {code === "sent" && (
+        <p className="mb-4 text-sm text-green-700 dark:text-green-400">
+          Kod aktywacyjny dla subskrypcji #{sub} został wysłany do klienta (poprzedni kod przestał działać).
+        </p>
+      )}
+      {code === "failed" && (
+        <p className="mb-4 text-sm text-red-600 dark:text-red-400">
+          Nie udało się wysłać kodu dla subskrypcji #{sub} (subskrypcja nie jest oczekująca, brak e-maila klienta albo błąd wysyłki).
+        </p>
+      )}
 
       <div className="mb-6">
         <SearchInput placeholder="Szukaj po kliencie, email, nazwie planu, tablicy..." />
@@ -38,12 +61,13 @@ export default async function SubscriptionsPage({
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Status</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Aktywacja</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Wygaśnięcie</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Kod aktywacyjny</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {subscriptions.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
                   Brak subskrypcji
                 </td>
               </tr>
@@ -83,6 +107,21 @@ export default async function SubscriptionsPage({
                   {s.expiration_datetime
                     ? new Date(s.expiration_datetime).toLocaleDateString("pl-PL")
                     : "—"}
+                </td>
+                <td className="px-4 py-3">
+                  {s.status === "pending" && s.plate_numbers.length > 0 ? (
+                    <form action={sendActivationCodeAction}>
+                      <input type="hidden" name="subscription_id" value={s.subscription_id} />
+                      <button
+                        type="submit"
+                        className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        {s.activation_code_hash ? "Wyślij nowy kod" : "Wyślij kod"}
+                      </button>
+                    </form>
+                  ) : (
+                    <span className="text-gray-400">—</span>
+                  )}
                 </td>
               </tr>
             ))}

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { signMobileToken } from "@/lib/mobile-session";
 import { normalizePhone } from "@/lib/phone";
-import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/rate-limit";
+import { rateLimitPersistent } from "@/lib/rate-limit-persistent";
 
 const PHONE_PATTERN = /^\+?[0-9 ()-]{6,20}$/;
 
@@ -17,15 +18,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid phone number" }, { status: 400 });
   }
 
+  const phone = normalizePhone(rawPhone);
+
   if (
-    !rateLimit(`phone-hint-phone:${rawPhone}`, 10, 15 * 60_000) ||
-    !rateLimit(`phone-hint-ip:${clientIp(request)}`, 30, 15 * 60_000)
+    !(await rateLimitPersistent(`phone-hint-phone:${phone}`, 10, 15 * 60_000)) ||
+    !(await rateLimitPersistent(`phone-hint-ip:${clientIp(request)}`, 30, 15 * 60_000))
   ) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
-  const phone = normalizePhone(rawPhone);
-  const token = await signMobileToken({ phone });
+  const token = await signMobileToken({ phone, method: "hint" });
 
   return NextResponse.json({ ok: true, token });
 }

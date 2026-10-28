@@ -19,7 +19,12 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   return NextResponse.json({
     plate_number: plate.plate_number,
-    nfc_uid: plate.nfc_uid,
+    // The real UID is not returned: together with assign-nfc it would let
+    // anyone holding the shared key replay it to obtain the plate secret.
+    // `nfc_uid` stays null/non-null for apps that only check "is it tagged";
+    // `tagged` is the explicit flag.
+    nfc_uid: plate.nfc_uid ? "tagged" : null,
+    tagged: Boolean(plate.nfc_uid),
     subscription_id: plate.subscription_id,
     plate_language: plate.plate_language,
   });

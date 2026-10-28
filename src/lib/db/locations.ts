@@ -1,5 +1,7 @@
 import { createAdminClient } from "../supabase/admin";
+import { ilikeValue } from "./search";
 import { plateScanCount } from "../plate-scans";
+import { isSafeGoogleReviewUrl } from "../urls";
 import type { CustomerLocation, CustomerLocationLink } from "../types";
 
 const PL_CHAR_MAP: Record<string, string> = {
@@ -94,6 +96,10 @@ export async function getLocationBySlug(slug: string): Promise<CustomerLocation 
   return data ?? null;
 }
 
+function assertSafeReviewLink(link: string | null | undefined): void {
+  if (link && !isSafeGoogleReviewUrl(link)) throw new Error("Invalid google_review_link");
+}
+
 export async function createLocation(data: {
   subscription_id: number;
   location_name: string;
@@ -113,6 +119,7 @@ export async function createLocation(data: {
   menu_link?: string;
   menu_type?: "link" | "image";
 }): Promise<CustomerLocation> {
+  assertSafeReviewLink(data.google_review_link);
   const supabase = createAdminClient();
   const { data: location, error } = await supabase
     .from("customer_locations")
@@ -159,8 +166,9 @@ export async function listLocations(search?: string): Promise<LocationWithCustom
     .order("created_at", { ascending: false });
 
   if (search) {
+    const pattern = ilikeValue(search);
     query = query.or(
-      `location_name.ilike.%${search}%,google_business_name.ilike.%${search}%,city.ilike.%${search}%,linktree_slug.ilike.%${search}%`
+      `location_name.ilike.${pattern},google_business_name.ilike.${pattern},city.ilike.${pattern},linktree_slug.ilike.${pattern}`
     );
   }
 
@@ -225,6 +233,9 @@ export async function updateLocation(
     promo_sms_text?: string | null;
     promo_sms_text_en?: string | null;
     promo_sms_text_de?: string | null;
+    has_wifi_enabled?: boolean;
+    wifi_ssid?: string | null;
+    wifi_password?: string | null;
     wifi_banner_text_en?: string | null;
     wifi_banner_text_de?: string | null;
     has_menu_enabled?: boolean;
@@ -251,6 +262,7 @@ export async function updateLocation(
     active_languages?: string[];
   }
 ): Promise<CustomerLocation> {
+  assertSafeReviewLink(updates.google_review_link);
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("customer_locations")

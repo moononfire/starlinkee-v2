@@ -26,6 +26,30 @@ export async function getSubscriptionById(id: number): Promise<Subscription | nu
   return data;
 }
 
+export async function listSubscriptionsByStripeInvoice(invoiceId: string): Promise<Subscription[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase.from("subscriptions").select("*").eq("stripe_invoice_id", invoiceId);
+  return data ?? [];
+}
+
+export async function listSubscriptionsByStripeSubscription(stripeSubscriptionId: string): Promise<Subscription[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("subscriptions")
+    .select("*")
+    .eq("stripe_subscription_id", stripeSubscriptionId);
+  return data ?? [];
+}
+
+export async function setActivationCodeHash(subscriptionId: number, hash: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({ activation_code_hash: hash })
+    .eq("subscription_id", subscriptionId);
+  if (error) throw new Error(`Failed to store activation code: ${error.message}`);
+}
+
 export async function deactivateExpiredSubscriptions(): Promise<number> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
@@ -60,6 +84,8 @@ export async function createSubscription(data: {
   subscription_name: string;
   duration_in_days: number;
   is_free: boolean;
+  stripe_subscription_id?: string;
+  stripe_invoice_id?: string;
 }): Promise<Subscription> {
   const supabase = createAdminClient();
   const { data: sub, error } = await supabase

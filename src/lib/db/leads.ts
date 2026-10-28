@@ -10,15 +10,17 @@ export function generateCouponCode(): string {
     .join("");
 }
 
-export async function checkLeadExists(locationId: number, phone: string): Promise<boolean> {
+/** `phone` may be several spellings of one number (legacy rows kept the raw input). */
+export async function checkLeadExists(locationId: number, phone: string | string[]): Promise<boolean> {
   const supabase = createAdminClient();
+  const phones = Array.isArray(phone) ? phone : [phone];
   const { data } = await supabase
     .from("location_leads")
     .select("id")
     .eq("location_id", locationId)
-    .eq("phone", phone)
-    .single();
-  return !!data;
+    .in("phone", phones)
+    .limit(1);
+  return (data?.length ?? 0) > 0;
 }
 
 export async function createLead(
