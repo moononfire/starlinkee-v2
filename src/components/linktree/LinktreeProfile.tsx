@@ -6,7 +6,7 @@ import { LinkIconGlyph } from "@/lib/linkIcons";
 import { getTileBackground } from "@/lib/linkBackgrounds";
 import { getPageBackground } from "@/lib/pageBackgrounds";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import { getModuleText } from "@/lib/promo-i18n";
+import { getModuleText, getLinkTitle } from "@/lib/promo-i18n";
 
 interface Props {
   location: CustomerLocation;
@@ -14,13 +14,6 @@ interface Props {
   slug: string;
   scanToken?: string;
   lang: string;
-}
-
-function getLinkTitle(link: CustomerLocationLink, lang: string): string {
-  if (lang === "pl") return link.title_pl || link.title_en || link.title_de || link.title;
-  if (lang === "en") return link.title_en || link.title_pl || link.title_de || link.title;
-  if (lang === "de") return link.title_de || link.title_pl || link.title_en || link.title;
-  return link.title;
 }
 
 export default function LinktreeProfile({ location, links, slug, scanToken, lang }: Props) {

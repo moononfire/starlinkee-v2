@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import { getCustomerByEmail, getCustomerSubscriptions } from "@/lib/db/portal";
 import { updateLocation, upsertLocationLinks } from "@/lib/db/locations";
 import { isSafeHttpUrl } from "@/lib/urls";
-import { SUPPORTED_LANGUAGES } from "@/lib/language";
+import { PLATE_LANGUAGES } from "@/lib/language";
 import { isLinkIconKey } from "@/lib/linkIcons";
 import { isTileBackgroundKey } from "@/lib/linkBackgrounds";
 import { isPageBackgroundKey } from "@/lib/pageBackgrounds";
@@ -109,10 +109,10 @@ export async function upsertLinktreeLinks(formData: FormData): Promise<ActionRes
   const location = await getOwnedLocation(customer.customer_id, subscriptionId, locationId);
   if (!location) return { ok: false, error: "failed" };
 
-  const primaryLang = SUPPORTED_LANGUAGES.find((l) => location.active_languages.includes(l)) ?? "pl";
+  const primaryLang = PLATE_LANGUAGES.find((l) => location.active_languages.includes(l)) ?? "en";
   const primaryField = `title_${primaryLang}` as const;
 
-  let rawLinks: { title_pl: string; title_en: string; title_de: string; url: string; icon?: string | null; background?: string | null }[];
+  let rawLinks: { title_pl: string; title_en: string; title_de: string; title_it?: string; url: string; icon?: string | null; background?: string | null }[];
   try {
     rawLinks = JSON.parse(linksJson);
     if (!Array.isArray(rawLinks)) throw new Error();
@@ -128,6 +128,7 @@ export async function upsertLinktreeLinks(formData: FormData): Promise<ActionRes
       const title_pl = l.title_pl?.trim() || null;
       const title_en = l.title_en?.trim() || null;
       const title_de = l.title_de?.trim() || null;
+      const title_it = l.title_it?.trim() || null;
       
       const newIndex = validLinks.length;
       indexMapping.set(originalIndex, newIndex);
@@ -137,6 +138,7 @@ export async function upsertLinktreeLinks(formData: FormData): Promise<ActionRes
         title_pl,
         title_en,
         title_de,
+        title_it,
         url: l.url.trim(),
         icon: isLinkIconKey(l.icon) ? l.icon : null,
         background: isTileBackgroundKey(l.background) ? l.background : null,
@@ -173,30 +175,35 @@ export async function upsertLinktreeLinks(formData: FormData): Promise<ActionRes
       if (b.pl !== undefined) updates.promo_banner_text = b.pl || null;
       if (b.en !== undefined) updates.promo_banner_text_en = b.en || null;
       if (b.de !== undefined) updates.promo_banner_text_de = b.de || null;
+      if (b.it !== undefined) updates.promo_banner_text_it = b.it || null;
     }
     if (loyaltyBannerJson) {
       const b = JSON.parse(loyaltyBannerJson);
       if (b.pl !== undefined) updates.loyalty_banner_text = b.pl || null;
       if (b.en !== undefined) updates.loyalty_banner_text_en = b.en || null;
       if (b.de !== undefined) updates.loyalty_banner_text_de = b.de || null;
+      if (b.it !== undefined) updates.loyalty_banner_text_it = b.it || null;
     }
     if (wifiBannerJson) {
       const b = JSON.parse(wifiBannerJson);
       if (b.pl !== undefined) updates.wifi_banner_text = b.pl || null;
       if (b.en !== undefined) updates.wifi_banner_text_en = b.en || null;
       if (b.de !== undefined) updates.wifi_banner_text_de = b.de || null;
+      if (b.it !== undefined) updates.wifi_banner_text_it = b.it || null;
     }
     if (menuBannerJson) {
       const b = JSON.parse(menuBannerJson);
       if (b.pl !== undefined) updates.menu_banner_text = b.pl || null;
       if (b.en !== undefined) updates.menu_banner_text_en = b.en || null;
       if (b.de !== undefined) updates.menu_banner_text_de = b.de || null;
+      if (b.it !== undefined) updates.menu_banner_text_it = b.it || null;
     }
     if (reviewBannerJson) {
       const b = JSON.parse(reviewBannerJson);
       if (b.pl !== undefined) updates.review_banner_text = b.pl || null;
       if (b.en !== undefined) updates.review_banner_text_en = b.en || null;
       if (b.de !== undefined) updates.review_banner_text_de = b.de || null;
+      if (b.it !== undefined) updates.review_banner_text_it = b.it || null;
     }
   } catch (e) {
     // Ignore parse errors for banners
@@ -257,7 +264,7 @@ export async function updateActiveLanguages(formData: FormData): Promise<ActionR
   const ok = await verifyOwnership(customer.customer_id, subscriptionId, locationId);
   if (!ok) return { ok: false, error: "failed" };
 
-  const selected = SUPPORTED_LANGUAGES.filter((l) => formData.get(`lang_${l}`) === "on");
+  const selected = PLATE_LANGUAGES.filter((l) => formData.get(`lang_${l}`) === "on");
   if (selected.length === 0) {
     // Minimum jeden aktywny język musi zostać — odrzucamy zmianę.
     return { ok: false, error: "min_one" };

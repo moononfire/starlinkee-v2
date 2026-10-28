@@ -6,7 +6,7 @@ import SubmitButton from "../../SubmitButton";
 import SavableForm from "../../SavableForm";
 import { AutoSaveToggle, AutoSavePendingHint } from "../../settings/AutoSaveControls";
 import { t } from "@/lib/translations";
-import { SUPPORTED_LANGUAGES } from "@/lib/languages";
+import { PLATE_LANGUAGES } from "@/lib/languages";
 
 export default function LocationSettings({
   subscriptionId,
@@ -46,7 +46,7 @@ export default function LocationSettings({
         >
           <input type="hidden" name="location_id" value={location.location_id} />
           <input type="hidden" name="subscription_id" value={subscriptionId} />
-          {SUPPORTED_LANGUAGES.map((l) => (
+          {PLATE_LANGUAGES.map((l) => (
             <label key={l} className="flex items-center gap-3 cursor-pointer">
               <AutoSaveToggle
                 name={`lang_${l}`}

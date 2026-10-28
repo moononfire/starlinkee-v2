@@ -93,7 +93,13 @@ export async function updateLoyaltySettings(formData: FormData): Promise<ActionR
   const ok = await verifyOwnership(customer.customer_id, subscriptionId, locationId);
   if (!ok) return { ok: false, error: "failed" };
 
+  // _it is written only when the form carries it, so a form without Italian inputs cannot wipe it.
+  const italian = (name: string) =>
+    formData.has(name) ? { [name]: (formData.get(name) as string)?.trim() || null } : {};
+
   await updateLocation(locationId, {
+    ...italian("loyalty_card_text_it"),
+    ...italian("loyalty_reward_text_it"),
     loyalty_card_text: cardText,
     loyalty_card_text_en: cardTextEn,
     loyalty_card_text_de: cardTextDe,

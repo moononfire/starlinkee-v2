@@ -75,11 +75,13 @@ export default async function LoyaltyPortalPage({ params }: Props) {
             pl: location.loyalty_card_text ?? "",
             en: location.loyalty_card_text_en ?? "",
             de: location.loyalty_card_text_de ?? "",
+            it: location.loyalty_card_text_it ?? "",
           }}
           initialRewardText={{
             pl: location.loyalty_reward_text ?? "",
             en: location.loyalty_reward_text_en ?? "",
             de: location.loyalty_reward_text_de ?? "",
+            it: location.loyalty_reward_text_it ?? "",
           }}
           initialStampsRequired={location.loyalty_stamps_required ?? 10}
           logoLink={location.logo_link}

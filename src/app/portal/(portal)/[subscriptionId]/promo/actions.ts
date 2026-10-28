@@ -86,7 +86,13 @@ export async function updatePromoSettings(formData: FormData): Promise<ActionRes
   const ok = await verifyOwnership(customer.customer_id, subscriptionId, locationId);
   if (!ok) return { ok: false, error: "failed" };
 
+  // _it is written only when the form carries it, so a form without Italian inputs cannot wipe it.
+  const italian = (name: string) => (formData.has(name) ? { [name]: field(name) } : {});
+
   await updateLocation(locationId, {
+    ...italian("promo_description_it"),
+    ...italian("promo_banner_text_it"),
+    ...italian("promo_sms_text_it"),
     promo_description: field("promo_description"),
     promo_description_en: field("promo_description_en"),
     promo_description_de: field("promo_description_de"),

@@ -8,6 +8,7 @@ import { getLanguage } from "@/lib/language";
 import { t } from "@/lib/translations";
 import { getPromoText } from "@/lib/promo-i18n";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { firstPlateLanguage } from "@/lib/languages";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -22,7 +23,7 @@ export default async function PromoPage({ params, searchParams }: Props) {
   if (!location || !location.has_promo_enabled) notFound();
 
   const plates = await getPlatesBySubscriptionId(location.subscription_id);
-  const plateLanguage = plates[0]?.plate_language ?? "pl";
+  const plateLanguage = firstPlateLanguage(plates);
   const lang = await getLanguage(slug, plateLanguage, location.active_languages);
 
   return (

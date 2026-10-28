@@ -82,6 +82,24 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
               <p className="text-sm text-red-700 dark:text-red-400 mt-1">
                 {t("portal_subscription_inactive_message", lang)}
               </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {(["month", "year"] as const).map((interval) => (
+                  <form key={interval} action="/api/plate/renew" method="POST">
+                    <input type="hidden" name="subscriptionId" value={subscriptionId} />
+                    <input type="hidden" name="interval" value={interval} />
+                    <button
+                      type="submit"
+                      className={
+                        interval === "month"
+                          ? "rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-300 transition-colors"
+                          : "rounded-lg px-4 py-2 text-sm font-medium bg-white text-gray-900 border border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-700 transition-colors"
+                      }
+                    >
+                      {t(interval === "month" ? "plate_renew_button_monthly" : "plate_renew_button_yearly", lang)}
+                    </button>
+                  </form>
+                ))}
+              </div>
               <p className="text-sm text-red-700 dark:text-red-400 mt-2">
                 {t("portal_contact_to_renew", lang)}{" "}
                 <a

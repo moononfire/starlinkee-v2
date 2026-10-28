@@ -7,6 +7,8 @@ import PageTracker from "@/components/tracking/PageTracker";
 import { getLanguage } from "@/lib/language";
 import { t } from "@/lib/translations";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { getModuleText } from "@/lib/promo-i18n";
+import { firstPlateLanguage } from "@/lib/languages";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -22,16 +24,11 @@ export default async function LoyaltyPage({ params, searchParams }: Props) {
 
   const plates = await getPlatesBySubscriptionId(location.subscription_id);
 
-  const plateLanguage = plates[0]?.plate_language ?? "pl";
+  const plateLanguage = firstPlateLanguage(plates);
   const lang = await getLanguage(slug, plateLanguage, location.active_languages);
 
   const maxStamps = location.loyalty_stamps_required ?? 10;
-  const customText =
-    lang === "en"
-      ? location.loyalty_card_text_en || location.loyalty_card_text || location.loyalty_card_text_de
-      : lang === "de"
-        ? location.loyalty_card_text_de || location.loyalty_card_text || location.loyalty_card_text_en
-        : location.loyalty_card_text || location.loyalty_card_text_en || location.loyalty_card_text_de;
+  const customText = getModuleText(location, lang, "loyalty_card_text");
   const subtitle = customText?.trim() || t("portal_loyalty_card_text_placeholder", lang);
 
   return (

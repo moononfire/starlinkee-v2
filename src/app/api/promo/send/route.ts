@@ -9,6 +9,7 @@ import { rateLimitPersistent } from "@/lib/rate-limit-persistent";
 import { getPromoText } from "@/lib/promo-i18n";
 import { t } from "@/lib/translations";
 import { normalizePhone } from "@/lib/phone";
+import { PLATE_LANGUAGES, DEFAULT_LANGUAGE } from "@/lib/languages";
 
 const PHONE_PATTERN = /^\+?[0-9 ()-]{6,20}$/;
 
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
   try {
     await createLead(location.location_id, normalizedPhone, email ?? null, agreed, claimToken, couponCode);
 
-    const currentLang = typeof lang === "string" ? lang : "pl";
+    const currentLang = PLATE_LANGUAGES.includes(lang) ? lang : DEFAULT_LANGUAGE;
     const localizedSmsText = getPromoText(location, currentLang, "promo_sms_text");
     const defaultSms = t("portal_promo_sms_placeholder", currentLang);
 

@@ -4,7 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { upsertLinktreeLinks } from "./[subscriptionId]/actions";
 import { initialActionResult, type ActionResult } from "../action-result";
 import { t } from "@/lib/translations";
-import { SUPPORTED_LANGUAGES, type Language } from "@/lib/languages";
+import { PLATE_LANGUAGES, type PlateLanguage } from "@/lib/languages";
 import { LINK_ICON_KEYS, LinkIconGlyph, type LinkIconKey } from "@/lib/linkIcons";
 import { TILE_BACKGROUND_GROUPS, getTileBackground, type TileBackgroundKey } from "@/lib/linkBackgrounds";
 import { PAGE_BACKGROUND_KEYS, getPageBackground, type PageBackgroundKey } from "@/lib/pageBackgrounds";
@@ -14,6 +14,7 @@ interface LinkItem {
   title_pl: string;
   title_en: string;
   title_de: string;
+  title_it: string;
   url: string;
   icon: LinkIconKey | null;
   background: TileBackgroundKey | null;
@@ -24,7 +25,7 @@ interface Props {
   subscriptionId: number;
   initialLinks: LinkItem[];
   initialPageBackground: PageBackgroundKey | null;
-  activeLanguages: Language[];
+  activeLanguages: PlateLanguage[];
   lang: string;
   locationName: string;
   logoUrl: string | null;
@@ -34,16 +35,16 @@ interface Props {
   hasWifi?: boolean;
   hasMenu?: boolean;
   initialModuleOrder: string[] | null;
-  initialPromoBanner: { pl: string; en: string; de: string };
-  initialLoyaltyBanner: { pl: string; en: string; de: string };
-  initialWifiBanner: { pl: string; en: string; de: string };
-  initialMenuBanner: { pl: string; en: string; de: string };
-  initialReviewBanner: { pl: string; en: string; de: string };
+  initialPromoBanner: { pl: string; en: string; de: string; it: string };
+  initialLoyaltyBanner: { pl: string; en: string; de: string; it: string };
+  initialWifiBanner: { pl: string; en: string; de: string; it: string };
+  initialMenuBanner: { pl: string; en: string; de: string; it: string };
+  initialReviewBanner: { pl: string; en: string; de: string; it: string };
   initialReviewShowStar: boolean;
 }
 
 const MAX_LINKS = 7;
-type LinkLang = (typeof SUPPORTED_LANGUAGES)[number];
+type LinkLang = (typeof PLATE_LANGUAGES)[number];
 type LinkTab = "all" | LinkLang;
 
 export default function LinktreeLinksEditor({
@@ -90,9 +91,9 @@ export default function LinktreeLinksEditor({
   const [globalLang, setGlobalLang] = useState<LinkTab>("all");
 
   const [expandedStyleIdx, setExpandedStyleIdx] = useState<number | null>(null);
-  const linkLangs = SUPPORTED_LANGUAGES.filter((l) => activeLanguages.includes(l));
-  // Use portal lang if it's in activeLanguages, otherwise fallback to the first active language or "pl"
-  const defaultLang = (linkLangs.includes(lang as LinkLang) ? lang : linkLangs[0]) as LinkLang ?? "pl";
+  const linkLangs = PLATE_LANGUAGES.filter((l) => activeLanguages.includes(l));
+  // Use portal lang if it's in activeLanguages, otherwise fallback to the first active language or "en"
+  const defaultLang = (linkLangs.includes(lang as LinkLang) ? lang : linkLangs[0]) as LinkLang ?? "en";
   const [previewLang, setPreviewLang] = useState<LinkLang>(defaultLang);
 
   const [state, formAction, isPending] = useActionState(
@@ -119,7 +120,7 @@ export default function LinktreeLinksEditor({
   const addLink = () => {
     if (links.length >= MAX_LINKS) return;
     const newIdx = links.length;
-    setLinks((prev) => [...prev, { title_pl: "", title_en: "", title_de: "", url: "", icon: null, background: null }]);
+    setLinks((prev) => [...prev, { title_pl: "", title_en: "", title_de: "", title_it: "", url: "", icon: null, background: null }]);
     setModuleOrder((order) => [...order, `link:${newIdx}`]);
   };
 

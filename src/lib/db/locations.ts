@@ -221,23 +221,29 @@ export async function updateLocation(
     loyalty_card_text?: string | null;
     loyalty_card_text_en?: string | null;
     loyalty_card_text_de?: string | null;
+    loyalty_card_text_it?: string | null;
     loyalty_reward_text?: string | null;
     loyalty_reward_text_en?: string | null;
     loyalty_reward_text_de?: string | null;
+    loyalty_reward_text_it?: string | null;
     promo_description?: string | null;
     promo_description_en?: string | null;
     promo_description_de?: string | null;
+    promo_description_it?: string | null;
     promo_banner_text?: string | null;
     promo_banner_text_en?: string | null;
     promo_banner_text_de?: string | null;
+    promo_banner_text_it?: string | null;
     promo_sms_text?: string | null;
     promo_sms_text_en?: string | null;
     promo_sms_text_de?: string | null;
+    promo_sms_text_it?: string | null;
     has_wifi_enabled?: boolean;
     wifi_ssid?: string | null;
     wifi_password?: string | null;
     wifi_banner_text_en?: string | null;
     wifi_banner_text_de?: string | null;
+    wifi_banner_text_it?: string | null;
     has_menu_enabled?: boolean;
     menu_type?: "link" | "image";
     menu_link?: string | null;
@@ -245,9 +251,11 @@ export async function updateLocation(
     menu_banner_text?: string | null;
     menu_banner_text_en?: string | null;
     menu_banner_text_de?: string | null;
+    menu_banner_text_it?: string | null;
     review_banner_text?: string | null;
     review_banner_text_en?: string | null;
     review_banner_text_de?: string | null;
+    review_banner_text_it?: string | null;
     review_show_star?: boolean;
     google_review_link?: string | null;
     google_places_id?: string | null;
@@ -276,7 +284,7 @@ export async function updateLocation(
 
 export async function upsertLocationLinks(
   locationId: number,
-  links: { title: string; title_pl?: string | null; title_en?: string | null; title_de?: string | null; url: string; icon?: string | null; background?: string | null; sort_order: number }[]
+  links: { title: string; title_pl?: string | null; title_en?: string | null; title_de?: string | null; title_it?: string | null; url: string; icon?: string | null; background?: string | null; sort_order: number }[]
 ): Promise<void> {
   const supabase = createAdminClient();
 

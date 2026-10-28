@@ -86,6 +86,7 @@ export default function LinktreeSettings({
             title_pl: l.title_pl ?? l.title,
             title_en: l.title_en ?? "",
             title_de: l.title_de ?? "",
+            title_it: l.title_it ?? "",
             url: l.url,
             icon: isLinkIconKey(l.icon) ? l.icon : null,
             background: isTileBackgroundKey(l.background) ? l.background : null,
@@ -105,26 +106,31 @@ export default function LinktreeSettings({
             pl: location.promo_banner_text ?? "",
             en: location.promo_banner_text_en ?? "",
             de: location.promo_banner_text_de ?? "",
+            it: location.promo_banner_text_it ?? "",
           }}
           initialLoyaltyBanner={{
             pl: location.loyalty_banner_text ?? "",
             en: location.loyalty_banner_text_en ?? "",
             de: location.loyalty_banner_text_de ?? "",
+            it: location.loyalty_banner_text_it ?? "",
           }}
           initialWifiBanner={{
             pl: location.wifi_banner_text ?? "",
             en: location.wifi_banner_text_en ?? "",
             de: location.wifi_banner_text_de ?? "",
+            it: location.wifi_banner_text_it ?? "",
           }}
           initialMenuBanner={{
             pl: location.menu_banner_text ?? "",
             en: location.menu_banner_text_en ?? "",
             de: location.menu_banner_text_de ?? "",
+            it: location.menu_banner_text_it ?? "",
           }}
           initialReviewBanner={{
             pl: location.review_banner_text ?? "",
             en: location.review_banner_text_en ?? "",
             de: location.review_banner_text_de ?? "",
+            it: location.review_banner_text_it ?? "",
           }}
           initialReviewShowStar={location.review_show_star ?? true}
         />

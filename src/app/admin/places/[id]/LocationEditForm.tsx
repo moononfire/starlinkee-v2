@@ -26,24 +26,25 @@ export default function LocationEditForm({ location, initialLinks }: Props) {
   const [logoLink, setLogoLink] = useState(location.logo_link ?? "");
   const [ownerEmail, setOwnerEmail] = useState(location.owner_email ?? "");
 
-  const [links, setLinks] = useState<{ title_pl: string; title_en: string; title_de: string; url: string }[]>(
+  const [links, setLinks] = useState<{ title_pl: string; title_en: string; title_de: string; title_it: string; url: string }[]>(
     initialLinks.map((l) => ({
       title_pl: l.title_pl ?? l.title,
       title_en: l.title_en ?? "",
       title_de: l.title_de ?? "",
+      title_it: l.title_it ?? "",
       url: l.url,
     }))
   );
 
   function addLink() {
-    setLinks([...links, { title_pl: "", title_en: "", title_de: "", url: "" }]);
+    setLinks([...links, { title_pl: "", title_en: "", title_de: "", title_it: "", url: "" }]);
   }
 
   function removeLink(idx: number) {
     setLinks(links.filter((_, i) => i !== idx));
   }
 
-  function updateLink(idx: number, field: "title_pl" | "title_en" | "title_de" | "url", value: string) {
+  function updateLink(idx: number, field: "title_pl" | "title_en" | "title_de" | "title_it" | "url", value: string) {
     setLinks(links.map((l, i) => (i === idx ? { ...l, [field]: value } : l)));
   }
 
@@ -66,12 +67,13 @@ export default function LocationEditForm({ location, initialLinks }: Props) {
       logo_link: logoLink.trim() || null,
       owner_email: ownerEmail.trim() || null,
       links: links
-        .filter((l) => (l.title_pl || l.title_en || l.title_de) && l.url.trim())
+        .filter((l) => (l.title_pl || l.title_en || l.title_de || l.title_it) && l.url.trim())
         .map((l, i) => ({
-          title: l.title_pl.trim() || l.title_en.trim() || l.title_de.trim(),
+          title: l.title_pl.trim() || l.title_en.trim() || l.title_de.trim() || l.title_it.trim(),
           title_pl: l.title_pl.trim() || null,
           title_en: l.title_en.trim() || null,
           title_de: l.title_de.trim() || null,
+          title_it: l.title_it.trim() || null,
           url: l.url.trim(),
           sort_order: i,
         })),
@@ -198,7 +200,7 @@ export default function LocationEditForm({ location, initialLinks }: Props) {
 
         {links.map((link, idx) => (
           <div key={idx} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">PL</label>
                 <input
@@ -226,6 +228,16 @@ export default function LocationEditForm({ location, initialLinks }: Props) {
                   value={link.title_de}
                   onChange={(e) => updateLink(idx, "title_de", e.target.value)}
                   placeholder="Titel auf Deutsch"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">IT</label>
+                <input
+                  type="text"
+                  value={link.title_it}
+                  onChange={(e) => updateLink(idx, "title_it", e.target.value)}
+                  placeholder="Titolo in italiano"
                   className={inputClass}
                 />
               </div>

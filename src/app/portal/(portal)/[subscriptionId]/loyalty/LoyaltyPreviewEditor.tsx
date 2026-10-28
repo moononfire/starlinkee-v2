@@ -2,17 +2,19 @@
 
 import { useState } from "react";
 import { t } from "@/lib/translations";
-import { SUPPORTED_LANGUAGES, type Language } from "@/lib/languages";
+import { PLATE_LANGUAGES, type PlateLanguage } from "@/lib/languages";
+import { localizedFieldName, hiddenLanguageFields } from "@/lib/localized-fields";
 
-const LANGUAGE_LABELS: Record<Language, string> = {
+const LANGUAGE_LABELS: Record<PlateLanguage, string> = {
   pl: "Polski",
   en: "English",
   de: "Deutsch",
+  it: "Italiano",
 };
 
 const STAMP_OPTIONS = [5, 6, 7, 8, 9, 10];
 
-type LocalizedText = Record<Language, string>;
+type LocalizedText = Record<PlateLanguage, string>;
 
 interface Props {
   initialCardText: LocalizedText;
@@ -20,12 +22,8 @@ interface Props {
   initialStampsRequired: number;
   logoLink: string | null;
   locationName: string;
-  activeLanguages: Language[];
+  activeLanguages: PlateLanguage[];
   lang: string;
-}
-
-function fieldName(base: string, editLang: Language): string {
-  return editLang === "pl" ? base : `${base}_${editLang}`;
 }
 
 export default function LoyaltyPreviewEditor({
@@ -37,17 +35,17 @@ export default function LoyaltyPreviewEditor({
   activeLanguages,
   lang,
 }: Props) {
-  const editableLanguages = SUPPORTED_LANGUAGES.filter((l) => activeLanguages.includes(l));
-  const [editLang, setEditLang] = useState<Language>(editableLanguages[0] ?? "pl");
+  const editableLanguages = PLATE_LANGUAGES.filter((l) => activeLanguages.includes(l));
+  const [editLang, setEditLang] = useState<PlateLanguage>(editableLanguages[0] ?? "en");
   const [cardText, setCardText] = useState<LocalizedText>(initialCardText);
   const [rewardText, setRewardText] = useState<LocalizedText>(initialRewardText);
   const [stampsRequired, setStampsRequired] = useState(initialStampsRequired);
 
   const stampsCollected = Math.max(1, Math.min(stampsRequired - 1, Math.ceil(stampsRequired * 0.6)));
 
-  function hiddenInputsFor(base: string, values: LocalizedText, active: Language) {
-    return SUPPORTED_LANGUAGES.filter((l) => l !== active).map((l) => (
-      <input key={l} type="hidden" name={fieldName(base, l)} value={values[l]} />
+  function hiddenInputsFor(base: string, values: LocalizedText, active: PlateLanguage) {
+    return hiddenLanguageFields(base, values, active).map(({ name, value }) => (
+      <input key={name} type="hidden" name={name} value={value} />
     ));
   }
 
@@ -99,7 +97,7 @@ export default function LoyaltyPreviewEditor({
 
             {hiddenInputsFor("loyalty_card_text", cardText, editLang)}
             <textarea
-              name={fieldName("loyalty_card_text", editLang)}
+              name={localizedFieldName("loyalty_card_text", editLang)}
               value={cardText[editLang]}
               onChange={(e) => setCardText({ ...cardText, [editLang]: e.target.value })}
               placeholder={t("portal_loyalty_card_text_placeholder", editLang)}
@@ -192,7 +190,7 @@ export default function LoyaltyPreviewEditor({
             <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 mb-5">
               {hiddenInputsFor("loyalty_reward_text", rewardText, editLang)}
               <textarea
-                name={fieldName("loyalty_reward_text", editLang)}
+                name={localizedFieldName("loyalty_reward_text", editLang)}
                 value={rewardText[editLang]}
                 onChange={(e) => setRewardText({ ...rewardText, [editLang]: e.target.value })}
                 placeholder={t("portal_loyalty_reward_placeholder", editLang)}

@@ -90,7 +90,7 @@ export default function RatingStars({ scanId, googleReviewLink, lang }: Props) {
   }
 
   if (showFeedback) {
-    return <FeedbackForm scanId={scanId} lang={lang} />;
+    return <FeedbackForm scanId={scanId} lang={lang} googleReviewLink={googleReviewLink} />;
   }
 
   return (
