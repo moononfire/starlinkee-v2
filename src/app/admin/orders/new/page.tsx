@@ -127,7 +127,7 @@ export default async function NewOrderPage() {
             Tabliczki *
           </label>
           {plates.length === 0 ? (
-            <p className="text-sm text-gray-400">Brak dostępnych płytek (wszystkie przypisane)</p>
+            <p className="text-sm text-gray-400">Brak dostępnych tabliczek (wszystkie przypisane)</p>
           ) : (
             <PlatesPicker plates={plates} />
           )}

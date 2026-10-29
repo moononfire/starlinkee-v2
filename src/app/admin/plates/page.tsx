@@ -60,7 +60,7 @@ export default async function PlatesPage({
             {plates.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
-                  Brak płytek
+                  Brak tabliczek
                 </td>
               </tr>
             )}

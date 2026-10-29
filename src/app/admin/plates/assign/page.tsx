@@ -29,7 +29,7 @@ export default async function AssignPlatePage() {
       <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Przypisz tabliczkę do subskrypcji</h1>
       <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-6 max-w-lg">
         {plates.length === 0 && (
-          <p className="text-sm text-gray-400 mb-4">Brak dostępnych płytek (wszystkie przypisane)</p>
+          <p className="text-sm text-gray-400 mb-4">Brak dostępnych tabliczek (wszystkie przypisane)</p>
         )}
         {pendingSubs.length === 0 && (
           <p className="text-sm text-gray-400 mb-4">Brak subskrypcji ze statusem pending</p>

@@ -44,7 +44,7 @@ export default async function PlacesPage({
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Google Business</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Miasto / Kraj</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Sub.</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Skany płytek</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Skany tabliczek</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Wizyty Linktree</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Slug</th>
               <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Linktree</th>
