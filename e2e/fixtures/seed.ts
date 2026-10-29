@@ -462,3 +462,41 @@ export async function newestReviewGuestLanguage(plateNumber: string): Promise<st
   );
   return (await res.json())[0]?.guest_language ?? null;
 }
+
+export const CANCEL_OWNER = {
+  email: 'e2e-cancel@example.com',
+  password: 'e2e-portal-pass-3',
+  subscriptionId: 9003,
+  cancellingSubscriptionId: 9004,
+};
+
+/** Polish owner with two active Stripe-billed subscriptions: 9003 renews, 9004 is already set to end with the period. */
+export async function seedCancelOwner() {
+  await upsert(
+    'customers',
+    { customer_id: 9003, customer_type: 'individual', customer_name: 'E2E Cancel', email: CANCEL_OWNER.email, preferred_language: 'pl', country: 'PL' },
+    'customer_id',
+  );
+  const base = {
+    customer_id: 9003,
+    subscription_name: '1_YEAR_SUB',
+    duration_in_days: 365,
+    status: 'active',
+    activation_datetime: new Date(Date.now() - 30 * 86_400_000).toISOString(),
+    expiration_datetime: new Date(Date.now() + 200 * 86_400_000).toISOString(),
+  };
+  await upsert(
+    'subscriptions',
+    [
+      { ...base, subscription_id: CANCEL_OWNER.subscriptionId, stripe_subscription_id: 'sub_e2e_9003', cancel_at_period_end: false },
+      { ...base, subscription_id: CANCEL_OWNER.cancellingSubscriptionId, stripe_subscription_id: 'sub_e2e_9004', cancel_at_period_end: true },
+    ],
+    'subscription_id',
+  );
+  const res = await fetch(`${BASE_URL}/auth/v1/admin/users`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ email: CANCEL_OWNER.email, password: CANCEL_OWNER.password, email_confirm: true }),
+  });
+  if (!res.ok && res.status !== 422) throw new Error(`create auth user failed: ${await res.text()}`);
+}

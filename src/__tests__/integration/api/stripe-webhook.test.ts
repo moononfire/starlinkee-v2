@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const { mockProcessStripeInvoice, mockConstructEvent, mockClaim, mockDone, mockFailed } = vi.hoisted(() => ({
+const { mockSubEvent, mockProcessStripeInvoice, mockConstructEvent, mockClaim, mockDone, mockFailed } = vi.hoisted(() => ({
+  mockSubEvent: vi.fn(),
   mockProcessStripeInvoice: vi.fn(),
   mockConstructEvent: vi.fn(),
   mockClaim: vi.fn(),
@@ -12,6 +13,7 @@ const { mockProcessStripeInvoice, mockConstructEvent, mockClaim, mockDone, mockF
 vi.mock("@/lib/services/stripe", () => ({
   processStripeInvoice: mockProcessStripeInvoice,
 }));
+vi.mock("@/lib/services/stripe-cancel", () => ({ processStripeSubscriptionEvent: mockSubEvent }));
 vi.mock("@/lib/db/stripe-events", () => ({
   claimStripeEvent: mockClaim,
   markStripeEventDone: mockDone,
@@ -114,5 +116,22 @@ describe("POST /api/stripe/webhook", () => {
     expect(res.status).toBe(500);
     expect(mockFailed).toHaveBeenCalledWith("evt_1", "db down");
     expect(mockDone).not.toHaveBeenCalled();
+  });
+
+  it.each(["customer.subscription.updated", "customer.subscription.deleted"])("syncs %s without claiming an invoice event", async (type) => {
+    const event = { id: "evt_s", type, data: { object: { id: "sub_1" } } };
+    mockConstructEvent.mockReturnValue(event);
+    const res = await POST(makeRequest("{}", "sig"));
+    expect(res.status).toBe(200);
+    expect(mockSubEvent).toHaveBeenCalledWith(event);
+    expect(mockClaim).not.toHaveBeenCalled();
+    expect(mockProcessStripeInvoice).not.toHaveBeenCalled();
+  });
+
+  it("answers 500 when the subscription sync fails so Stripe retries", async () => {
+    mockConstructEvent.mockReturnValue({ id: "evt_s", type: "customer.subscription.updated", data: { object: { id: "sub_1" } } });
+    mockSubEvent.mockRejectedValue(new Error("db down"));
+    const res = await POST(makeRequest("{}", "sig"));
+    expect(res.status).toBe(500);
   });
 });

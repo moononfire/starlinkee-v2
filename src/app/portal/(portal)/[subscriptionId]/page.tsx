@@ -9,13 +9,14 @@ import { t } from "@/lib/translations";
 
 import { getPlatesBySubscriptionId } from "@/lib/db/plates";
 import DashboardSettings from "./DashboardSettings";
+import CancelRenewal from "./CancelRenewal";
 
 interface Props {
   params: Promise<{ subscriptionId: string }>;
   searchParams: Promise<{ stars?: string; scrollTo?: string }>;
 }
 
-const DATE_LOCALES: Record<string, string> = { en: "en-US", de: "de-DE", pl: "pl-PL" };
+const DATE_LOCALES: Record<string, string> = { en: "en-US", de: "de-DE", pl: "pl-PL", it: "it-IT" };
 
 function formatDate(d: string | null, lang: string) {
   if (!d) return "—";
@@ -127,6 +128,14 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
   return (
     <div className="space-y-6">
       <SubscriptionStats sub={sub} scans={scans} reviewVisits={reviewVisits} plateScanUrl={plateScanUrl} lang={lang} />
+      {sub.stripe_subscription_id && (
+        <CancelRenewal
+          subscriptionId={subscriptionId}
+          lang={lang}
+          endDate={formatDate(sub.expiration_datetime, lang)}
+          cancelling={!!sub.cancel_at_period_end}
+        />
+      )}
       <DashboardSettings
         subscriptionId={subscriptionId}
         location={sub.location}

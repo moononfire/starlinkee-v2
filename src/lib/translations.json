@@ -451,7 +451,14 @@
     "portal_password_wrong_current": "The current password is incorrect.",
     "plate_unavailable_title": "This plate is temporarily unavailable",
     "plate_unavailable_message": "Please try again later.",
-    "prefer_google_review_link": "Prefer to leave a review on Google?"
+    "prefer_google_review_link": "Prefer to leave a review on Google?",
+    "portal_cancel_button": "Cancel renewal",
+    "portal_cancel_confirm_title": "Cancel the renewal?",
+    "portal_cancel_confirm_text": "Your subscription stays active until {date}. After that it will not renew and you will not be charged again.",
+    "portal_cancel_confirm_button": "Cancel renewal now",
+    "portal_cancel_back": "Keep my subscription",
+    "portal_cancel_failed": "Could not cancel the renewal. Please try again or write to kontakt@starlinkee.pl.",
+    "portal_cancel_scheduled": "Renewal cancelled. Your subscription stays active until {date} and will not be renewed."
   },
   "de": {
     "back_button": "Zurück",
@@ -906,7 +913,14 @@
     "portal_password_wrong_current": "Das aktuelle Passwort ist falsch.",
     "plate_unavailable_title": "Dieser Aufsteller ist vorübergehend nicht verfügbar",
     "plate_unavailable_message": "Bitte versuchen Sie es später noch einmal.",
-    "prefer_google_review_link": "Lieber eine Bewertung bei Google hinterlassen?"
+    "prefer_google_review_link": "Lieber eine Bewertung bei Google hinterlassen?",
+    "portal_cancel_button": "Verträge hier kündigen",
+    "portal_cancel_confirm_title": "Verlängerung kündigen?",
+    "portal_cancel_confirm_text": "Ihr Abonnement bleibt bis zum {date} aktiv. Danach wird es nicht verlängert und es wird nichts mehr abgebucht.",
+    "portal_cancel_confirm_button": "Jetzt kündigen",
+    "portal_cancel_back": "Abonnement behalten",
+    "portal_cancel_failed": "Die Kündigung ist fehlgeschlagen. Bitte versuchen Sie es erneut oder schreiben Sie an kontakt@starlinkee.pl.",
+    "portal_cancel_scheduled": "Kündigung eingegangen. Ihr Abonnement bleibt bis zum {date} aktiv und wird nicht verlängert."
   },
   "pl": {
     "back_button": "Powrót",
@@ -1361,7 +1375,14 @@
     "portal_password_wrong_current": "Obecne hasło jest nieprawidłowe.",
     "plate_unavailable_title": "Ta tabliczka jest chwilowo niedostępna",
     "plate_unavailable_message": "Spróbuj ponownie później.",
-    "prefer_google_review_link": "Wolisz zostawić opinię w Google?"
+    "prefer_google_review_link": "Wolisz zostawić opinię w Google?",
+    "portal_cancel_button": "Zrezygnuj z odnowienia",
+    "portal_cancel_confirm_title": "Zrezygnować z odnowienia?",
+    "portal_cancel_confirm_text": "Subskrypcja działa do {date}. Potem nie zostanie odnowiona i nie pobierzemy kolejnej opłaty.",
+    "portal_cancel_confirm_button": "Zrezygnuj teraz",
+    "portal_cancel_back": "Zostaw subskrypcję",
+    "portal_cancel_failed": "Nie udało się zrezygnować z odnowienia. Spróbuj ponownie lub napisz na kontakt@starlinkee.pl.",
+    "portal_cancel_scheduled": "Rezygnacja przyjęta. Subskrypcja działa do {date} i nie zostanie odnowiona."
   },
   "it": {
     "appreciate_feedback": "Apprezziamo il tuo feedback.",
@@ -1452,7 +1473,14 @@
     "portal_promo_description_placeholder": "Descrizione della promozione — es. \"Caffè gratis con ogni acquisto!\"",
     "plate_unavailable_title": "Questa targhetta è temporaneamente non disponibile",
     "plate_unavailable_message": "Riprova più tardi.",
-    "prefer_google_review_link": "Preferisci lasciare una recensione su Google?"
+    "prefer_google_review_link": "Preferisci lasciare una recensione su Google?",
+    "portal_cancel_button": "Disdici il rinnovo",
+    "portal_cancel_confirm_title": "Disdire il rinnovo?",
+    "portal_cancel_confirm_text": "L'abbonamento resta attivo fino al {date}. Dopo non verrà rinnovato e non ti addebiteremo altro.",
+    "portal_cancel_confirm_button": "Disdici ora",
+    "portal_cancel_back": "Mantieni l'abbonamento",
+    "portal_cancel_failed": "Impossibile disdire il rinnovo. Riprova o scrivi a kontakt@starlinkee.pl.",
+    "portal_cancel_scheduled": "Disdetta ricevuta. L'abbonamento resta attivo fino al {date} e non verrà rinnovato."
   },
   "zh": {
     "proxy_page_title": "您如何评价您的体验？",

@@ -165,3 +165,13 @@ export async function listSubscriptions(search?: string): Promise<SubscriptionWi
     plate_numbers: (row.plates ?? []).map((p: any) => p.plate_number),
   }));
 }
+
+/** Mirrors Stripe's cancel_at_period_end for every row linked to that Stripe subscription. */
+export async function setCancelAtPeriodEnd(stripeSubscriptionId: string, cancelAtPeriodEnd: boolean): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({ cancel_at_period_end: cancelAtPeriodEnd })
+    .eq("stripe_subscription_id", stripeSubscriptionId);
+  if (error) throw new Error(`Failed to store cancel_at_period_end: ${error.message}`);
+}

@@ -25,6 +25,8 @@ export interface Subscription {
   status: "pending" | "active" | "inactive";
   activation_code_hash?: string | null;
   stripe_subscription_id?: string | null;
+  /** Renewal switched off: the Stripe subscription ends with the paid period. */
+  cancel_at_period_end?: boolean;
   stripe_invoice_id?: string | null;
   created_at: string;
   updated_at: string;

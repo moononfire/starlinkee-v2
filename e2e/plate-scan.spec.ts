@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { seedTestData, cleanupTestReviews, seedGermanPortalUser, portalSessionCookies, setLocationGoogleLink, seedMixedCaseExpiredOwner, PORTAL_MIXED_USER, seedPromoLead, deletePromoLead, seedLapsedVenue, LAPSED_VENUE,
-  seedReassignablePlate, movePlateTo, newestReviewSubscription, newestReviewGuestLanguage, MOVER } from './fixtures/seed';
+  seedReassignablePlate, movePlateTo, newestReviewSubscription, newestReviewGuestLanguage, MOVER, seedCancelOwner, CANCEL_OWNER } from './fixtures/seed';
 
 test.beforeAll(async () => {
   await seedTestData();
@@ -331,6 +331,60 @@ test.describe('Portal owner', () => {
     await expect(page.getByText('Nie masz jeszcze żadnych subskrypcji.')).toHaveCount(0);
     // ... and the date-expired "active" subscription already offers renewal.
     await expect(page.getByRole('button', { name: 'Odnów na miesiąc' })).toBeVisible();
+  });
+});
+
+// ── Flow 1i — Owner cancels the renewal in the portal (P14, F5) ────────────
+
+test.describe('Cancel renewal in the portal', () => {
+  const appUrl = 'http://localhost:' + (process.env.E2E_PORT ?? '3100');
+
+  test.beforeEach(async ({ page }) => {
+    await seedCancelOwner();
+    await page.context().addCookies(await portalSessionCookies(appUrl, CANCEL_OWNER.email));
+  });
+
+  test('button is visible at once, asks for confirmation naming the end date, then shows the cancelled state', async ({ page }) => {
+    // Stripe is not reachable from e2e: the browser-to-API call is answered here, the route itself is covered by integration tests.
+    let posted: unknown = null;
+    await page.route('**/api/portal/subscription/cancel', (route) => {
+      posted = route.request().postDataJSON();
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{"cancelAtPeriodEnd":true}' });
+    });
+    await page.goto(`/portal/${CANCEL_OWNER.subscriptionId}`);
+    await page.getByRole('button', { name: 'Zrezygnuj z odnowienia' }).click();
+    const dialog = page.getByRole('alertdialog');
+    await expect(dialog).toContainText('Subskrypcja działa do');
+    await dialog.getByRole('button', { name: 'Zrezygnuj teraz' }).click();
+    await expect.poll(() => posted).toEqual({ subscriptionId: CANCEL_OWNER.subscriptionId });
+  });
+
+  test('"Zostaw subskrypcję" backs out without calling the API', async ({ page }) => {
+    let called = false;
+    await page.route('**/api/portal/subscription/cancel', (route) => { called = true; return route.abort(); });
+    await page.goto(`/portal/${CANCEL_OWNER.subscriptionId}`);
+    await page.getByRole('button', { name: 'Zrezygnuj z odnowienia' }).click();
+    await page.getByRole('button', { name: 'Zostaw subskrypcję' }).click();
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Zrezygnuj z odnowienia' })).toBeVisible();
+    expect(called).toBe(false);
+  });
+
+  test('a failed cancellation says so and keeps the confirmation open', async ({ page }) => {
+    await page.route('**/api/portal/subscription/cancel', (route) =>
+      route.fulfill({ status: 502, contentType: 'application/json', body: '{"error":"Could not cancel the renewal"}' })
+    );
+    await page.goto(`/portal/${CANCEL_OWNER.subscriptionId}`);
+    await page.getByRole('button', { name: 'Zrezygnuj z odnowienia' }).click();
+    await page.getByRole('button', { name: 'Zrezygnuj teraz' }).click();
+    await expect(page.getByText('Nie udało się zrezygnować z odnowienia')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Zrezygnuj teraz' })).toBeEnabled();
+  });
+
+  test('a subscription already set to end (state from the webhook) shows when it ends instead of the button', async ({ page }) => {
+    await page.goto(`/portal/${CANCEL_OWNER.cancellingSubscriptionId}`);
+    await expect(page.getByTestId('renewal-cancelled')).toContainText('nie zostanie odnowiona');
+    await expect(page.getByRole('button', { name: 'Zrezygnuj z odnowienia' })).toHaveCount(0);
   });
 });
 
