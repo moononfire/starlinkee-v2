@@ -27,7 +27,8 @@ Teksty dla właściciela (portal, maile) istnieją tylko po `en/de/pl` (włoski 
 | `services/stripe` — nowy klient z faktury | tworzy klienta | `countryLanguage` (lokalny ternary) | `languageFromCountry()` |
 | `api/signup` | właściciel | `ALLOWED_LANGUAGES` (en/de/pl) → `en` | bez zmian (już spójne) |
 | Portal (`app/portal/**`, 13 stron) | właściciel | `getLanguage()` = tylko cookie → `en`; **`preferred_language` w ogóle nie był używany** | `getPortalLanguage()` |
-| Ekran płytki / skanu | gość | `getLanguage(plate, plate_language, …)` | bez zmian (już jak `guestLanguage`) |
+| Ekran płytki / skanu | gość | `getLanguage(...)`; język płytki spoza `active_languages` → pierwszy z listy = `pl`; `createLocation` zapisywał na sztywno `[pl,en,de]` (płytka IT na nowym lokalu po polsku) | `createLocation` dopisuje języki płytek subskrypcji do `active_languages`; `getLanguage` przy języku spoza listy daje `en`, nie pierwszy z listy |
+| `sendReplyNotification` (jedyny mail do gościa) | gość | brak `it` → angielski | dodany szablon `it` |
 | `/verify` | niezalogowany | `getLanguage()` | bez zmian (brak klienta) |
 | SMS do gościa (`api/portal/messages`) | gość | treść pisze właściciel, brak szablonu | bez zmian |
 | Cron `expire-subscriptions` | — | nie wysyła maili | bez zmian |

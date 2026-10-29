@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { seedTestData, cleanupTestReviews, seedGermanPortalUser, PORTAL_DE_USER } from './fixtures/seed';
+import { seedTestData, cleanupTestReviews, seedGermanPortalUser, portalSessionCookies } from './fixtures/seed';
 
 test.beforeAll(async () => {
   await seedTestData();
@@ -93,15 +93,27 @@ test.describe('Languages', () => {
   test('guest language cookie beats the plate language', async ({ page }) => {
     await page.context().addCookies([{ name: 'lang_DEPLAT', value: 'en', url: 'http://localhost:' + (process.env.E2E_PORT ?? '3000') }]);
     await page.goto('/plate/DEPLAT/testsecretde');
+    await expect(page.getByText('How would you rate your experience?')).toBeVisible();
     await expect(page.getByText('Wie bewerten Sie Ihre Erfahrung?')).toHaveCount(0);
+  });
+
+  test('Italian plate on a venue created with default languages is shown in Italian', async ({ page }) => {
+    await page.goto('/plate/ITPLAT/testsecretit');
+    await expect(page).toHaveURL(/\/plate\/ITPLAT\/scan\/.+/);
+    await expect(page.getByText('Come valuti la tua esperienza?')).toBeVisible();
+  });
+
+  test('plate language the venue does not offer falls back to English, not Polish', async ({ page }) => {
+    await page.goto('/plate/ITOLDP/testsecretitold');
+    await expect(page).toHaveURL(/\/plate\/ITOLDP\/scan\/.+/);
+    await expect(page.getByText('How would you rate your experience?')).toBeVisible();
   });
 
   test('portal opens in the customer preferred_language', async ({ page }) => {
     await seedGermanPortalUser();
-    await page.goto('/portal/login');
-    await page.locator('input[name="email"]').fill(PORTAL_DE_USER.email);
-    await page.locator('input[name="password"]').fill(PORTAL_DE_USER.password);
-    await page.locator('button[type="submit"]').click();
+    const appUrl = 'http://localhost:' + (process.env.E2E_PORT ?? '3000');
+    await page.context().addCookies(await portalSessionCookies(appUrl));
+    await page.goto('/portal');
     await expect(page.getByText('Sie haben noch keine Abonnements.')).toBeVisible();
   });
 });

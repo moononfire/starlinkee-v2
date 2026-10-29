@@ -201,6 +201,15 @@ describe("HTML escaping of user-controlled values", () => {
     expect(html).not.toContain("javascript:");
   });
 
+  it("writes to an Italian guest in Italian, other languages as before", async () => {
+    await sendReplyNotification("guest@x.it", "it", { locationName: "Bar", message: "Ciao", scanUrl: "https://app/x" });
+    expect(mockSendMail.mock.calls[0][0].subject).toBe("Nuova risposta da Bar");
+    expect(mockSendMail.mock.calls[0][0].html).toContain("Vedi la conversazione");
+
+    await sendReplyNotification("guest@x.de", "de", { locationName: "Bar", message: "Hallo", scanUrl: "https://app/x" });
+    expect(mockSendMail.mock.calls[1][0].subject).toBe("Neue Antwort von Bar");
+  });
+
   it("escapes the promo text and plate import contents", async () => {
     await sendPromoEmail("guest@x.pl", { locationName: "Cafe", claimUrl: "https://app/x", smsText: evil });
     expect(mockSendMail.mock.calls[0][0].html).not.toContain("<script>");

@@ -1,3 +1,4 @@
+import { createServerClient } from '@supabase/ssr';
 const BASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
@@ -55,6 +56,15 @@ export async function seedTestData() {
         activation_datetime: new Date().toISOString(),
         expiration_datetime: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
       },
+      ...[3, 4].map((id) => ({
+        subscription_id: id,
+        customer_id: 1,
+        subscription_name: '1_YEAR_SUB',
+        duration_in_days: 365,
+        status: 'active',
+        activation_datetime: new Date().toISOString(),
+        expiration_datetime: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      })),
       {
         subscription_id: 2,
         customer_id: 1,
@@ -75,6 +85,8 @@ export async function seedTestData() {
       { plate_number: 'PENDNG', plate_language: 'pl', secret_key: 'testsecretpending', subscription_id: 2 },
       { plate_number: 'NOSSUB', plate_language: 'pl', secret_key: 'testsecretnosub', subscription_id: null },
       { plate_number: 'ENACTL', plate_language: 'en', secret_key: 'testsecreteng', subscription_id: 1 },
+      { plate_number: 'ITOLDP', plate_language: 'it', secret_key: 'testsecretitold', subscription_id: 4 },
+      { plate_number: 'ITPLAT', plate_language: 'it', secret_key: 'testsecretit', subscription_id: 3 },
       { plate_number: 'DEPLAT', plate_language: 'de', secret_key: 'testsecretde', subscription_id: 1 },
     ],
     'plate_number',
@@ -100,11 +112,46 @@ export async function seedTestData() {
     },
     'linktree_slug',
   );
+
+  // Venue as createLocation() makes it for an Italian plate: 'it' is in active_languages.
+  await upsert(
+    'customer_locations',
+    {
+      subscription_id: 3,
+      active_languages: ['pl', 'en', 'de', 'it'],
+      location_name: 'Ristorante Test',
+      google_business_name: 'Ristorante Test',
+      google_business_address: 'Via Test 1, Roma',
+      city: 'Roma',
+      google_review_link: 'https://g.page/r/test-review-link-it',
+      support_email: 'support@ristorantetest.it',
+      linktree_slug: 'testristorante',
+      owner_email: 'owner@ristorantetest.it',
+    },
+    'linktree_slug',
+  );
+
+  // Venue created before the fix: default languages only, the plate itself is Italian.
+  await upsert(
+    'customer_locations',
+    {
+      subscription_id: 4,
+      location_name: 'Ristorante Vecchio',
+      google_business_name: 'Ristorante Vecchio',
+      google_business_address: 'Via Test 2, Roma',
+      city: 'Roma',
+      google_review_link: 'https://g.page/r/test-review-link-it-old',
+      support_email: 'support@ristorantevecchio.it',
+      linktree_slug: 'testristorantevecchio',
+      owner_email: 'owner@ristorantevecchio.it',
+    },
+    'linktree_slug',
+  );
 }
 
 export async function cleanupTestReviews() {
   const res = await fetch(
-    `${BASE_URL}/rest/v1/plates?plate_number=in.(ACTIVE,PENDNG,NOSSUB,ENACTL,DEPLAT)&select=plate_id`,
+    `${BASE_URL}/rest/v1/plates?plate_number=in.(ACTIVE,PENDNG,NOSSUB,ENACTL,DEPLAT,ITPLAT,ITOLDP)&select=plate_id`,
     { headers: headers() },
   );
   if (!res.ok) return;
@@ -138,4 +185,29 @@ export async function seedGermanPortalUser() {
   });
   // 422 = user already exists from a previous run
   if (!res.ok && res.status !== 422) throw new Error(`create auth user failed: ${await res.text()}`);
+}
+
+/**
+ * Session cookies for the portal user. Password login is off on a local Supabase with signups
+ * disabled (the committed config), so mint a session from an admin-generated magic link.
+ */
+export async function portalSessionCookies(appUrl: string) {
+  const linkRes = await fetch(`${BASE_URL}/auth/v1/admin/generate_link`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ type: 'magiclink', email: PORTAL_DE_USER.email }),
+  });
+  if (!linkRes.ok) throw new Error(`generate_link failed: ${await linkRes.text()}`);
+  const { hashed_token } = await linkRes.json();
+
+  const jar = new Map<string, string>();
+  const supabase = createServerClient(BASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    cookies: {
+      getAll: () => [...jar].map(([name, value]) => ({ name, value })),
+      setAll: (list) => list.forEach(({ name, value }) => jar.set(name, value)),
+    },
+  });
+  const { error } = await supabase.auth.verifyOtp({ type: 'magiclink', token_hash: hashed_token });
+  if (error) throw new Error(`verifyOtp failed: ${error.message}`);
+  return [...jar].map(([name, value]) => ({ name, value, url: appUrl }));
 }

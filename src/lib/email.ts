@@ -490,14 +490,20 @@ const replyStrings = {
     title: (locationName: string) => `${locationName} odpowiedział na Twoją opinię`,
     viewConversationBtn: "Zobacz rozmowę",
   },
-} satisfies Record<Lang, object>;
+  // The only email a guest receives, so it is the only one with Italian.
+  it: {
+    subject: (locationName: string) => `Nuova risposta da ${locationName}`,
+    title: (locationName: string) => `${locationName} ha risposto al tuo feedback`,
+    viewConversationBtn: "Vedi la conversazione",
+  },
+} satisfies Record<Lang | "it", object>;
 
 export async function sendReplyNotification(
   to: string,
   language: string,
   data: { locationName: string; message: string; scanUrl: string }
 ) {
-  const s = replyStrings[toLang(language)];
+  const s = replyStrings[language === "it" ? "it" : toLang(language)];
 
   const html = layout(
     h1(s.title(esc(data.locationName))) +
