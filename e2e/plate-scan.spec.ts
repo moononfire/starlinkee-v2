@@ -123,8 +123,8 @@ test.describe('Languages', () => {
 test.describe('Pending plate (setup)', () => {
   test('shows PlateSetupForm', async ({ page }) => {
     await page.goto('/plate/PENDNG/testsecretpending');
-    await expect(page.getByRole('heading', { name: 'Skonfiguruj swoją tabliczkę' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Aktywuj tabliczkę' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Skonfiguruj swoją płytkę' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Aktywuj płytkę' })).toBeVisible();
   });
 });
 
