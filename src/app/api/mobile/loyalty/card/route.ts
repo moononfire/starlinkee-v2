@@ -1,3 +1,4 @@
+import { isLocationActive, SUBSCRIPTION_INACTIVE } from "@/lib/location-access";
 import { NextRequest, NextResponse } from "next/server";
 import { getBearerToken, verifyMobileToken } from "@/lib/mobile-session";
 import { getLoyaltyCard } from "@/lib/db/loyalty";
@@ -15,6 +16,9 @@ export async function GET(request: NextRequest) {
   const location = slug ? await getLocationBySlug(slug) : null;
   if (!location || !location.has_loyalty_enabled) {
     return NextResponse.json({ error: "Location not found" }, { status: 404 });
+  }
+  if (!(await isLocationActive(location))) {
+    return NextResponse.json(SUBSCRIPTION_INACTIVE, { status: 403 });
   }
 
   const maxStamps = location.loyalty_stamps_required ?? 10;

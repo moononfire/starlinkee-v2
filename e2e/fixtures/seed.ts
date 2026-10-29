@@ -286,3 +286,46 @@ export async function seedPromoLead(token: string) {
 export async function deletePromoLead(token: string) {
   await del('location_leads', `claim_token=eq.${token}`);
 }
+
+export const LAPSED_VENUE = { slug: 'e2e-lapsed', plate: 'LAPSED', secret: 'e2elapsedsecret', name: 'Lapsed Cafe E2E' };
+
+/** A venue whose subscription is no longer active, with everything a linktree needs (plate, promo, loyalty, wifi). */
+export async function seedLapsedVenue() {
+  await upsert(
+    'subscriptions',
+    {
+      subscription_id: 9003,
+      customer_id: 1,
+      subscription_name: '1_MONTH_SUB',
+      duration_in_days: 30,
+      status: 'inactive',
+      activation_datetime: new Date(Date.now() - 60 * 86_400_000).toISOString(),
+      expiration_datetime: new Date(Date.now() - 30 * 86_400_000).toISOString(),
+    },
+    'subscription_id',
+  );
+  await upsert(
+    'plates',
+    { plate_number: LAPSED_VENUE.plate, plate_language: 'pl', secret_key: LAPSED_VENUE.secret, subscription_id: 9003 },
+    'plate_number',
+  );
+  await upsert(
+    'customer_locations',
+    {
+      subscription_id: 9003,
+      location_name: LAPSED_VENUE.name,
+      google_business_name: LAPSED_VENUE.name,
+      city: 'Warszawa',
+      google_review_link: 'https://g.page/r/lapsed-review-link',
+      support_email: 'support@lapsed.example.com',
+      linktree_slug: LAPSED_VENUE.slug,
+      has_linktree_access: true,
+      has_promo_enabled: true,
+      has_loyalty_enabled: true,
+      has_wifi_enabled: true,
+      wifi_ssid: 'LapsedWifi',
+      owner_email: 'owner@lapsed.example.com',
+    },
+    'linktree_slug',
+  );
+}

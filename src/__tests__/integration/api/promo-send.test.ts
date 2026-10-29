@@ -1,4 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const accessMock = vi.hoisted(() => ({ active: vi.fn(), activeById: vi.fn() }));
+vi.mock("@/lib/location-access", () => ({
+  isLocationActive: accessMock.active,
+  isLocationActiveById: accessMock.activeById,
+  SUBSCRIPTION_INACTIVE: { error: "subscription_inactive" },
+}));
 import { NextRequest } from "next/server";
 
 const {
@@ -61,6 +68,8 @@ const validBody = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  accessMock.active.mockResolvedValue(true);
+  accessMock.activeById.mockResolvedValue(true);
   resetRateLimits();
   mockGetLocationBySlug.mockResolvedValue(location);
   mockCheckLeadExists.mockResolvedValue(false);
@@ -197,5 +206,20 @@ describe("POST /api/promo/send — SMS language", () => {
     const { t } = await import("@/lib/translations");
     // GSM-7 basic set (letters used by Italian) — no curly quotes, no ’, no exotic symbols
     expect(t("portal_promo_sms_placeholder", "it")).toMatch(/^[A-Za-z0-9 !"#%&'()*+,\-./:;<=>?@_{}èéùìòà]+$/);
+  });
+});
+
+describe("POST /api/promo/send — venue subscription not active (F11)", () => {
+  it("returns 403 and sends no SMS, e-mail or coupon", async () => {
+    accessMock.active.mockResolvedValue(false);
+
+    const res = await POST(makeRequest(validBody));
+
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe("subscription_inactive");
+    expect(mockCreateLead).not.toHaveBeenCalled();
+    expect(mockSendSms).not.toHaveBeenCalled();
+    expect(mockSendPromoEmail).not.toHaveBeenCalled();
+    expect(mockConsumeScanToken).not.toHaveBeenCalled();
   });
 });

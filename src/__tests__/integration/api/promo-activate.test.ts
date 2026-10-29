@@ -1,4 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const accessMock = vi.hoisted(() => ({ active: vi.fn(), activeById: vi.fn() }));
+vi.mock("@/lib/location-access", () => ({
+  isLocationActive: accessMock.active,
+  isLocationActiveById: accessMock.activeById,
+  SUBSCRIPTION_INACTIVE: { error: "subscription_inactive" },
+}));
 import { NextRequest } from "next/server";
 
 const { mockGetLeadByToken, mockGetLeadByCouponCode, mockMarkLeadAsUsed, mockGetLoyaltyCardByRedeemCode, mockConfirmRedemption } =
@@ -34,6 +41,8 @@ function makeRequest(body: unknown) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  accessMock.active.mockResolvedValue(true);
+  accessMock.activeById.mockResolvedValue(true);
   mockMarkLeadAsUsed.mockResolvedValue(undefined);
   mockConfirmRedemption.mockResolvedValue(undefined);
   mockGetLeadByCouponCode.mockResolvedValue(null);
@@ -110,5 +119,29 @@ describe("POST /api/promo/activate", () => {
     mockGetLoyaltyCardByRedeemCode.mockResolvedValue({ id: 9, redeem_used_at: new Date().toISOString() });
     const res = await POST(makeRequest({ code: "ABCD1234" }));
     expect(res.status).toBe(409);
+  });
+});
+
+describe("POST /api/promo/activate — venue subscription not active (F11)", () => {
+  it("refuses to redeem a promo coupon: 403, lead stays unused", async () => {
+    accessMock.activeById.mockResolvedValue(false);
+    mockGetLeadByToken.mockResolvedValue({ id: 5, location_id: 3, is_used: false });
+
+    const res = await POST(makeRequest({ token: "valid-token" }));
+
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe("subscription_inactive");
+    expect(accessMock.activeById).toHaveBeenCalledWith(3);
+    expect(mockMarkLeadAsUsed).not.toHaveBeenCalled();
+  });
+
+  it("refuses to confirm a loyalty redemption: 403", async () => {
+    accessMock.activeById.mockResolvedValue(false);
+    mockGetLoyaltyCardByRedeemCode.mockResolvedValue({ id: 9, location_id: 4, redeem_used_at: null, redeem_requested_at: null });
+
+    const res = await POST(makeRequest({ code: "abc123" }));
+
+    expect(res.status).toBe(403);
+    expect(mockConfirmRedemption).not.toHaveBeenCalled();
   });
 });

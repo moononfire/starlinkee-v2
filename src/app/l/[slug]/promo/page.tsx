@@ -1,3 +1,5 @@
+import { isLocationActive } from "@/lib/location-access";
+import LocationInactive from "@/components/linktree/LocationInactive";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLocationBySlug } from "@/lib/db/locations";
@@ -21,6 +23,7 @@ export default async function PromoPage({ params, searchParams }: Props) {
 
   const location = await getLocationBySlug(slug);
   if (!location || !location.has_promo_enabled) notFound();
+  if (!(await isLocationActive(location))) return <LocationInactive location={location} slug={slug} />;
 
   const plates = await getPlatesBySubscriptionId(location.subscription_id);
   const plateLanguage = firstPlateLanguage(plates);

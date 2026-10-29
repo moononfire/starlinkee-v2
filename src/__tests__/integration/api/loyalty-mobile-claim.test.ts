@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const accessMock = vi.hoisted(() => ({ active: vi.fn(), activeById: vi.fn() }));
+vi.mock("@/lib/location-access", () => ({
+  isLocationActive: accessMock.active,
+  isLocationActiveById: accessMock.activeById,
+  SUBSCRIPTION_INACTIVE: { error: "subscription_inactive" },
+}));
+
 const { mockVerifyMobileToken, mockGetLocationBySlug, mockGetLocationById, mockGetLoyaltyCard, mockSetRedeemCode } =
   vi.hoisted(() => ({
     mockVerifyMobileToken: vi.fn(),
@@ -34,6 +41,8 @@ function request(slug = "my-restaurant") {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  accessMock.active.mockResolvedValue(true);
+  accessMock.activeById.mockResolvedValue(true);
   mockVerifyMobileToken.mockResolvedValue({ phone: "+48600000000" });
   mockGetLocationBySlug.mockResolvedValue({ location_id: 1, has_loyalty_enabled: true, loyalty_stamps_required: 10 });
   mockGetLocationById.mockResolvedValue({ location_id: 1, has_loyalty_enabled: true, loyalty_stamps_required: 10 });
@@ -97,5 +106,19 @@ describe("POST /api/mobile/loyalty/claim", () => {
     mockGetLoyaltyCard.mockResolvedValue({ id: 1, stamps_count: 10 });
     await POST(request());
     expect(mockGetLoyaltyCard).toHaveBeenCalledWith(1, "+48600000000");
+  });
+});
+
+describe("POST /api/mobile/loyalty/claim — venue subscription not active (F11)", () => {
+  it("returns 403 subscription_inactive and does not look at the card", async () => {
+    accessMock.active.mockResolvedValue(false);
+    mockGetLoyaltyCard.mockResolvedValue({ id: 5, stamps_count: 10 });
+
+    const res = await POST(request());
+
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe("subscription_inactive");
+    expect(mockGetLoyaltyCard).not.toHaveBeenCalled();
+    expect(mockSetRedeemCode).not.toHaveBeenCalled();
   });
 });

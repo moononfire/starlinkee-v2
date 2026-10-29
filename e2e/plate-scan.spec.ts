@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { seedTestData, cleanupTestReviews, seedGermanPortalUser, portalSessionCookies, setLocationGoogleLink, seedMixedCaseExpiredOwner, PORTAL_MIXED_USER, seedPromoLead, deletePromoLead } from './fixtures/seed';
+import { seedTestData, cleanupTestReviews, seedGermanPortalUser, portalSessionCookies, setLocationGoogleLink, seedMixedCaseExpiredOwner, PORTAL_MIXED_USER, seedPromoLead, deletePromoLead, seedLapsedVenue, LAPSED_VENUE } from './fixtures/seed';
 
 test.beforeAll(async () => {
   await seedTestData();
@@ -197,6 +197,50 @@ test.describe('Promo claim', () => {
     } finally {
       await deletePromoLead(token);
     }
+  });
+});
+
+// ── Flow 1f — Linktree goes dark with the subscription; no plate secret leaks (F11) ──
+
+test.describe('Linktree of a lapsed venue', () => {
+  test.beforeAll(async () => {
+    await seedLapsedVenue();
+  });
+
+  const UNAVAILABLE = 'Ta tabliczka jest chwilowo niedostępna';
+
+  test('the linktree home shows the neutral "unavailable" screen, not the venue', async ({ page }) => {
+    await page.goto(`/l/${LAPSED_VENUE.slug}`);
+    await expect(page.getByText(UNAVAILABLE)).toBeVisible();
+    await expect(page.getByText(LAPSED_VENUE.name)).toHaveCount(0);
+  });
+
+  for (const sub of ['promo', 'loyalty', 'wifi']) {
+    test(`/${sub} is unavailable too`, async ({ page }) => {
+      await page.goto(`/l/${LAPSED_VENUE.slug}/${sub}`);
+      await expect(page.getByText(UNAVAILABLE)).toBeVisible();
+      await expect(page.getByText(LAPSED_VENUE.name)).toHaveCount(0);
+    });
+  }
+
+  test('/review does not redirect and never exposes the plate secret', async ({ page }) => {
+    const response = await page.goto(`/l/${LAPSED_VENUE.slug}/review`);
+
+    await expect(page.getByText(UNAVAILABLE)).toBeVisible();
+    expect(page.url()).toContain(`/l/${LAPSED_VENUE.slug}/review`);
+    expect(page.url()).not.toContain(LAPSED_VENUE.secret);
+    expect(await response!.text()).not.toContain(LAPSED_VENUE.secret);
+    expect(await page.content()).not.toContain(LAPSED_VENUE.secret);
+  });
+
+  test('an active venue is unaffected: linktree opens and /review goes to the rating screen', async ({ page }) => {
+    await page.goto('/l/testrestaurant');
+    await expect(page.getByText('Restauracja Testowa').first()).toBeVisible();
+    await expect(page.getByText(UNAVAILABLE)).toHaveCount(0);
+
+    await page.goto('/l/testrestaurant/review');
+    await expect(page).toHaveURL(/\/plate\/[A-Z]+\/scan\/.+/);
+    await expect(page.getByLabel('5 star')).toBeVisible();
   });
 });
 

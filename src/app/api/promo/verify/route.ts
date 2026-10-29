@@ -3,6 +3,7 @@ import { getLeadByCouponCode, CLAIM_WINDOW_MS } from "@/lib/db/leads";
 import { getLoyaltyCardByRedeemCode } from "@/lib/db/loyalty";
 import { REDEEM_WINDOW_MS } from "@/lib/loyalty-collect";
 import { getLocationById } from "@/lib/db/locations";
+import { isLocationActive, SUBSCRIPTION_INACTIVE } from "@/lib/location-access";
 
 function expiryInfo(requestedAt: string | null, windowMs: number) {
   if (!requestedAt) return { expired: false, expiresAt: null as string | null };
@@ -25,6 +26,9 @@ export async function POST(request: NextRequest) {
   const lead = await getLeadByCouponCode(normalizedCode);
   if (lead) {
     const location = await getLocationById(lead.location_id);
+    if (!location || !(await isLocationActive(location))) {
+      return NextResponse.json(SUBSCRIPTION_INACTIVE, { status: 403 });
+    }
     const { expired, expiresAt } = expiryInfo(lead.claimed_at, CLAIM_WINDOW_MS);
 
     return NextResponse.json({
@@ -43,6 +47,9 @@ export async function POST(request: NextRequest) {
   const card = await getLoyaltyCardByRedeemCode(normalizedCode);
   if (card) {
     const location = await getLocationById(card.location_id);
+    if (!location || !(await isLocationActive(location))) {
+      return NextResponse.json(SUBSCRIPTION_INACTIVE, { status: 403 });
+    }
     const { expired, expiresAt } = expiryInfo(card.redeem_requested_at, REDEEM_WINDOW_MS);
 
     return NextResponse.json({
