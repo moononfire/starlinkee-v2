@@ -1,0 +1,152 @@
+From 735a7ec53e2b01fb60f9ce90fefd56df999f748c Mon Sep 17 00:00:00 2001
+From: viktor <vikbobinski@gmail.com>
+Date: Thu, 29 Oct 2026 04:39:14 +0100
+Subject: [PATCH] R1: prod read blocked for the agent; read-only SQL for VB
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ docs/plans/audit-2026-10.md | 15 +++++++++++++++
+ e2e/plate-scan.spec.ts      |  4 ++--
+ src/lib/translations.json   | 36 ++++++++++++++++++------------------
+ 3 files changed, 35 insertions(+), 20 deletions(-)
+
+diff --git a/docs/plans/audit-2026-10.md b/docs/plans/audit-2026-10.md
+index 010cdb9..120613e 100644
+--- a/docs/plans/audit-2026-10.md
++++ b/docs/plans/audit-2026-10.md
+@@ -151,3 +151,18 @@ Kolejność u buildera: (P3 w toku) → **P10 (pilny)** → P4 → P6 → P7 →
+ - (P2) Czy zapamiętywać język gościa w mailu (kolumna `reviews.guest_language`, migracja na prod)? Dziś mail do gościa idzie w `plate_language`.
+ - (P2) Portal wcześniej ignorował `preferred_language` (zawsze angielski bez cookie). Teraz klient z `de` widzi niemiecki od pierwszego wejścia — zmiana widoczna dla wszystkich istniejących klientów DE/PL.
+ - (P2) Istniejące lokale w bazie mają `active_languages` bez `it` także przy płytce IT. Po poprawce takie płytki pokażą się po angielsku (zamiast polsku); żeby były po włosku, trzeba dopisać `it` do `active_languages` tych lokali (jednorazowy UPDATE na prod — tylko za zgodą VB).
++- (R1, review-reviewer) **Odczyt prod NIE wykonany**: agentowi zablokowano odczyt produkcji (klasyfikator uprawnień Claude Code: „Production Reads”), mimo zgody VB w decyzjach 1 i 6. Dwie drogi: VB uruchamia poniższe SELECT-y w Supabase → SQL Editor (prod) i wkleja wynik, albo dopuszcza w ustawieniach Claude Code odczyt prod dla reviewera (skrypt tylko z GET jest gotowy u reviewera). Czego szukać — e2e i `supabase/seed.sql` tworzyły dokładnie te rekordy: klient `customer_id=1` „Test Restaurant GmbH” (`t***@example.com`), subskrypcje 1 (active) i 2 (pending) klienta 1, płytki `ACTIVE`, `PENDNG`, `NOSSUB`, `ENACTL` z sekretami `testsecret*`, lokal `testrestaurant` („Restauracja Testowa”, subskrypcja 1); `cleanupTestReviews` **kasował wszystkie reviews tych płytek**. Upsert po `customer_id=1`/`subscription_id=1,2`/`plate_number` mógł **nadpisać prawdziwego klienta lub subskrypcję o tych id**, jeśli istniały.
++  ```sql
++  -- 1. Ślady e2e (sprawdź, czy id 1/2 to dane testowe czy nadpisany prawdziwy klient)
++  select customer_id, customer_name, source, created_at, updated_at from customers where customer_id = 1 or email in ('test@example.com','e2e-portal-de@example.com');
++  select subscription_id, customer_id, subscription_name, status, created_at from subscriptions where subscription_id in (1,2) or customer_id = 1;
++  select plate_id, plate_number, subscription_id, secret_key like 'testsecret%' as test_secret, number_of_visits, created_at from plates where plate_number in ('ACTIVE','PENDNG','NOSSUB','ENACTL','DEPLAT','ITPLAT','ITOLDP');
++  select location_id, subscription_id, location_name, linktree_slug, created_at from customer_locations where subscription_id in (1,2) or linktree_slug = 'testrestaurant';
++  select p.plate_number, count(r.*) as reviews, count(r.feedback_time) as with_feedback, min(r.created_at), max(r.created_at)
++    from plates p left join reviews r on r.plate_id = p.plate_id where p.plate_number in ('ACTIVE','PENDNG','NOSSUB','ENACTL') group by 1;
++  -- czy płytki/subskrypcje 1,2 należą też do innych klientów (nadpisanie):
++  select count(*) from plates where subscription_id in (1,2) and plate_number not in ('ACTIVE','PENDNG','ENACTL');
++  -- 2. F6
++  select lower(trim(email)), count(*) from customers group by 1 having count(*) > 1;
++  select customer_id, source, left(email,1) || '***@' || split_part(email,'@',2) as email_masked from customers where email <> lower(trim(email));
++  ```
+diff --git a/e2e/plate-scan.spec.ts b/e2e/plate-scan.spec.ts
+index 1fb5148..5540190 100644
+--- a/e2e/plate-scan.spec.ts
++++ b/e2e/plate-scan.spec.ts
+@@ -123,8 +123,8 @@ test.describe('Languages', () => {
+ test.describe('Pending plate (setup)', () => {
+   test('shows PlateSetupForm', async ({ page }) => {
+     await page.goto('/plate/PENDNG/testsecretpending');
+-    await expect(page.getByRole('heading', { name: 'Skonfiguruj swoją płytkę' })).toBeVisible();
+-    await expect(page.getByRole('button', { name: 'Aktywuj płytkę' })).toBeVisible();
++    await expect(page.getByRole('heading', { name: 'Skonfiguruj swoją tabliczkę' })).toBeVisible();
++    await expect(page.getByRole('button', { name: 'Aktywuj tabliczkę' })).toBeVisible();
+   });
+ });
+ 
+diff --git a/src/lib/translations.json b/src/lib/translations.json
+index 80b6ed9..c21cc56 100644
+--- a/src/lib/translations.json
++++ b/src/lib/translations.json
+@@ -965,20 +965,20 @@
+     "subscription_start_date": "Data rozpoczęcia",
+     "subscription_end_date": "Data zakończenia",
+     "subscription_status": "Status",
+-    "registered_plates_header": "Zarejestrowane tabliczekzki:",
++    "registered_plates_header": "Zarejestrowane tabliczki:",
+     "plate_reviews": "Recenzje",
+     "plate_avg_rating": "Średnia ocena",
+     "subscription_number": "Subskrypcja #",
+     "plate_added_success": "Tabliczka została pomyślnie dodana.",
+-    "plate_add_failed": "Nie udało się dodać tabliczekzki.",
++    "plate_add_failed": "Nie udało się dodać tabliczki.",
+     "invalid_request_method": "Nieprawidłowa metoda żądania.",
+     "plates_import_success": "Tabliczki zostały pomyślnie zaimportowane.",
+     "plates_import_failed": "Nie udało się zaimportować tabliczek.",
+     "file_missing": "Nie przesłano żadnego pliku.",
+-    "invalid_plate_secret": "Nieprawidłowy klucz tabliczekzki.",
+-    "plate_processing_failed": "Nie udało się przetworzyć tabliczekzki.",
+-    "plate_setup_success": "Konfiguracja tabliczekzki zakończona pomyślnie.",
+-    "plate_setup_failed": "Nie udało się zakończyć konfiguracji tabliczekzki.",
++    "invalid_plate_secret": "Nieprawidłowy klucz tabliczki.",
++    "plate_processing_failed": "Nie udało się przetworzyć tabliczki.",
++    "plate_setup_success": "Konfiguracja tabliczki zakończona pomyślnie.",
++    "plate_setup_failed": "Nie udało się zakończyć konfiguracji tabliczki.",
+     "plate_already_scanned": "Tabliczka, którą próbujesz zeskanować, została już zeskanowana.",
+     "subscription_report": "Szanowny(a) {CUSTOMER_NAME},\n\nOto raport Twojej subskrypcji:\n\n{SUBSCRIPTION_DETAILS}\n\nW przypadku pytań prosimy o kontakt z naszym zespołem wsparcia.\n\nPozdrawiamy,\nTwój Zespół Serwisowy",
+     "setup_form_title": "Skonfiguruj swoją tabliczkę",
+@@ -996,7 +996,7 @@
+     "setup_form_submitting": "Konfigurowanie...",
+     "setup_form_submit": "Aktywuj tabliczkę",
+     "setup_plate_title": "Konfiguracja Plate",
+-    "setup_plate_instructions": "Ta strona pozwala skonfigurować Twoją tabliczekzkę z informacjami o Twojej firmie. Wypełnij poniższy formularz, aby zakończyć konfigurację tabliczekzki.",
++    "setup_plate_instructions": "Ta strona pozwala skonfigurować Twoją tabliczkę z informacjami o Twojej firmie. Wypełnij poniższy formularz, aby zakończyć konfigurację tabliczki.",
+     "business_name_label": "Nazwa firmy",
+     "business_name_hint": "Wprowadź nazwę swojej firmy tak, jak ma być widoczna dla klientów.",
+     "business_address_label": "Adres firmy w Google",
+@@ -1004,7 +1004,7 @@
+     "support_email_label": "Email wsparcia",
+     "support_email_hint": "Wprowadź adres email dla opinii klientów. Niskie oceny będą wysyłane na ten adres email zamiast do Google, co pozwoli Ci bezpośrednio kontaktować się z klientami i rozwiązywać problemy.",
+     "logo_label": "Prześlij logo",
+-    "logo_hint": "Prześlij logo swojej firmy (format JPEG lub PNG, maksymalnie 2 MB). Logo zostanie wyświetlone na stronie profilu Twojej tabliczekzki.",
++    "logo_hint": "Prześlij logo swojej firmy (format JPEG lub PNG, maksymalnie 2 MB). Logo zostanie wyświetlone na stronie profilu Twojej tabliczki.",
+     "logo_preview_title": "Logo Vorschau",
+     "setup_page_preview": "Setup-Seitenvorschau:",
+     "final_page_preview": "Endbenutzer-Seitenvorschau:",
+@@ -1022,15 +1022,15 @@
+     "invalid_scan_id": "Podany identyfikator skanowania jest nieprawidłowy lub wygasł.",
+     "exception_message": "Wystąpił błąd podczas przetwarzania Twojego żądania. Spróbuj ponownie później.",
+     "technical_exception_message": "Błąd techniczny:",
+-    "plate_not_found_exception": "Nie znaleziono tabliczekzki.",
+-    "invalid_plate_secret_exception": "Nieprawidłowy klucz tabliczekzki.",
+-    "plate_processing_failed_exception": "Nie udało się przetworzyć tabliczekzki.",
+-    "subscription_not_found": "Nie znaleziono subskrypcji dla tej tabliczekzki.",
+-    "plate_renew_description": "Odnów subskrypcję, a tabliczekzka znów zacznie zbierać opinie. Zajmie to chwilę.",
++    "plate_not_found_exception": "Nie znaleziono tabliczki.",
++    "invalid_plate_secret_exception": "Nieprawidłowy klucz tabliczki.",
++    "plate_processing_failed_exception": "Nie udało się przetworzyć tabliczki.",
++    "subscription_not_found": "Nie znaleziono subskrypcji dla tej tabliczki.",
++    "plate_renew_description": "Odnów subskrypcję, a tabliczka znów zacznie zbierać opinie. Zajmie to chwilę.",
+     "plate_renew_button_monthly": "Odnów na miesiąc",
+     "plate_renew_button_yearly": "Odnów na rok",
+     "location_not_found_exception": "Nie znaleziono lokalizacji.",
+-    "subscription_not_found_exception": "Nie znaleziono subskrypcji dla tej tabliczekzki.",
++    "subscription_not_found_exception": "Nie znaleziono subskrypcji dla tej tabliczki.",
+     "leave_review": "Zostaw opinię",
+     "collect_promo_default": "Odbierz promocję",
+     "loyalty_card_link": "Karta lojalnościowa",
+@@ -1039,12 +1039,12 @@
+     "your_promo_coupon": "Twój kupon promocyjny",
+     "verify_coupon_title": "Weryfikacja kodu",
+     "enter_coupon_status": "Wprowadź kod promocji lub nagrody lojalnościowej, aby sprawdzić jego status.",
+-    "scan_nfc_for_promo": "Zeskanuj tabliczekzkę NFC, aby odebrać promocję.",
++    "scan_nfc_for_promo": "Zeskanuj tabliczkę NFC, aby odebrać promocję.",
+     "email_optional_placeholder": "Email (opcjonalnie)",
+     "consent_text": "Zgadzam się na przetwarzanie danych osobowych w celach marketingowych.",
+     "consent_required": "To pole jest wymagane.",
+     "phone_already_claimed": "Ten numer telefonu już odebrał tę promocję.",
+-    "link_expired": "Link wygasł. Zeskanuj tabliczekzkę ponownie.",
++    "link_expired": "Link wygasł. Zeskanuj tabliczkę ponownie.",
+     "something_went_wrong": "Coś poszło nie tak. Spróbuj ponownie.",
+     "promo_sent_sms": "Link do promocji został wysłany SMS-em!",
+     "check_messages": "Sprawdź swoją skrzynkę wiadomości.",
+@@ -1340,10 +1340,10 @@
+     "portal_loyalty_total_stamps": "Rozdane pieczątki",
+     "email_required_input": "Adres e-mail (wymagany)",
+     "setup_form_activation_code": "Kod aktywacyjny",
+-    "setup_form_activation_code_hint": "Kod z wiadomości e-mail, którą wysłaliśmy po przypisaniu tabliczekzki do Twojego konta.",
++    "setup_form_activation_code_hint": "Kod z wiadomości e-mail, którą wysłaliśmy po przypisaniu tabliczki do Twojego konta.",
+     "portal_password_current": "Obecne hasło",
+     "portal_password_wrong_current": "Obecne hasło jest nieprawidłowe.",
+-    "plate_unavailable_title": "Ta tabliczekzka jest chwilowo niedostępna",
++    "plate_unavailable_title": "Ta tabliczka jest chwilowo niedostępna",
+     "plate_unavailable_message": "Spróbuj ponownie później.",
+     "prefer_google_review_link": "Wolisz zostawić opinię w Google?"
+   },
+-- 
+2.53.0
+
