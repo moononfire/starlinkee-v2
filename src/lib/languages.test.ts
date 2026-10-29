@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ownerLanguage, guestLanguage, languageFromCountry } from "./languages";
+import { ownerLanguage, guestLanguage, languageFromCountry, dateLocale } from "./languages";
 
 describe("ownerLanguage", () => {
   it("uses the customer's preferred language first", () => {
@@ -36,5 +36,19 @@ describe("languageFromCountry", () => {
     expect(languageFromCountry("IT")).toBe("it");
     expect(languageFromCountry("FR")).toBe("en");
     expect(languageFromCountry(undefined)).toBe("en");
+  });
+});
+
+describe("dateLocale", () => {
+  it("gives Italian month names for it, not English", () => {
+    const d = new Date(Date.UTC(2026, 9, 29, 12));
+    expect(d.toLocaleDateString(dateLocale("it"), { month: "short", timeZone: "UTC" })).toBe("ott");
+    expect(d.toLocaleDateString(dateLocale("it"), { timeZone: "UTC" })).toBe("29/10/2026");
+  });
+  it("maps the other languages and falls back to English", () => {
+    expect(dateLocale("de")).toBe("de-DE");
+    expect(dateLocale("pl")).toBe("pl-PL");
+    expect(dateLocale("xx")).toBe("en-US");
+    expect(dateLocale(undefined)).toBe("en-US");
   });
 });

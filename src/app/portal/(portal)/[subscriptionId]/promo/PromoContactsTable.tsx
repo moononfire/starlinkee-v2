@@ -2,11 +2,10 @@
 
 import type { LocationLead } from "@/lib/types";
 import { t } from "@/lib/translations";
-
-const DATE_LOCALES: Record<string, string> = { en: "en-US", de: "de-DE", pl: "pl-PL" };
+import { dateLocale } from "@/lib/languages";
 
 function formatDate(d: string, lang: string) {
-  const locale = DATE_LOCALES[lang] ?? "en-US";
+  const locale = dateLocale(lang);
   return new Date(d).toLocaleDateString(locale, {
     year: "numeric",
     month: "2-digit",
@@ -16,7 +15,7 @@ function formatDate(d: string, lang: string) {
 
 export default function PromoContactsTable({ leads, lang }: { leads: LocationLead[]; lang: string }) {
   function exportCsv() {
-    const locale = DATE_LOCALES[lang] ?? "en-US";
+    const locale = dateLocale(lang);
     const header = t("portal_contacts_csv_header", lang);
     const rows = leads.map((l) =>
       [

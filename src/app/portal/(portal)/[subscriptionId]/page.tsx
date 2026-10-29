@@ -10,17 +10,16 @@ import { t } from "@/lib/translations";
 import { getPlatesBySubscriptionId } from "@/lib/db/plates";
 import DashboardSettings from "./DashboardSettings";
 import CancelRenewal from "./CancelRenewal";
+import { dateLocale } from "@/lib/languages";
 
 interface Props {
   params: Promise<{ subscriptionId: string }>;
   searchParams: Promise<{ stars?: string; scrollTo?: string }>;
 }
 
-const DATE_LOCALES: Record<string, string> = { en: "en-US", de: "de-DE", pl: "pl-PL", it: "it-IT" };
-
 function formatDate(d: string | null, lang: string) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString(DATE_LOCALES[lang] ?? "en-US");
+  return new Date(d).toLocaleDateString(dateLocale(lang));
 }
 
 function Stars({ rating }: { rating: number }) {

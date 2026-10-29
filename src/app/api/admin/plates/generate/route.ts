@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateUniquePlateCodes } from "@/lib/db/plates";
 import { requireAdmin } from "@/lib/api-auth";
+import { PLATE_LANGUAGES } from "@/lib/languages";
 
 export async function GET(request: NextRequest) {
   const authError = await requireAdmin();
@@ -10,7 +11,7 @@ export async function GET(request: NextRequest) {
   const count = Math.min(parseInt(searchParams.get("count") ?? "10"), 500);
   const language = searchParams.get("language") ?? "en";
 
-  if (!["en", "de", "pl"].includes(language)) {
+  if (!(PLATE_LANGUAGES as readonly string[]).includes(language)) {
     return NextResponse.json({ error: "Invalid language" }, { status: 400 });
   }
 

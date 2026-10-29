@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { t } from "@/lib/translations";
+import { dateLocale } from "@/lib/languages";
 
 declare global {
   interface Window {
@@ -262,7 +263,7 @@ export default function VerifyClient({ initialCode, lang }: Props) {
           <p className="text-gray-600 text-sm font-medium">{t("coupon_used", lang)}</p>
           {result.usedAt && (
             <p className="text-gray-400 text-xs mt-1">
-              {new Date(result.usedAt).toLocaleString(lang === "pl" ? "pl-PL" : lang === "de" ? "de-DE" : "en-GB")}
+              {new Date(result.usedAt).toLocaleString(dateLocale(lang))}
             </p>
           )}
         </div>

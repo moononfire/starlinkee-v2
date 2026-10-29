@@ -54,6 +54,7 @@ export default function GeneratePlatesForm() {
             <option value="en">EN</option>
             <option value="de">DE</option>
             <option value="pl">PL</option>
+            <option value="it">IT</option>
           </select>
         </div>
       </div>

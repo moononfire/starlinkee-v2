@@ -89,7 +89,8 @@ export async function POST(request: NextRequest) {
   // Activate subscription
   const now = new Date();
   const expiration = new Date(now);
-  expiration.setDate(expiration.getDate() + subscription.duration_in_days);
+  // UTC days, so the length does not depend on the server timezone or a DST change.
+  expiration.setUTCDate(expiration.getUTCDate() + subscription.duration_in_days);
 
   await setSubscriptionActive(
     plate.subscription_id,

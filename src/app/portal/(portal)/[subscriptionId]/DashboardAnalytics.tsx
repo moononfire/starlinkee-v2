@@ -4,6 +4,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import type { Review, CustomerLocation } from "@/lib/types";
 import { t } from "@/lib/translations";
+import { dateLocale } from "@/lib/languages";
 
 type ReviewWithPlate = Review & { plate_number: string };
 type Range = "7d" | "30d" | "90d" | "1y" | "all";
@@ -27,8 +28,6 @@ function getRanges(lang: string): { key: Range; label: string }[] {
   ];
 }
 
-const DATE_LOCALES: Record<string, string> = { en: "en-US", de: "de-DE", pl: "pl-PL" };
-
 function getCutoff(range: Range): Date {
   const now = Date.now();
   if (range === "7d") return new Date(now - 7 * 86400000);
@@ -50,7 +49,7 @@ function groupKey(d: Date, range: Range): string {
 }
 
 function formatKey(key: string, range: Range, lang: string): string {
-  const locale = DATE_LOCALES[lang] ?? "en-US";
+  const locale = dateLocale(lang);
   if (range === "7d" || range === "30d" || range === "90d") {
     return new Date(key + "T12:00:00").toLocaleDateString(locale, { day: "numeric", month: "short" });
   }
@@ -186,7 +185,7 @@ function BarChart({ bars, maxY, lang }: { bars: ReturnType<typeof buildChartData
 
 function formatDate(d: string | null, lang: string) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString(DATE_LOCALES[lang] ?? "en-US");
+  return new Date(d).toLocaleDateString(dateLocale(lang));
 }
 
 function Stars({ rating }: { rating: number }) {

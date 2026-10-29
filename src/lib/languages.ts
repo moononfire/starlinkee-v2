@@ -9,6 +9,13 @@ export type PlateLanguage = Language;
 
 export const DEFAULT_LANGUAGE: Language = "en";
 
+const DATE_LOCALES: Record<Language, string> = { en: "en-US", de: "de-DE", pl: "pl-PL", it: "it-IT" };
+
+/** BCP 47 locale for dates and numbers in the given UI language (English for anything unknown). */
+export function dateLocale(language?: string | null): string {
+  return DATE_LOCALES[language as Language] ?? DATE_LOCALES.en;
+}
+
 // A location without any plate yet has no plate language of its own: fall back to the default.
 export function firstPlateLanguage(plates: readonly { plate_language: string }[]): string {
   return plates[0]?.plate_language ?? DEFAULT_LANGUAGE;
