@@ -79,6 +79,25 @@ export async function setSubscriptionActive(
   if (error) throw new Error(`Failed to activate subscription: ${error.message}`);
 }
 
+/** Extends an existing subscription to a new end date and keeps it active; activation_datetime stays as it was. */
+export async function extendSubscription(subscriptionId: number, expirationDatetime: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({ status: "active", expiration_datetime: expirationDatetime })
+    .eq("subscription_id", subscriptionId);
+  if (error) throw new Error(`Failed to extend subscription: ${error.message}`);
+}
+
+export async function setSubscriptionStripeId(subscriptionId: number, stripeSubscriptionId: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({ stripe_subscription_id: stripeSubscriptionId })
+    .eq("subscription_id", subscriptionId);
+  if (error) throw new Error(`Failed to store the Stripe subscription id: ${error.message}`);
+}
+
 export async function createSubscription(data: {
   customer_id: number;
   subscription_name: string;

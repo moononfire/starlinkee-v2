@@ -23,6 +23,15 @@ const {
   mockGetPlateById,
   mockAssignPlate,
   mockIssueCode,
+  mockExtendSubscription,
+  mockSetStripeId,
+  mockSendRenewalConfirmation,
+  mockSendRenewalAdmin,
+  mockSendDuplicateAdmin,
+  mockStripeSubRetrieve,
+  mockSessionsList,
+  mockSessionsExpire,
+  mockSessionsCreate,
 } = vi.hoisted(() => ({
   mockUpsertCustomerByEmail: vi.fn(),
   mockGetCustomerById: vi.fn(),
@@ -45,6 +54,23 @@ const {
   mockGetPlateById: vi.fn(),
   mockAssignPlate: vi.fn(),
   mockIssueCode: vi.fn(),
+  mockExtendSubscription: vi.fn(),
+  mockSetStripeId: vi.fn(),
+  mockSendRenewalConfirmation: vi.fn(),
+  mockSendRenewalAdmin: vi.fn(),
+  mockSendDuplicateAdmin: vi.fn(),
+  mockStripeSubRetrieve: vi.fn(),
+  mockSessionsList: vi.fn(),
+  mockSessionsExpire: vi.fn(),
+  mockSessionsCreate: vi.fn(),
+}));
+
+vi.mock("stripe", () => ({
+  default: class {
+    subscriptions = { retrieve: mockStripeSubRetrieve };
+    checkout = { sessions: { list: mockSessionsList, expire: mockSessionsExpire, create: mockSessionsCreate } };
+    customers = { retrieve: vi.fn() };
+  },
 }));
 
 vi.mock("@/lib/db/customers", () => ({
@@ -65,6 +91,8 @@ vi.mock("@/lib/db/orders", () => ({
 vi.mock("@/lib/db/subscriptions", () => ({
   createSubscription: mockCreateSubscription,
   setSubscriptionActive: mockSetSubscriptionActive,
+  extendSubscription: mockExtendSubscription,
+  setSubscriptionStripeId: mockSetStripeId,
   getSubscriptionById: mockGetSubscriptionById,
   listSubscriptionsByStripeInvoice: mockListSubsByInvoice,
   listSubscriptionsByStripeSubscription: mockListSubsByStripeSub,
@@ -77,8 +105,9 @@ vi.mock("@/lib/services/activation", () => ({ issueActivationCode: mockIssueCode
 vi.mock("@/lib/email", () => ({
   sendOrderConfirmationToAdmin: mockSendOrderConfirmationToAdmin,
   sendPortalCredentials: mockSendPortalCredentials,
-  sendRenewalConfirmation: vi.fn().mockResolvedValue(undefined),
-  sendRenewalConfirmationToAdmin: vi.fn().mockResolvedValue(undefined),
+  sendRenewalConfirmation: mockSendRenewalConfirmation,
+  sendRenewalConfirmationToAdmin: mockSendRenewalAdmin,
+  sendDuplicateStripeSubscriptionToAdmin: mockSendDuplicateAdmin,
 }));
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
@@ -93,7 +122,12 @@ vi.mock("@/lib/password", () => ({
   generateRandomPassword: mockGenerateRandomPassword,
 }));
 
-import { processInvoicePaymentSucceeded, processStripeInvoice } from "@/lib/services/stripe";
+import {
+  processInvoicePaymentSucceeded,
+  processStripeInvoice,
+  createRenewalCheckoutSession,
+  RENEWAL_GRACE_DAYS,
+} from "@/lib/services/stripe";
 
 const TEST_PRICE_ID = "price_test_1year";
 
@@ -142,6 +176,15 @@ beforeEach(() => {
   mockGetSubscriptionById.mockResolvedValue(null);
   mockGetPlateById.mockResolvedValue(null);
   mockAssignPlate.mockResolvedValue(undefined);
+  mockExtendSubscription.mockResolvedValue(undefined);
+  mockSetStripeId.mockResolvedValue(undefined);
+  mockSendRenewalConfirmation.mockResolvedValue(undefined);
+  mockSendRenewalAdmin.mockResolvedValue(undefined);
+  mockSendDuplicateAdmin.mockResolvedValue(undefined);
+  mockStripeSubRetrieve.mockResolvedValue({ status: "canceled" });
+  mockSessionsList.mockResolvedValue({ data: [] });
+  mockSessionsExpire.mockResolvedValue({});
+  mockSessionsCreate.mockResolvedValue({ url: "https://checkout.test/s" });
 });
 
 describe("processInvoicePaymentSucceeded()", () => {
@@ -364,7 +407,8 @@ describe("processStripeInvoice() routing by billing_reason", () => {
 
       expect(mockCreateSubscription).not.toHaveBeenCalled();
       expect(mockAssignPlate).not.toHaveBeenCalled();
-      expect(mockSetSubscriptionActive).toHaveBeenCalledWith(50, expect.any(String), expect.any(String));
+      expect(mockExtendSubscription).toHaveBeenCalledWith(50, expect.any(String));
+      expect(mockSetSubscriptionActive).not.toHaveBeenCalled(); // activation_datetime untouched
     });
 
     it("falls back to the plate's current subscription for renewals created before Stripe ids were stored", async () => {
@@ -373,7 +417,7 @@ describe("processStripeInvoice() routing by billing_reason", () => {
 
       await processStripeInvoice(renewal("subscription_cycle"));
 
-      expect(mockSetSubscriptionActive).toHaveBeenCalledWith(33, expect.any(String), expect.any(String));
+      expect(mockExtendSubscription).toHaveBeenCalledWith(33, expect.any(String));
       expect(mockCreateSubscription).not.toHaveBeenCalled();
       expect(mockAssignPlate).not.toHaveBeenCalled();
     });
@@ -404,5 +448,200 @@ describe("processStripeInvoice() routing by billing_reason", () => {
       expect(mockAssignPlate).toHaveBeenLastCalledWith(7, 50);
       expect(mockIssueCode).toHaveBeenCalledWith(50);
     });
+  });
+});
+
+
+// ── Renewal of an existing (lapsed) subscription: period, grace, duplicates (F3, F4) ──
+describe("renewal of an existing subscription (renewal_subscription_id)", () => {
+  const DAY = 86_400_000;
+  const PERIOD_END_31D = 1_900_000_000; // seconds
+  const withGrace = (sec: number) => new Date(sec * 1000 + RENEWAL_GRACE_DAYS * DAY).toISOString();
+
+  const renewal = (reason: string, extra: { periodEnd?: number | null; stripeSub?: string } = {}) =>
+    makeInvoice({
+      billing_reason: reason,
+      parent: {
+        subscription_details: {
+          subscription: extra.stripeSub ?? "sub_new",
+          metadata: {
+            renewal_subscription_id: "50",
+            plate_number: "ABCDEF",
+            renewal_duration_days: "30",
+            renewal_interval: "month",
+            plate_language: "pl",
+          },
+        },
+      },
+      lines: { data: extra.periodEnd === null ? [] : [{ period: { end: extra.periodEnd ?? PERIOD_END_31D } }] },
+    });
+
+  it("has a grace period of 2 days", () => {
+    expect(RENEWAL_GRACE_DAYS).toBe(2);
+  });
+
+  it("first invoice: active until the end of the PAID period (a 31-day month, not now+30d) plus grace", async () => {
+    mockGetSubscriptionById.mockResolvedValue({ subscription_id: 50, status: "inactive", stripe_subscription_id: null });
+
+    await processStripeInvoice(renewal("subscription_create"));
+
+    expect(mockSetSubscriptionActive).toHaveBeenCalledWith(50, expect.any(String), withGrace(PERIOD_END_31D));
+  });
+
+  it("falls back to now + duration + grace when Stripe reports no period", async () => {
+    mockGetSubscriptionById.mockResolvedValue({ subscription_id: 50, status: "inactive" });
+    const before = Date.now();
+
+    await processStripeInvoice(renewal("subscription_create", { periodEnd: null }));
+
+    const expiration = new Date(mockSetSubscriptionActive.mock.calls[0][2]).getTime();
+    expect(expiration).toBeGreaterThanOrEqual(before + (30 + RENEWAL_GRACE_DAYS) * DAY);
+    expect(expiration).toBeLessThanOrEqual(Date.now() + (30 + RENEWAL_GRACE_DAYS) * DAY);
+  });
+
+  it("first invoice emails the customer and the admin, and records the Stripe subscription id", async () => {
+    mockGetSubscriptionById.mockResolvedValue({ subscription_id: 50, status: "inactive", stripe_subscription_id: null });
+
+    await processStripeInvoice(renewal("subscription_create"));
+
+    expect(mockSendRenewalConfirmation).toHaveBeenCalledOnce();
+    expect(mockSendRenewalAdmin).toHaveBeenCalledOnce();
+    expect(mockSetStripeId).toHaveBeenCalledWith(50, "sub_new");
+    expect(mockSendDuplicateAdmin).not.toHaveBeenCalled();
+  });
+
+  it("later cycle: only moves the end date; no activation change, no emails", async () => {
+    mockGetSubscriptionById.mockResolvedValue({
+      subscription_id: 50,
+      status: "active",
+      expiration_datetime: new Date(PERIOD_END_31D * 1000 - 40 * DAY).toISOString(),
+    });
+
+    await processStripeInvoice(renewal("subscription_cycle"));
+
+    expect(mockExtendSubscription).toHaveBeenCalledWith(50, withGrace(PERIOD_END_31D));
+    expect(mockSetSubscriptionActive).not.toHaveBeenCalled();
+    expect(mockSendRenewalConfirmation).not.toHaveBeenCalled();
+    expect(mockSendRenewalAdmin).not.toHaveBeenCalled();
+  });
+
+  it("later cycle never shortens time that was already granted (late or replayed invoice)", async () => {
+    const granted = new Date(PERIOD_END_31D * 1000 + 90 * DAY).toISOString();
+    mockGetSubscriptionById.mockResolvedValue({ subscription_id: 50, status: "active", expiration_datetime: granted });
+
+    await processStripeInvoice(renewal("subscription_cycle"));
+
+    expect(mockExtendSubscription).toHaveBeenCalledWith(50, granted);
+  });
+
+  it("later cycle reactivates a lapsed subscription (payment arrived after the cron)", async () => {
+    mockGetSubscriptionById.mockResolvedValue({
+      subscription_id: 50,
+      status: "inactive",
+      expiration_datetime: new Date(Date.now() - DAY).toISOString(),
+    });
+
+    await processStripeInvoice(renewal("subscription_cycle"));
+
+    expect(mockExtendSubscription).toHaveBeenCalledWith(50, withGrace(PERIOD_END_31D));
+  });
+
+  it("later cycle leaves a never-set-up (pending) subscription alone", async () => {
+    mockGetSubscriptionById.mockResolvedValue({ subscription_id: 50, status: "pending" });
+    await processStripeInvoice(renewal("subscription_cycle"));
+    expect(mockExtendSubscription).not.toHaveBeenCalled();
+  });
+
+  it("a second live Stripe subscription for the same row alerts the admin (and cancels nothing)", async () => {
+    mockGetSubscriptionById.mockResolvedValue({ subscription_id: 50, status: "inactive", stripe_subscription_id: "sub_old" });
+    mockStripeSubRetrieve.mockResolvedValue({ status: "active" });
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await processStripeInvoice(renewal("subscription_create", { stripeSub: "sub_new" }));
+
+    expect(mockStripeSubRetrieve).toHaveBeenCalledWith("sub_old");
+    expect(mockSendDuplicateAdmin).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subscriptionId: 50,
+        previousStripeSubscriptionId: "sub_old",
+        newStripeSubscriptionId: "sub_new",
+        plateNumber: "ABCDEF",
+      })
+    );
+    expect(mockSetStripeId).toHaveBeenCalledWith(50, "sub_new");
+    expect(mockSetSubscriptionActive).toHaveBeenCalled(); // the paid renewal is still honoured
+    err.mockRestore();
+  });
+
+  it("no alert when the previous Stripe subscription is already canceled", async () => {
+    mockGetSubscriptionById.mockResolvedValue({ subscription_id: 50, status: "inactive", stripe_subscription_id: "sub_old" });
+    mockStripeSubRetrieve.mockResolvedValue({ status: "canceled" });
+
+    await processStripeInvoice(renewal("subscription_create", { stripeSub: "sub_new" }));
+
+    expect(mockSendDuplicateAdmin).not.toHaveBeenCalled();
+    expect(mockSetStripeId).toHaveBeenCalledWith(50, "sub_new");
+  });
+
+  it("alerts when the previous subscription cannot be looked up (better a false alarm than a silent double charge)", async () => {
+    mockGetSubscriptionById.mockResolvedValue({ subscription_id: 50, status: "inactive", stripe_subscription_id: "sub_old" });
+    mockStripeSubRetrieve.mockRejectedValue(new Error("network"));
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await processStripeInvoice(renewal("subscription_create", { stripeSub: "sub_new" }));
+
+    expect(mockSendDuplicateAdmin).toHaveBeenCalledOnce();
+    err.mockRestore();
+  });
+
+  it("same Stripe subscription again: nothing to record or alert", async () => {
+    mockGetSubscriptionById.mockResolvedValue({ subscription_id: 50, status: "inactive", stripe_subscription_id: "sub_new" });
+
+    await processStripeInvoice(renewal("subscription_create", { stripeSub: "sub_new" }));
+
+    expect(mockSetStripeId).not.toHaveBeenCalled();
+    expect(mockStripeSubRetrieve).not.toHaveBeenCalled();
+  });
+});
+
+describe("createRenewalCheckoutSession() — one open renewal session per subscription (F4)", () => {
+  const params = { subscriptionId: 50, plateNumber: "ABCDEF", returnUrl: "https://app/x", lang: "pl", interval: "month" as const };
+
+  beforeEach(() => {
+    process.env.STRIPE_PRICE_ID_RENEWAL_MONTHLY = "price_m";
+    process.env.STRIPE_PRICE_ID_RENEWAL_YEARLY = "price_y";
+    process.env.STRIPE_SECRET_KEY = "sk_test_placeholder";
+  });
+
+  it("expires this subscription's earlier open sessions (and only those) before creating the new one", async () => {
+    mockSessionsList.mockResolvedValue({
+      data: [
+        { id: "cs_mine_month", metadata: { renewal_subscription_id: "50" } },
+        { id: "cs_other_sub", metadata: { renewal_subscription_id: "51" } },
+        { id: "cs_no_meta", metadata: {} },
+      ],
+    });
+
+    await createRenewalCheckoutSession(params);
+
+    expect(mockSessionsList).toHaveBeenCalledWith(expect.objectContaining({ status: "open" }));
+    expect(mockSessionsExpire).toHaveBeenCalledTimes(1);
+    expect(mockSessionsExpire).toHaveBeenCalledWith("cs_mine_month");
+    expect(mockSessionsExpire.mock.invocationCallOrder[0]).toBeLessThan(mockSessionsCreate.mock.invocationCallOrder[0]);
+  });
+
+  it("tags the new session with the subscription id so it can be found later", async () => {
+    await createRenewalCheckoutSession(params);
+    expect(mockSessionsCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: { renewal_subscription_id: "50" } })
+    );
+  });
+
+  it("still creates the session when listing/expiring fails", async () => {
+    mockSessionsList.mockRejectedValue(new Error("stripe down"));
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(createRenewalCheckoutSession(params)).resolves.toBe("https://checkout.test/s");
+    err.mockRestore();
   });
 });

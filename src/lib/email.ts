@@ -377,6 +377,36 @@ export async function sendRenewalConfirmationToAdmin(data: {
   );
 }
 
+export async function sendDuplicateStripeSubscriptionToAdmin(data: {
+  subscriptionId: number;
+  plateNumber: string;
+  customerEmail: string;
+  previousStripeSubscriptionId: string;
+  newStripeSubscriptionId: string;
+}) {
+  const html = layout(
+    h1("Possible double Stripe subscription") +
+      para(
+        "A renewal was paid for a subscription that already has another live Stripe subscription. " +
+          "The customer may be charged twice. Nothing was cancelled automatically: check both in Stripe and cancel one."
+      ) +
+      dataTable(
+        ["Subscription", String(data.subscriptionId)],
+        ["Plate", esc(data.plateNumber)],
+        ["Customer email", esc(data.customerEmail)],
+        ["Previous Stripe subscription", esc(data.previousStripeSubscriptionId)],
+        ["New Stripe subscription", esc(data.newStripeSubscriptionId)]
+      )
+  );
+  await sendMail(
+    process.env.EMAIL_ADMIN!,
+    `Possible double subscription — ${data.plateNumber}`,
+    html,
+    `Subscription ${data.subscriptionId} (plate ${data.plateNumber}, ${data.customerEmail}) has two live Stripe subscriptions: ` +
+      `${data.previousStripeSubscriptionId} and ${data.newStripeSubscriptionId}. Cancel one in Stripe.`
+  );
+}
+
 const feedbackStrings = {
   en: {
     title: (locationName: string) => `New feedback — ${locationName}`,
