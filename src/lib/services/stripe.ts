@@ -220,8 +220,9 @@ async function extendSubscriptionsForCycle(invoice: Stripe.Invoice): Promise<voi
   const until = paidThrough(invoice);
   for (const sub of subs) {
     if (sub.status === "pending") continue; // never set up yet: the setup flow starts the period
-    const expiration = until ?? new Date(now.getTime() + sub.duration_in_days * 86_400_000);
-    await setSubscriptionActive(sub.subscription_id, now.toISOString(), expiration.toISOString());
+    // Like the renewal path: the next cycle's invoice only exists after the paid period ends, so keep a grace window.
+    const expiration = new Date((until ?? new Date(now.getTime() + sub.duration_in_days * DAY_MS)).getTime() + RENEWAL_GRACE_DAYS * DAY_MS);
+    await extendOnCycle(sub, expiration);
   }
 }
 

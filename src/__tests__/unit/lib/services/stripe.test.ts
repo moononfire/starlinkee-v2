@@ -432,7 +432,7 @@ describe("processStripeInvoice() routing by billing_reason", () => {
     expect(mockCreateOrder).toHaveBeenCalledOnce();
   });
 
-  it("does NOT create an order, subscriptions or shipment for subscription_cycle; extends the linked subscription to the paid-through date", async () => {
+  it("does NOT create an order, subscriptions or shipment for subscription_cycle; extends the linked subscription to the paid-through date plus grace", async () => {
     mockListSubsByStripeSub.mockResolvedValue([{ subscription_id: 50, status: "active", duration_in_days: 365 }]);
 
     await processStripeInvoice(cycleInvoice());
@@ -440,11 +440,21 @@ describe("processStripeInvoice() routing by billing_reason", () => {
     expect(mockCreateOrder).not.toHaveBeenCalled();
     expect(mockCreateSubscription).not.toHaveBeenCalled();
     expect(mockCreateShipment).not.toHaveBeenCalled();
-    expect(mockSetSubscriptionActive).toHaveBeenCalledWith(
+    expect(mockExtendSubscription).toHaveBeenCalledWith(
       50,
-      expect.any(String),
-      new Date(1_900_000_000 * 1000).toISOString()
+      new Date((1_900_000_000 + 2 * 86_400) * 1000).toISOString()
     );
+  });
+
+  it("a cycle never shortens time already granted", async () => {
+    const later = new Date((1_900_000_000 + 10 * 86_400) * 1000).toISOString();
+    mockListSubsByStripeSub.mockResolvedValue([
+      { subscription_id: 50, status: "active", duration_in_days: 30, expiration_datetime: later },
+    ]);
+
+    await processStripeInvoice(cycleInvoice());
+
+    expect(mockExtendSubscription).toHaveBeenCalledWith(50, later);
   });
 
   it("leaves pending (never set up) subscriptions alone on a cycle", async () => {
