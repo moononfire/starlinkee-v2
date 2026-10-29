@@ -337,7 +337,12 @@ export async function processRenewalInvoicePaid(
 
   const plate = await getPlateById(plateId);
   if (plate?.subscription_id !== subscription.subscription_id) {
-    await assignPlateToSubscription(plateId, subscription.subscription_id);
+    const assigned = await assignPlateToSubscription(plateId, subscription.subscription_id);
+    // Paid, but the plate is gone or belongs to someone else: fail loudly (the event is recorded as failed)
+    // rather than leave a paying customer with a subscription that has no plate.
+    if (!assigned) {
+      throw new Error(`renewal invoice ${invoice.id}: plate ${plateId} could not be assigned to subscription ${subscription.subscription_id}`);
+    }
   }
   // Without the code the customer cannot set the plate up (/api/plate/setup).
   if (!subscription.activation_code_hash && subscription.status === "pending") {

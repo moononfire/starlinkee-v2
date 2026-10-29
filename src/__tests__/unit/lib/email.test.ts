@@ -17,6 +17,7 @@ import {
   sendCustomerRegistration,
   sendPlateSetupConfirmation,
   sendFeedbackNotification,
+  sendGuestReplyNotification,
   sendPromoEmail,
   sendPlateImportLinks,
   sendReplyNotification,
@@ -88,6 +89,38 @@ describe("sendPlateSetupConfirmation()", () => {
 
     const call = mockSendMail.mock.calls[0][0];
     expect(call.to).toBe("owner@restaurant.com");
+  });
+});
+
+describe("sendGuestReplyNotification()", () => {
+  const data = { locationName: "My Bistro", message: "<b>Still</b> waiting", subscriptionId: 50 };
+
+  it("goes to the given address with the venue name and a link to the portal reviews", async () => {
+    await sendGuestReplyNotification("owner@restaurant.com", "en", data);
+
+    const call = mockSendMail.mock.calls[0][0];
+    expect(call.to).toBe("owner@restaurant.com");
+    expect(call.subject).toBe("New reply from a guest — My Bistro");
+    expect(call.text).toContain("<b>Still</b> waiting");
+    expect(call.text).toContain("/portal/50/reviews");
+  });
+
+  it("is written in the owner's language (pl, de) and falls back to English", async () => {
+    await sendGuestReplyNotification("o@x.com", "pl", data);
+    await sendGuestReplyNotification("o@x.com", "de", data);
+    await sendGuestReplyNotification("o@x.com", "it", data);
+
+    expect(mockSendMail.mock.calls[0][0].subject).toBe("Nowa odpowiedź gościa — My Bistro");
+    expect(mockSendMail.mock.calls[1][0].subject).toBe("Neue Antwort eines Gastes — My Bistro");
+    expect(mockSendMail.mock.calls[2][0].subject).toBe("New reply from a guest — My Bistro");
+  });
+
+  it("escapes the guest's text in the HTML body", async () => {
+    await sendGuestReplyNotification("o@x.com", "en", data);
+
+    const html = mockSendMail.mock.calls[0][0].html as string;
+    expect(html).toContain("&lt;b&gt;Still&lt;/b&gt; waiting");
+    expect(html).not.toContain("<b>Still</b>");
   });
 });
 

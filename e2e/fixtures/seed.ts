@@ -269,3 +269,20 @@ export async function seedMixedCaseExpiredOwner() {
   });
   if (!res.ok && res.status !== 422) throw new Error(`create auth user failed: ${await res.text()}`);
 }
+
+/** A promo lead for the seeded venue, so /l/testrestaurant/promo/claim/<token> renders the claim button. */
+export async function seedPromoLead(token: string) {
+  const res = await fetch(`${BASE_URL}/rest/v1/customer_locations?linktree_slug=eq.testrestaurant&select=location_id`, {
+    headers: headers(),
+  });
+  const [location] = await res.json();
+  await upsert(
+    'location_leads',
+    { location_id: location.location_id, phone: '+48500000001', agreed_to_terms: true, claim_token: token },
+    'claim_token',
+  );
+}
+
+export async function deletePromoLead(token: string) {
+  await del('location_leads', `claim_token=eq.${token}`);
+}

@@ -78,7 +78,7 @@ export default async function ScanPage({ params }: Props) {
         <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
           <div className="max-w-sm w-full flex flex-col items-center gap-4 text-center">
             <p className="text-lg font-semibold text-gray-800">{t("thank_you_short", lang)}</p>
-            <p className="text-gray-500">{t("rated_thanks_text", lang)}</p>
+            <p className="text-gray-500">{t(googleLink ? "rated_thanks_text" : "rated_thanks_text_no_google", lang)}</p>
             {googleLink && (
               <a
                 href={googleLink}

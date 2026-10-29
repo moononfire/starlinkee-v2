@@ -47,15 +47,44 @@ export async function getPlatesBySubscriptionId(subscriptionId: number): Promise
   return data ?? [];
 }
 
+/**
+ * Assigns a free plate to a subscription. Conditional (`subscription_id IS NULL`), so a stale form or a second
+ * window cannot overwrite another assignment. Returns true when the plate now belongs to this subscription
+ * (including "already assigned to it", so retries are safe); false when it is missing or belongs to another one.
+ * Throws on a database error.
+ */
 export async function assignPlateToSubscription(
   plateId: number,
   subscriptionId: number
-): Promise<void> {
+): Promise<boolean> {
   const supabase = createAdminClient();
-  await supabase
+  const { data, error } = await supabase
     .from("plates")
     .update({ subscription_id: subscriptionId })
-    .eq("plate_id", plateId);
+    .eq("plate_id", plateId)
+    .is("subscription_id", null)
+    .select("plate_id");
+  if (error) throw new Error(`Failed to assign plate: ${error.message}`);
+  if (data && data.length > 0) return true;
+
+  const { data: plate, error: readError } = await supabase
+    .from("plates")
+    .select("subscription_id")
+    .eq("plate_id", plateId)
+    .maybeSingle();
+  if (readError) throw new Error(`Failed to read plate: ${readError.message}`);
+  return plate?.subscription_id === subscriptionId;
+}
+
+/** Undoes an assignment made by the same flow (only if the plate still belongs to that subscription). */
+export async function unassignPlateFromSubscription(plateId: number, subscriptionId: number): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("plates")
+    .update({ subscription_id: null })
+    .eq("plate_id", plateId)
+    .eq("subscription_id", subscriptionId);
+  if (error) throw new Error(`Failed to unassign plate: ${error.message}`);
 }
 
 export async function listPlateNumbersBySubscription(subscriptionId: number): Promise<string[]> {

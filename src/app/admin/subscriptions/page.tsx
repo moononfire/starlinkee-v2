@@ -46,7 +46,7 @@ export default async function SubscriptionsPage({
       )}
 
       <div className="mb-6">
-        <SearchInput placeholder="Szukaj po kliencie, email, nazwie planu, tablicy..." />
+        <SearchInput placeholder="Szukaj po kliencie, email, nazwie planu, tabliczce..." />
       </div>
 
       <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg overflow-hidden">

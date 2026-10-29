@@ -100,7 +100,9 @@ export default function RatingStars({ scanId, googleReviewLink, lang }: Props) {
     return (
       <div className="flex flex-col items-center gap-2 text-center">
         <p className="text-lg font-semibold text-gray-800">{t("thank_you_short", lang)}</p>
-        <p className="text-gray-500">{t("rated_thanks_text", lang)}</p>
+        <p className="text-gray-500">
+          {t(isSafeGoogleReviewUrl(googleReviewLink) ? "rated_thanks_text" : "rated_thanks_text_no_google", lang)}
+        </p>
       </div>
     );
   }

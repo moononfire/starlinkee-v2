@@ -29,7 +29,14 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => supabaseMock,
 }));
 
-import { getPlateByNumber, plateExists, insertPlatesBatch, incrementPlateVisits } from "@/lib/db/plates";
+import {
+  getPlateByNumber,
+  plateExists,
+  insertPlatesBatch,
+  incrementPlateVisits,
+  assignPlateToSubscription,
+  unassignPlateFromSubscription,
+} from "@/lib/db/plates";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -123,5 +130,65 @@ describe("incrementPlateVisits()", () => {
   it("throws when the rpc returns an error", async () => {
     mockRpc.mockResolvedValue({ error: { message: "rpc failed" } });
     await expect(incrementPlateVisits(42)).rejects.toThrow("Failed to increment plate visits");
+  });
+});
+
+describe("assignPlateToSubscription()", () => {
+  // update().eq().is().select() — the conditional write; then an optional re-read of the plate.
+  function mockAssign(update: { data: unknown[] | null; error: { message: string } | null }, plateRow?: { subscription_id: number | null } | null) {
+    const isFn = vi.fn(() => ({ select: vi.fn().mockResolvedValue(update) }));
+    const updateFn = vi.fn(() => ({ eq: vi.fn(() => ({ is: isFn })) }));
+    supabaseMock.from.mockReturnValueOnce({ update: updateFn });
+    if (plateRow !== undefined) {
+      supabaseMock.from.mockReturnValueOnce({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({ maybeSingle: vi.fn().mockResolvedValue({ data: plateRow, error: null }) })),
+        })),
+      });
+    }
+    return { updateFn, isFn };
+  }
+
+  it("assigns a free plate, only where subscription_id is still null", async () => {
+    const { updateFn, isFn } = mockAssign({ data: [{ plate_id: 7 }], error: null });
+
+    await expect(assignPlateToSubscription(7, 50)).resolves.toBe(true);
+    expect(updateFn).toHaveBeenCalledWith({ subscription_id: 50 });
+    expect(isFn).toHaveBeenCalledWith("subscription_id", null);
+  });
+
+  it("is idempotent: a plate already on this subscription counts as assigned", async () => {
+    mockAssign({ data: [], error: null }, { subscription_id: 50 });
+    await expect(assignPlateToSubscription(7, 50)).resolves.toBe(true);
+  });
+
+  it("returns false when the plate belongs to another subscription (stale form, second window)", async () => {
+    mockAssign({ data: [], error: null }, { subscription_id: 99 });
+    await expect(assignPlateToSubscription(7, 50)).resolves.toBe(false);
+  });
+
+  it("returns false for a plate that does not exist", async () => {
+    mockAssign({ data: [], error: null }, null);
+    await expect(assignPlateToSubscription(404, 50)).resolves.toBe(false);
+  });
+
+  it("throws on a database error instead of swallowing it", async () => {
+    mockAssign({ data: null, error: { message: "boom" } });
+    await expect(assignPlateToSubscription(7, 50)).rejects.toThrow("Failed to assign plate: boom");
+  });
+});
+
+describe("unassignPlateFromSubscription()", () => {
+  it("clears the plate only if it still belongs to that subscription", async () => {
+    const eqSub = vi.fn().mockResolvedValue({ error: null });
+    const eqPlate = vi.fn(() => ({ eq: eqSub }));
+    const updateFn = vi.fn(() => ({ eq: eqPlate }));
+    supabaseMock.from.mockReturnValueOnce({ update: updateFn });
+
+    await unassignPlateFromSubscription(7, 50);
+
+    expect(updateFn).toHaveBeenCalledWith({ subscription_id: null });
+    expect(eqPlate).toHaveBeenCalledWith("plate_id", 7);
+    expect(eqSub).toHaveBeenCalledWith("subscription_id", 50);
   });
 });

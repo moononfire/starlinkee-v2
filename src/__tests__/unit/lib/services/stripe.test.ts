@@ -175,7 +175,7 @@ beforeEach(() => {
   mockSetSubscriptionActive.mockResolvedValue(undefined);
   mockGetSubscriptionById.mockResolvedValue(null);
   mockGetPlateById.mockResolvedValue(null);
-  mockAssignPlate.mockResolvedValue(undefined);
+  mockAssignPlate.mockResolvedValue(true);
   mockExtendSubscription.mockResolvedValue(undefined);
   mockSetStripeId.mockResolvedValue(undefined);
   mockSendRenewalConfirmation.mockResolvedValue(undefined);
@@ -422,6 +422,13 @@ describe("processStripeInvoice() routing by billing_reason", () => {
       expect(mockAssignPlate).not.toHaveBeenCalled();
     });
 
+    it("fails loudly when the paid-for plate cannot be assigned (taken or gone): no code is issued", async () => {
+      mockAssignPlate.mockResolvedValue(false);
+
+      await expect(processStripeInvoice(renewal("subscription_create"))).rejects.toThrow(/could not be assigned/);
+      expect(mockIssueCode).not.toHaveBeenCalled();
+    });
+
     it("a retried first invoice does not create a second subscription when everything is already in place", async () => {
       mockListSubsByInvoice.mockResolvedValue([{ subscription_id: 50, status: "pending", activation_code_hash: "h" }]);
       mockGetPlateById.mockResolvedValue({ plate_id: 7, subscription_id: 50 });
@@ -440,7 +447,7 @@ describe("processStripeInvoice() routing by billing_reason", () => {
       // Stripe retries: the subscription for this invoice now exists, the plate is not attached yet
       mockListSubsByInvoice.mockResolvedValue([{ subscription_id: 50, status: "pending", activation_code_hash: null }]);
       mockGetPlateById.mockResolvedValue({ plate_id: 7, subscription_id: null });
-      mockAssignPlate.mockResolvedValue(undefined);
+      mockAssignPlate.mockResolvedValue(true);
 
       await processStripeInvoice(renewal("subscription_create"));
 

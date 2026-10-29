@@ -446,6 +446,48 @@ const feedbackStrings = {
   },
 } satisfies Record<Lang, object>;
 
+const guestReplyStrings = {
+  en: {
+    title: (locationName: string) => `New reply from a guest — ${locationName}`,
+    subject: (locationName: string) => `New reply from a guest — ${locationName}`,
+    intro: "A guest answered in the conversation about their feedback:",
+    btn: "Open the conversation",
+  },
+  de: {
+    title: (locationName: string) => `Neue Antwort eines Gastes — ${locationName}`,
+    subject: (locationName: string) => `Neue Antwort eines Gastes — ${locationName}`,
+    intro: "Ein Gast hat in der Unterhaltung zu seinem Feedback geantwortet:",
+    btn: "Unterhaltung öffnen",
+  },
+  pl: {
+    title: (locationName: string) => `Nowa odpowiedź gościa — ${locationName}`,
+    subject: (locationName: string) => `Nowa odpowiedź gościa — ${locationName}`,
+    intro: "Gość odpisał w rozmowie o swojej opinii:",
+    btn: "Otwórz rozmowę",
+  },
+} satisfies Record<Lang, object>;
+
+/** Tells the venue owner that a guest replied in an existing feedback thread. */
+export async function sendGuestReplyNotification(
+  to: string,
+  language: string,
+  data: { locationName: string; message: string; subscriptionId: number }
+) {
+  const s = guestReplyStrings[toLang(language)];
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://app.starlinkee.com").replace(/\/$/, "");
+  const link = `${appUrl}/portal/${data.subscriptionId}/reviews`;
+
+  const html = layout(
+    h1(s.title(esc(data.locationName))) +
+      para(s.intro) +
+      `<blockquote style="margin:0;padding:12px 16px;background:#f4f4f5;border-left:3px solid #d4d4d8;border-radius:0 4px 4px 0;font-size:14px;line-height:1.7;color:#3f3f46;white-space:pre-wrap;">${esc(data.message)}</blockquote>` +
+      `<div style="margin-top:24px;">${btn(link, s.btn)}</div>`
+  );
+  const text = [s.title(data.locationName), s.intro, "", data.message, "", `${s.btn}: ${link}`].join("\n");
+
+  await sendMail(to, s.subject(data.locationName), html, text);
+}
+
 export async function sendFeedbackNotification(
   to: string,
   language: string,

@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { assertAdmin } from "@/lib/api-auth";
-import { listUnassignedPlates, assignPlateToSubscription } from "@/lib/db/plates";
+import { listUnassignedPlates } from "@/lib/db/plates";
 import { listSubscriptions } from "@/lib/db/subscriptions";
-import { issueActivationCode } from "@/lib/services/activation";
+import { assignPlateAndIssueCode } from "@/lib/services/plate-assignment";
 
 async function assignPlateAction(formData: FormData) {
   "use server";
@@ -11,12 +11,16 @@ async function assignPlateAction(formData: FormData) {
   const plateId = parseInt(formData.get("plate_id") as string);
   const subscriptionId = parseInt(formData.get("subscription_id") as string);
 
-  await assignPlateToSubscription(plateId, subscriptionId);
-  await issueActivationCode(subscriptionId);
+  if (!(await assignPlateAndIssueCode(plateId, subscriptionId))) redirect("/admin/plates/assign?error=taken");
   redirect("/admin/plates");
 }
 
-export default async function AssignPlatePage() {
+export default async function AssignPlatePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
   const [plates, subscriptions] = await Promise.all([
     listUnassignedPlates(),
     listSubscriptions(),
@@ -28,6 +32,11 @@ export default async function AssignPlatePage() {
     <div>
       <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Przypisz tabliczkę do subskrypcji</h1>
       <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-6 max-w-lg">
+        {error === "taken" && (
+          <p role="alert" className="text-sm text-red-600 mb-4">
+            Nie przypisano: ta tabliczka jest już przypisana albo nie istnieje (formularz mógł być nieaktualny). Nie wysłano kodu aktywacyjnego.
+          </p>
+        )}
         {plates.length === 0 && (
           <p className="text-sm text-gray-400 mb-4">Brak dostępnych tabliczek (wszystkie przypisane)</p>
         )}

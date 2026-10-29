@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { seedTestData, cleanupTestReviews, seedGermanPortalUser, portalSessionCookies, setLocationGoogleLink, seedMixedCaseExpiredOwner, PORTAL_MIXED_USER } from './fixtures/seed';
+import { seedTestData, cleanupTestReviews, seedGermanPortalUser, portalSessionCookies, setLocationGoogleLink, seedMixedCaseExpiredOwner, PORTAL_MIXED_USER, seedPromoLead, deletePromoLead } from './fixtures/seed';
 
 test.beforeAll(async () => {
   await seedTestData();
@@ -98,7 +98,8 @@ test.describe('Positive rating without a Google link', () => {
       await page.waitForURL(/\/plate\/ACTIVE\/scan\/.+/);
       await page.getByLabel('5 star').click();
 
-      await expect(page.getByText('Dziękujemy za wysoką ocenę!')).toBeVisible();
+      await expect(page.getByText('Dziękujemy za wysoką ocenę!', { exact: true })).toBeVisible();
+      await expect(page.getByText('zostaw ją też w Google')).toHaveCount(0);
       await expect(page.locator('textarea[name="feedback_message"]')).toHaveCount(0);
     } finally {
       await setLocationGoogleLink(1, 'https://g.page/r/test-review-link');
@@ -172,6 +173,30 @@ test.describe('Languages', () => {
     await page.context().addCookies(await portalSessionCookies(appUrl));
     await page.goto('/portal');
     await expect(page.getByText('Sie haben noch keine Abonnements.')).toBeVisible();
+  });
+});
+
+// ── Flow 1e — Promo claim button shows a translated "processing" (F15) ──────
+
+test.describe('Promo claim', () => {
+  test('the claim button says "Przetwarzanie..." while the request runs, not the raw key', async ({ page }) => {
+    const token = 'e2e-claim-token';
+    await seedPromoLead(token);
+    try {
+      await page.route('**/api/promo/claim', async (route) => {
+        await new Promise((r) => setTimeout(r, 1500));
+        await route.abort('failed');
+      });
+      const appUrl = 'http://localhost:' + (process.env.E2E_PORT ?? '3100');
+      await page.context().addCookies([{ name: 'lang_testrestaurant', value: 'pl', url: appUrl }]);
+      await page.goto(`/l/testrestaurant/promo/claim/${token}`);
+      await page.locator('main button.bg-black').click(); // the claim button (the others are language switches)
+
+      await expect(page.getByRole('button', { name: 'Przetwarzanie...' })).toBeVisible();
+      await expect(page.getByText('processing', { exact: true })).toHaveCount(0);
+    } finally {
+      await deletePromoLead(token);
+    }
   });
 });
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ownerLanguage } from "@/lib/languages";
 import { requireAdmin } from "@/lib/api-auth";
-import { getPlateById, assignPlateToSubscription } from "@/lib/db/plates";
+import { getPlateById, assignPlateToSubscription, unassignPlateFromSubscription } from "@/lib/db/plates";
 import { createSubscription, setSubscriptionActive } from "@/lib/db/subscriptions";
 import { upsertCustomerByEmail } from "@/lib/db/customers";
 import { createLocation, upsertLocationLinks } from "@/lib/db/locations";
@@ -68,6 +68,10 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // The plate is attached only once everything else exists, and detached again if a later step fails,
+  // so a failure never leaves it pinned to a half-built subscription ("Plate is already assigned" on retry).
+  let assignedSubscriptionId: number | null = null;
+
   try {
     const customerId = await upsertCustomerByEmail({
       customer_type: "business",
@@ -84,8 +88,6 @@ export async function POST(request: NextRequest) {
       duration_in_days: TRIAL_DAYS,
       is_free: true,
     });
-
-    await assignPlateToSubscription(plate.plate_id, subscription.subscription_id);
 
     const newLocation = await createLocation({
       subscription_id: subscription.subscription_id,
@@ -126,6 +128,11 @@ export async function POST(request: NextRequest) {
       await supabaseAdmin.from("customer_locations").update({ module_order: moduleOrder }).eq("location_id", newLocation.location_id);
     }
 
+    if (!(await assignPlateToSubscription(plate.plate_id, subscription.subscription_id))) {
+      return NextResponse.json({ error: "Plate is already assigned" }, { status: 409 });
+    }
+    assignedSubscriptionId = subscription.subscription_id;
+
     const now = new Date();
     const expiration = new Date(now);
     expiration.setDate(expiration.getDate() + TRIAL_DAYS);
@@ -157,6 +164,11 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("[quick-activate] Failed:", err);
+    if (assignedSubscriptionId !== null) {
+      await unassignPlateFromSubscription(plate.plate_id, assignedSubscriptionId).catch((undoErr) =>
+        console.error("[quick-activate] could not release the plate after a failure:", undoErr)
+      );
+    }
     const msg = err instanceof Error ? err.message : "Quick activation failed";
     return NextResponse.json({ error: msg }, { status: 500 });
   }

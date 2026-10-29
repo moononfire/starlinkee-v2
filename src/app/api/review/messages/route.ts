@@ -3,6 +3,15 @@ import { getReviewByScanId } from "@/lib/db/reviews";
 import { insertMessage, listMessagesByScanId, markReporterRead } from "@/lib/db/review-messages";
 import { broadcastToChannel } from "@/lib/realtime/broadcast";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getLocationBySubscriptionId } from "@/lib/db/locations";
+import { getSubscriptionById } from "@/lib/db/subscriptions";
+import { getCustomerById } from "@/lib/db/customers";
+import { sendGuestReplyNotification } from "@/lib/email";
+import { ownerLanguage } from "@/lib/languages";
+import { rateLimitPersistent } from "@/lib/rate-limit-persistent";
+
+// At most one "guest replied" email per thread in this window, so a chatty guest cannot flood the owner.
+const REPLY_MAIL_WINDOW_MS = 15 * 60_000;
 
 // The reporter has no account — the scanId (already a de facto bearer
 // token elsewhere: getReviewByScanId/updateFeedback) is their credential
@@ -38,6 +47,9 @@ export async function POST(request: NextRequest) {
   }).catch(() => {});
 
   await notifyPortal(review.plate_id, review.review_id, created.created_at, created.sender).catch(() => {});
+  await emailOwner(review.plate_id, review.review_id, created.body).catch((err) =>
+    console.error("[review messages] owner email failed:", err)
+  );
 
   return NextResponse.json({ message: created });
 }
@@ -68,5 +80,31 @@ async function notifyPortal(
     review_id: reviewId,
     last_message_at: lastMessageAt,
     last_message_sender: lastMessageSender,
+  });
+}
+
+/** F7: the owner's portal is usually closed, so a guest's reply must also reach them by email. */
+async function emailOwner(plateId: number, reviewId: number, message: string) {
+  const supabase = createAdminClient();
+  const { data: plate } = await supabase
+    .from("plates")
+    .select("plate_language, subscription_id")
+    .eq("plate_id", plateId)
+    .single();
+  if (!plate?.subscription_id) return;
+
+  const location = await getLocationBySubscriptionId(plate.subscription_id);
+  if (!location?.support_email) return;
+
+  // Checked last, so a reply that has nobody to notify does not use up the window.
+  if (!(await rateLimitPersistent(`guest-reply-mail:${reviewId}`, 1, REPLY_MAIL_WINDOW_MS))) return;
+
+  const subscription = await getSubscriptionById(plate.subscription_id);
+  const customer = subscription ? await getCustomerById(subscription.customer_id) : null;
+
+  await sendGuestReplyNotification(location.support_email, ownerLanguage(customer, plate), {
+    locationName: location.location_name,
+    message,
+    subscriptionId: plate.subscription_id,
   });
 }
