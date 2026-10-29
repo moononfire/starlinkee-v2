@@ -1,14 +1,18 @@
 import { createAdminClient } from "../supabase/admin";
 import { plateScanCount } from "../plate-scans";
+import { normalizeEmail, escapeLikePattern } from "../customer-email";
 import type { Customer, Subscription, CustomerLocation, Plate, Review } from "../types";
 
 export async function getCustomerByEmail(email: string): Promise<Customer | null> {
   const supabase = createAdminClient();
+  // ilike: rows saved before e-mails were normalized may still have capitals. Oldest row wins if duplicates exist.
   const { data } = await supabase
     .from("customers")
     .select("*")
-    .eq("email", email)
-    .single();
+    .ilike("email", escapeLikePattern(normalizeEmail(email)))
+    .order("customer_id", { ascending: true })
+    .limit(1)
+    .maybeSingle();
   return data ?? null;
 }
 
@@ -29,8 +33,15 @@ export async function getCustomerSubscriptions(
 
   if (error) throw new Error(`Failed to load subscriptions: ${error.message}`);
 
+  // An "active" subscription past its end date is already off for guests; show it as inactive
+  // (so it can be renewed) without waiting for the nightly cron, like getSubscriptionById does.
+  const now = new Date();
   return (data ?? []).map((row: any) => ({
     ...row,
+    status:
+      row.status === "active" && row.expiration_datetime && new Date(row.expiration_datetime) < now
+        ? "inactive"
+        : row.status,
     location: row.customer_locations?.[0] ?? row.customer_locations ?? null,
     plates: row.plates ?? [],
   }));

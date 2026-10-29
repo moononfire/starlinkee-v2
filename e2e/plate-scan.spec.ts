@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { seedTestData, cleanupTestReviews, seedGermanPortalUser, portalSessionCookies, setLocationGoogleLink } from './fixtures/seed';
+import { seedTestData, cleanupTestReviews, seedGermanPortalUser, portalSessionCookies, setLocationGoogleLink, seedMixedCaseExpiredOwner, PORTAL_MIXED_USER } from './fixtures/seed';
 
 test.beforeAll(async () => {
   await seedTestData();
@@ -172,6 +172,23 @@ test.describe('Languages', () => {
     await page.context().addCookies(await portalSessionCookies(appUrl));
     await page.goto('/portal');
     await expect(page.getByText('Sie haben noch keine Abonnements.')).toBeVisible();
+  });
+});
+
+// ── Flow 1d — Portal: e-mail case and expiry before the cron (F6, F14) ───────
+
+test.describe('Portal owner', () => {
+  test('customer stored with capitals in the e-mail logs in and sees the subscription, expired by date -> renewal offered', async ({ page }) => {
+    await seedMixedCaseExpiredOwner();
+    const appUrl = 'http://localhost:' + (process.env.E2E_PORT ?? '3100');
+    await page.context().addCookies(await portalSessionCookies(appUrl, PORTAL_MIXED_USER.login));
+
+    await page.goto('/portal');
+    // Not the empty state (customer found despite the capitals) ...
+    await expect(page).toHaveURL(/\/portal\/9002$/);
+    await expect(page.getByText('Nie masz jeszcze żadnych subskrypcji.')).toHaveCount(0);
+    // ... and the date-expired "active" subscription already offers renewal.
+    await expect(page.getByRole('button', { name: 'Odnów na miesiąc' })).toBeVisible();
   });
 });
 

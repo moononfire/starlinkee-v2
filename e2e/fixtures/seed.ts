@@ -194,11 +194,11 @@ export async function seedGermanPortalUser() {
  * Session cookies for the portal user. Password login is off on a local Supabase with signups
  * disabled (the committed config), so mint a session from an admin-generated magic link.
  */
-export async function portalSessionCookies(appUrl: string) {
+export async function portalSessionCookies(appUrl: string, email: string = PORTAL_DE_USER.email) {
   const linkRes = await fetch(`${BASE_URL}/auth/v1/admin/generate_link`, {
     method: 'POST',
     headers: headers(),
-    body: JSON.stringify({ type: 'magiclink', email: PORTAL_DE_USER.email }),
+    body: JSON.stringify({ type: 'magiclink', email }),
   });
   if (!linkRes.ok) throw new Error(`generate_link failed: ${await linkRes.text()}`);
   const { hashed_token } = await linkRes.json();
@@ -223,4 +223,49 @@ export async function setLocationGoogleLink(subscriptionId: number, link: string
     body: JSON.stringify({ google_review_link: link }),
   });
   if (!res.ok) throw new Error(`setLocationGoogleLink failed: ${await res.text()}`);
+}
+
+/** The customers.email as stored (capitals, from an admin or a Stripe checkout) vs. the login e-mail Auth stores. */
+export const PORTAL_MIXED_USER = {
+  stored: 'E2E.Mixed.Case@Example.com',
+  login: 'e2e.mixed.case@example.com',
+  password: 'e2e-portal-pass-2',
+};
+
+/**
+ * Owner whose customers.email has capitals and whose subscription is "active" in the DB but already past its
+ * end date (the nightly cron has not run yet): portal must find the customer and offer renewal.
+ */
+export async function seedMixedCaseExpiredOwner() {
+  await upsert(
+    'customers',
+    {
+      customer_id: 9002,
+      customer_type: 'individual',
+      customer_name: 'E2E Mixed Case',
+      email: PORTAL_MIXED_USER.stored,
+      preferred_language: 'pl',
+      country: 'PL',
+    },
+    'customer_id',
+  );
+  await upsert(
+    'subscriptions',
+    {
+      subscription_id: 9002,
+      customer_id: 9002,
+      subscription_name: '1_MONTH_SUB',
+      duration_in_days: 30,
+      status: 'active',
+      activation_datetime: new Date(Date.now() - 31 * 86_400_000).toISOString(),
+      expiration_datetime: new Date(Date.now() - 86_400_000).toISOString(),
+    },
+    'subscription_id',
+  );
+  const res = await fetch(`${BASE_URL}/auth/v1/admin/users`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ email: PORTAL_MIXED_USER.login, password: PORTAL_MIXED_USER.password, email_confirm: true }),
+  });
+  if (!res.ok && res.status !== 422) throw new Error(`create auth user failed: ${await res.text()}`);
 }

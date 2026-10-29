@@ -7,7 +7,12 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => supabaseMock,
 }));
 
-import { getAllReviewsBySubscription, getPlateStatsBySubscription } from "@/lib/db/portal";
+import {
+  getAllReviewsBySubscription,
+  getPlateStatsBySubscription,
+  getCustomerByEmail,
+  getCustomerSubscriptions,
+} from "@/lib/db/portal";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -116,5 +121,54 @@ describe("getPlateStatsBySubscription()", () => {
   it("throws when the reviews query fails", async () => {
     setup({ plates: [{ plate_id: 1, number_of_visits: 1, scan_count_offset: 0 }], reviewsError: { message: "boom" } });
     await expect(getPlateStatsBySubscription(9)).rejects.toThrow("Failed to count scans");
+  });
+});
+
+describe("getCustomerByEmail()", () => {
+  it("matches case-insensitively on the trimmed, lowercased address (oldest row wins)", async () => {
+    const ilike = vi.fn(() => ({
+      order: vi.fn(() => ({
+        limit: vi.fn(() => ({ maybeSingle: vi.fn().mockResolvedValue({ data: { customer_id: 5 } }) })),
+      })),
+    }));
+    supabaseMock.from.mockReturnValue({ select: vi.fn(() => ({ ilike })) });
+
+    const customer = await getCustomerByEmail(" Jan@Firma.PL ");
+
+    expect(customer).toEqual({ customer_id: 5 });
+    expect(ilike).toHaveBeenCalledWith("email", "jan@firma.pl");
+  });
+
+  it("returns null when nothing matches", async () => {
+    supabaseMock.from.mockReturnValue({
+      select: vi.fn(() => ({
+        ilike: () => ({ order: () => ({ limit: () => ({ maybeSingle: vi.fn().mockResolvedValue({ data: null }) }) }) }),
+      })),
+    });
+    expect(await getCustomerByEmail("nobody@x.com")).toBeNull();
+  });
+});
+
+describe("getCustomerSubscriptions() — expiry before the nightly cron (F14)", () => {
+  function rows(list: any[]) {
+    supabaseMock.from.mockReturnValue({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({ order: vi.fn().mockResolvedValue({ data: list, error: null }) })),
+      })),
+    });
+  }
+  const day = 86_400_000;
+
+  it("shows an active subscription with a past end date as inactive", async () => {
+    rows([
+      { subscription_id: 1, status: "active", expiration_datetime: new Date(Date.now() - day).toISOString() },
+      { subscription_id: 2, status: "active", expiration_datetime: new Date(Date.now() + day).toISOString() },
+      { subscription_id: 3, status: "active", expiration_datetime: null },
+      { subscription_id: 4, status: "pending", expiration_datetime: new Date(Date.now() - day).toISOString() },
+    ]);
+
+    const subs = await getCustomerSubscriptions(1);
+
+    expect(subs.map((s) => s.status)).toEqual(["inactive", "active", "active", "pending"]);
   });
 });
