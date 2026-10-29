@@ -26,7 +26,7 @@ export default async function AssignPlatePage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Przypisz płytkę do subskrypcji</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Przypisz tabliczkę do subskrypcji</h1>
       <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-6 max-w-lg">
         {plates.length === 0 && (
           <p className="text-sm text-gray-400 mb-4">Brak dostępnych płytek (wszystkie przypisane)</p>
@@ -36,13 +36,13 @@ export default async function AssignPlatePage() {
         )}
         <form action={assignPlateAction} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Płytka *</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tabliczka *</label>
             <select
               name="plate_id"
               required
               className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
             >
-              <option value="">— wybierz płytkę —</option>
+              <option value="">— wybierz tabliczkę —</option>
               {plates.map((p) => (
                 <option key={p.plate_id} value={p.plate_id}>
                   {p.plate_number} ({p.plate_language})

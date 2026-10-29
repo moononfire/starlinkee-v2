@@ -53,7 +53,7 @@ export default function ImportPlatesPage() {
       <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Import płytek z TXT</h1>
       <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-6 max-w-lg">
         <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-          Format pliku: jedna linia = jedna płytka, format <code className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded">ABCDEF,pl</code> (numer, język).
+          Format pliku: jedna linia = jedna tabliczka, format <code className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded">ABCDEF,pl</code> (numer, język).
           Po imporcie linki zostaną wysłane emailem do admina.
         </p>
         <form action={importPlatesAction} className="space-y-4">

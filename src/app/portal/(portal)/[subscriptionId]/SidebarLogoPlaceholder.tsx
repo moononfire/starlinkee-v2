@@ -25,7 +25,7 @@ export default function SidebarLogoPlaceholder({ subscriptionId, lang }: Props) 
 
       {/* Tooltip */}
       <div className="absolute top-full mt-2 w-48 p-2.5 bg-gray-900 dark:bg-gray-700 text-white text-[11px] font-medium text-center rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 shadow-xl pointer-events-none left-1/2 -translate-x-1/2">
-        Dodaj logo swojego lokalu, aby klienci widzieli je po zeskanowaniu płytki.
+        Dodaj logo swojego lokalu, aby klienci widzieli je po zeskanowaniu tabliczki.
         <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-gray-900 dark:bg-gray-700 rotate-45"></div>
       </div>
     </div>

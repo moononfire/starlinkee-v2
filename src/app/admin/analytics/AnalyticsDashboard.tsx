@@ -57,7 +57,7 @@ const PAGE_TYPE_LABELS: Record<string, string> = {
   promo: "Promo",
   promo_claim: "Odbiór kuponu",
   loyalty: "Loyalty",
-  plate_scan: "Skan płytki",
+  plate_scan: "Skan tabliczki",
 };
 
 const WEEKDAY_LABELS = ["Nd", "Pn", "Wt", "Śr", "Cz", "Pt", "So"];
@@ -367,7 +367,7 @@ function FunnelTab({ data }: { data: AnalyticsData }) {
   );
 
   const steps = [
-    { label: "Skan płytki", value: f.plate_scan, color: "bg-slate-500" },
+    { label: "Skan tabliczki", value: f.plate_scan, color: "bg-slate-500" },
     { label: "Linktree", value: f.linktree, color: "bg-blue-500" },
     { label: "Recenzja", value: f.review, color: "bg-green-500" },
     { label: "Promo", value: f.promo, color: "bg-amber-500" },

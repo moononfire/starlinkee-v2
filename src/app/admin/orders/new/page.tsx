@@ -124,7 +124,7 @@ export default async function NewOrderPage() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Płytki *
+            Tabliczki *
           </label>
           {plates.length === 0 ? (
             <p className="text-sm text-gray-400">Brak dostępnych płytek (wszystkie przypisane)</p>

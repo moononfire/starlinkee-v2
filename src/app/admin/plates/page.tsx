@@ -14,7 +14,7 @@ export default async function PlatesPage({
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Płytki</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Tabliczki</h1>
         <div className="flex gap-2">
           <Link
             href="/admin/plates/import"
@@ -32,13 +32,13 @@ export default async function PlatesPage({
             href="/admin/plates/assign"
             className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700 transition-colors"
           >
-            Przypisz płytkę
+            Przypisz tabliczkę
           </Link>
         </div>
       </div>
 
       <div className="mb-6">
-        <SearchInput placeholder="Szukaj po numerze płytki..." />
+        <SearchInput placeholder="Szukaj po numerze tabliczki..." />
       </div>
 
       <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg overflow-hidden">

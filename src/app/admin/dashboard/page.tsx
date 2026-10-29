@@ -36,7 +36,7 @@ export default async function DashboardPage() {
     { label: "Klienci", value: stats.customers },
     { label: "Aktywne subskrypcje", value: stats.activeSubscriptions },
     { label: "Zamówienia", value: stats.orders },
-    { label: "Płytki (łącznie)", value: stats.plates },
+    { label: "Tabliczki (łącznie)", value: stats.plates },
     { label: "Oceny wystawione", value: stats.reviews },
     { label: "Wysyłki w drodze", value: stats.shipments },
   ];

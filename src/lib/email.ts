@@ -112,43 +112,43 @@ const strings = {
     orderSubject: (id: number) => `Bestellung bestätigt — #${id}`,
     orderGreeting: (name: string) => `Hallo ${name},`,
     orderBody: () =>
-      "Vielen Dank für Ihre Bestellung! Wir werden sie in Kürze bearbeiten und Ihre Starlinkee-Platte(n) an Ihre Adresse versenden.",
+      "Vielen Dank für Ihre Bestellung! Wir werden sie in Kürze bearbeiten und Ihre Starlinkee-Aufsteller an Ihre Adresse versenden.",
     orderNumberLabel: "Bestellnummer",
     orderQuestions: "Bei Fragen antworten Sie einfach auf diese E-Mail.",
 
-    setupSubject: "Ihre Starlinkee-Platte ist jetzt aktiv",
+    setupSubject: "Ihr Starlinkee-Aufsteller ist jetzt aktiv",
     setupGreeting: "Hallo,",
     setupBody: (name: string) =>
-      `Ihre Starlinkee-Platte für <strong>${name}</strong> wurde erfolgreich eingerichtet und ist jetzt aktiv.`,
+      `Ihr Starlinkee-Aufsteller für <strong>${name}</strong> wurde erfolgreich eingerichtet und ist jetzt aktiv.`,
     setupBody2:
-      "Gäste können jetzt Ihre Platte scannen und direkt Bewertungen hinterlassen.",
+      "Gäste können jetzt Ihren Aufsteller scannen und direkt Bewertungen hinterlassen.",
     setupFooter: "Vielen Dank, dass Sie Starlinkee nutzen.",
 
     renewalSubject: "Ihr Starlinkee-Abonnement wurde verlängert",
     renewalGreeting: "Hallo,",
     renewalBody: (plateNumber: string) =>
-      `Ihr Abonnement für Platte <strong>${plateNumber}</strong> wurde erfolgreich verlängert. Vielen Dank für Ihre Zahlung.`,
+      `Ihr Abonnement für Aufsteller <strong>${plateNumber}</strong> wurde erfolgreich verlängert. Vielen Dank für Ihre Zahlung.`,
     renewalFooter: "Vielen Dank, dass Sie Starlinkee nutzen.",
   },
   pl: {
     orderSubject: (id: number) => `Zamówienie potwierdzone — #${id}`,
     orderGreeting: (name: string) => `Cześć ${name},`,
     orderBody: () =>
-      "Dziękujemy za zamówienie! Wkrótce je zrealizujemy i wyślemy Twoje płytki Starlinkee na podany adres.",
+      "Dziękujemy za zamówienie! Wkrótce je zrealizujemy i wyślemy Twoje tabliczki Starlinkee na podany adres.",
     orderNumberLabel: "Numer zamówienia",
     orderQuestions: "W razie pytań odpowiedz na tę wiadomość.",
 
-    setupSubject: "Twoja płytka Starlinkee jest już aktywna",
+    setupSubject: "Twoja tabliczka Starlinkee jest już aktywna",
     setupGreeting: "Cześć,",
     setupBody: (name: string) =>
-      `Twoja płytka Starlinkee dla <strong>${name}</strong> została pomyślnie skonfigurowana i jest już aktywna.`,
-    setupBody2: "Goście mogą teraz skanować Twoją płytkę i zostawiać opinie.",
+      `Twoja tabliczka Starlinkee dla <strong>${name}</strong> została pomyślnie skonfigurowana i jest już aktywna.`,
+    setupBody2: "Goście mogą teraz skanować Twoją tabliczkę i zostawiać opinie.",
     setupFooter: "Dziękujemy za korzystanie z Starlinkee.",
 
     renewalSubject: "Twoja subskrypcja Starlinkee została odnowiona",
     renewalGreeting: "Cześć,",
     renewalBody: (plateNumber: string) =>
-      `Twoja subskrypcja dla płytki <strong>${plateNumber}</strong> została pomyślnie odnowiona. Dziękujemy za płatność.`,
+      `Twoja subskrypcja dla tabliczki <strong>${plateNumber}</strong> została pomyślnie odnowiona. Dziękujemy za płatność.`,
     renewalFooter: "Dziękujemy za korzystanie z Starlinkee.",
   },
 } satisfies Record<Lang, object>;
@@ -666,11 +666,11 @@ const activationStrings = {
   },
   de: {
     subject: "Ihr Starlinkee-Aktivierungscode",
-    title: "Starlinkee-Schild aktivieren",
-    body: "Ihr Starlinkee-Schild wurde Ihrem Konto zugeordnet. Scannen Sie zur Einrichtung das Schild und geben Sie bei Aufforderung diesen Aktivierungscode ein:",
-    plates: "Schild(er)",
+    title: "Starlinkee-Aufsteller aktivieren",
+    body: "Ihr Starlinkee-Aufsteller wurde Ihrem Konto zugeordnet. Scannen Sie zur Einrichtung den Aufsteller und geben Sie bei Aufforderung diesen Aktivierungscode ein:",
+    plates: "Aufsteller",
     codeLabel: "Aktivierungscode",
-    footer: "Halten Sie diesen Code geheim. Wenn Sie kein Starlinkee-Schild bestellt haben, ignorieren Sie diese E-Mail.",
+    footer: "Halten Sie diesen Code geheim. Wenn Sie keinen Starlinkee-Aufsteller bestellt haben, ignorieren Sie diese E-Mail.",
   },
   pl: {
     subject: "Twój kod aktywacyjny Starlinkee",
