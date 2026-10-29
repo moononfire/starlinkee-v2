@@ -91,28 +91,27 @@ export async function PATCH(request: NextRequest) {
 interface OwnerReviewRow {
   review_id: number;
   scan_id: string;
+  subscription_id: number | null;
   contact_email: string | null;
   contact_phone: string | null;
-  plates: {
-    plate_number: string;
-    plate_language: string;
-    subscription_id: number;
-    subscriptions: { customer_locations: { location_name: string }[] | null } | null;
-  } | null;
+  plates: { plate_number: string; plate_language: string } | null;
+  subscriptions: { customer_locations: { location_name: string }[] | null } | null;
 }
 
+// The owner of a thread is the subscription the review was created under (reviews.subscription_id),
+// not whoever holds the plate today (F12).
 async function getReviewForOwner(reviewId: number, ownedSubscriptionIds: number[]) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("reviews")
     .select(
-      "review_id, scan_id, contact_email, contact_phone, plates!inner(plate_number, plate_language, subscription_id, subscriptions(customer_locations(location_name)))"
+      "review_id, scan_id, subscription_id, contact_email, contact_phone, plates!inner(plate_number, plate_language), subscriptions(customer_locations(location_name))"
     )
     .eq("review_id", reviewId)
     .returns<OwnerReviewRow[]>()
     .single();
 
-  if (!data?.plates?.subscription_id || !ownedSubscriptionIds.includes(data.plates.subscription_id)) {
+  if (!data?.subscription_id || !ownedSubscriptionIds.includes(data.subscription_id) || !data.plates) {
     return null;
   }
 
@@ -121,10 +120,10 @@ async function getReviewForOwner(reviewId: number, ownedSubscriptionIds: number[
     scan_id: data.scan_id,
     contact_email: data.contact_email,
     contact_phone: data.contact_phone,
-    subscription_id: data.plates.subscription_id,
+    subscription_id: data.subscription_id,
     plate_number: data.plates.plate_number,
     plate_language: data.plates.plate_language,
-    location_name: data.plates.subscriptions?.customer_locations?.[0]?.location_name ?? null,
+    location_name: data.subscriptions?.customer_locations?.[0]?.location_name ?? null,
   };
 }
 

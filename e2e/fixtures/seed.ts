@@ -271,14 +271,24 @@ export async function seedMixedCaseExpiredOwner() {
 }
 
 /** A promo lead for the seeded venue, so /l/testrestaurant/promo/claim/<token> renders the claim button. */
-export async function seedPromoLead(token: string) {
-  const res = await fetch(`${BASE_URL}/rest/v1/customer_locations?linktree_slug=eq.testrestaurant&select=location_id`, {
-    headers: headers(),
-  });
+export async function seedPromoLead(
+  token: string,
+  opts: { slug?: string; couponCode?: string; phone?: string } = {},
+) {
+  const res = await fetch(
+    `${BASE_URL}/rest/v1/customer_locations?linktree_slug=eq.${opts.slug ?? 'testrestaurant'}&select=location_id`,
+    { headers: headers() },
+  );
   const [location] = await res.json();
   await upsert(
     'location_leads',
-    { location_id: location.location_id, phone: '+48500000001', agreed_to_terms: true, claim_token: token },
+    {
+      location_id: location.location_id,
+      phone: opts.phone ?? '+48500000001',
+      agreed_to_terms: true,
+      claim_token: token,
+      ...(opts.couponCode ? { coupon_code: opts.couponCode } : {}),
+    },
     'claim_token',
   );
 }
@@ -328,4 +338,117 @@ export async function seedLapsedVenue() {
     },
     'linktree_slug',
   );
+}
+
+export const MOVER = {
+  plate: 'MOVER',
+  secret: 'e2emoversecret',
+  ownerA: { email: 'e2e.owner.a@example.com', customerId: 9004, subscriptionId: 9004 },
+  ownerB: { email: 'e2e.owner.b@example.com', customerId: 9005, subscriptionId: 9005 },
+  complaint: 'Old guest complaint about MOVER',
+  scanId: 'e2e-mover-scan',
+};
+
+async function ensureAuthUser(email: string) {
+  const res = await fetch(`${BASE_URL}/auth/v1/admin/users`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ email, password: 'e2e-portal-pass-3', email_confirm: true }),
+  });
+  if (!res.ok && res.status !== 422) throw new Error(`create auth user failed: ${await res.text()}`);
+}
+
+/**
+ * Two owners with active subscriptions and one plate that starts on owner A's, with a guest complaint thread
+ * created under A's subscription. Call movePlateTo(MOVER.ownerB.subscriptionId) to re-assign it.
+ */
+export async function seedReassignablePlate() {
+  for (const o of [MOVER.ownerA, MOVER.ownerB]) {
+    await upsert(
+      'customers',
+      {
+        customer_id: o.customerId,
+        customer_type: 'individual',
+        customer_name: `E2E Owner ${o.customerId}`,
+        email: o.email,
+        preferred_language: 'pl',
+        country: 'PL',
+      },
+      'customer_id',
+    );
+    await upsert(
+      'subscriptions',
+      {
+        subscription_id: o.subscriptionId,
+        customer_id: o.customerId,
+        subscription_name: '1_YEAR_SUB',
+        duration_in_days: 365,
+        status: 'active',
+        activation_datetime: new Date().toISOString(),
+        expiration_datetime: new Date(Date.now() + 365 * 86_400_000).toISOString(),
+      },
+      'subscription_id',
+    );
+    await ensureAuthUser(o.email);
+  }
+
+  await upsert(
+    'plates',
+    { plate_number: MOVER.plate, plate_language: 'pl', secret_key: MOVER.secret, subscription_id: MOVER.ownerA.subscriptionId },
+    'plate_number',
+  );
+  const plate = await getPlate(MOVER.plate);
+
+  // The thread: a complaint that was left while the plate was on A's subscription.
+  const existing = await (await fetch(`${BASE_URL}/rest/v1/reviews?scan_id=eq.${MOVER.scanId}&select=review_id`, { headers: headers() })).json();
+  for (const r of existing) await del('review_messages', `review_id=eq.${r.review_id}`);
+  await del('reviews', `scan_id=eq.${MOVER.scanId}`);
+  await del('reviews', `plate_id=eq.${plate.plate_id}`);
+  const created = await fetch(`${BASE_URL}/rest/v1/reviews`, {
+    method: 'POST',
+    headers: { ...headers(), Prefer: 'return=representation' },
+    body: JSON.stringify({
+      plate_id: plate.plate_id,
+      subscription_id: MOVER.ownerA.subscriptionId,
+      scan_id: MOVER.scanId,
+      rating: 1,
+      rating_time: new Date().toISOString(),
+      feedback_message: MOVER.complaint,
+      contact_email: 'guest@example.com',
+      feedback_time: new Date().toISOString(),
+    }),
+  });
+  if (!created.ok) throw new Error(`seed review failed: ${await created.text()}`);
+  const [review] = await created.json();
+  const msg = await fetch(`${BASE_URL}/rest/v1/review_messages`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ review_id: review.review_id, sender: 'reporter', body: MOVER.complaint }),
+  });
+  if (!msg.ok) throw new Error(`seed message failed: ${await msg.text()}`);
+}
+
+async function getPlate(plateNumber: string): Promise<{ plate_id: number }> {
+  const res = await fetch(`${BASE_URL}/rest/v1/plates?plate_number=eq.${plateNumber}&select=plate_id`, { headers: headers() });
+  return (await res.json())[0];
+}
+
+/** Re-assigns the MOVER plate to another subscription (what a renewal onto a new subscription or an admin does). */
+export async function movePlateTo(subscriptionId: number) {
+  const res = await fetch(`${BASE_URL}/rest/v1/plates?plate_number=eq.${MOVER.plate}`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ subscription_id: subscriptionId }),
+  });
+  if (!res.ok) throw new Error(`movePlateTo failed: ${await res.text()}`);
+}
+
+/** subscription_id of the newest review of a plate. */
+export async function newestReviewSubscription(plateNumber: string): Promise<number | null> {
+  const plate = await getPlate(plateNumber);
+  const res = await fetch(
+    `${BASE_URL}/rest/v1/reviews?plate_id=eq.${plate.plate_id}&order=created_at.desc&limit=1&select=subscription_id`,
+    { headers: headers() },
+  );
+  return (await res.json())[0]?.subscription_id ?? null;
 }

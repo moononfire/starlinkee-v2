@@ -46,8 +46,12 @@ interface ScanDeviceInfo {
 export async function createScanRecord(plateId: number, deviceInfo?: ScanDeviceInfo): Promise<string> {
   const supabase = createAdminClient();
   const scanId = crypto.randomUUID();
+  // The review belongs to the subscription the plate is on right now. A plate later moved to another
+  // subscription or customer must not take its guests' feedback along (F12).
+  const { data: plate } = await supabase.from("plates").select("subscription_id").eq("plate_id", plateId).single();
   const { error } = await supabase.from("reviews").insert({
     plate_id: plateId,
+    subscription_id: plate?.subscription_id ?? null,
     scan_id: scanId,
     ...deviceInfo,
   });

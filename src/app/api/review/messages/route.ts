@@ -46,8 +46,8 @@ export async function POST(request: NextRequest) {
     created_at: created.created_at,
   }).catch(() => {});
 
-  await notifyPortal(review.plate_id, review.review_id, created.created_at, created.sender).catch(() => {});
-  await emailOwner(review.plate_id, review.review_id, created.body).catch((err) =>
+  await notifyPortal(review.subscription_id, review.review_id, created.created_at, created.sender).catch(() => {});
+  await emailOwner(review.plate_id, review.subscription_id, review.review_id, created.body).catch((err) =>
     console.error("[review messages] owner email failed:", err)
   );
 
@@ -63,20 +63,15 @@ export async function PATCH(request: NextRequest) {
 }
 
 async function notifyPortal(
-  plateId: number,
+  subscriptionId: number | null,
   reviewId: number,
   lastMessageAt: string,
   lastMessageSender: "reporter" | "owner"
 ) {
-  const supabase = createAdminClient();
-  const { data: plate } = await supabase
-    .from("plates")
-    .select("subscription_id")
-    .eq("plate_id", plateId)
-    .single();
-  if (!plate?.subscription_id) return;
+  // The thread belongs to the subscription the review was created under (F12).
+  if (!subscriptionId) return;
 
-  await broadcastToChannel(`review-portal:${plate.subscription_id}`, "thread_updated", {
+  await broadcastToChannel(`review-portal:${subscriptionId}`, "thread_updated", {
     review_id: reviewId,
     last_message_at: lastMessageAt,
     last_message_sender: lastMessageSender,
@@ -84,27 +79,23 @@ async function notifyPortal(
 }
 
 /** F7: the owner's portal is usually closed, so a guest's reply must also reach them by email. */
-async function emailOwner(plateId: number, reviewId: number, message: string) {
+async function emailOwner(plateId: number, subscriptionId: number | null, reviewId: number, message: string) {
+  if (!subscriptionId) return;
   const supabase = createAdminClient();
-  const { data: plate } = await supabase
-    .from("plates")
-    .select("plate_language, subscription_id")
-    .eq("plate_id", plateId)
-    .single();
-  if (!plate?.subscription_id) return;
+  const { data: plate } = await supabase.from("plates").select("plate_language").eq("plate_id", plateId).single();
 
-  const location = await getLocationBySubscriptionId(plate.subscription_id);
+  const location = await getLocationBySubscriptionId(subscriptionId);
   if (!location?.support_email) return;
 
   // Checked last, so a reply that has nobody to notify does not use up the window.
   if (!(await rateLimitPersistent(`guest-reply-mail:${reviewId}`, 1, REPLY_MAIL_WINDOW_MS))) return;
 
-  const subscription = await getSubscriptionById(plate.subscription_id);
+  const subscription = await getSubscriptionById(subscriptionId);
   const customer = subscription ? await getCustomerById(subscription.customer_id) : null;
 
   await sendGuestReplyNotification(location.support_email, ownerLanguage(customer, plate), {
     locationName: location.location_name,
     message,
-    subscriptionId: plate.subscription_id,
+    subscriptionId,
   });
 }

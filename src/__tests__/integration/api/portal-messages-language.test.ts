@@ -41,7 +41,9 @@ describe("POST /api/portal/messages — reporter email language", () => {
         scan_id: "s",
         contact_email: "guest@example.com",
         contact_phone: null,
-        plates: { plate_number: "DEPLAT", plate_language: "de", subscription_id: 7, subscriptions: null },
+        subscription_id: 7,
+        plates: { plate_number: "DEPLAT", plate_language: "de" },
+        subscriptions: null,
       },
     });
     const res = await POST(

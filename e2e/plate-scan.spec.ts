@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { seedTestData, cleanupTestReviews, seedGermanPortalUser, portalSessionCookies, setLocationGoogleLink, seedMixedCaseExpiredOwner, PORTAL_MIXED_USER, seedPromoLead, deletePromoLead, seedLapsedVenue, LAPSED_VENUE } from './fixtures/seed';
+import { seedTestData, cleanupTestReviews, seedGermanPortalUser, portalSessionCookies, setLocationGoogleLink, seedMixedCaseExpiredOwner, PORTAL_MIXED_USER, seedPromoLead, deletePromoLead, seedLapsedVenue, LAPSED_VENUE,
+  seedReassignablePlate, movePlateTo, newestReviewSubscription, MOVER } from './fixtures/seed';
 
 test.beforeAll(async () => {
   await seedTestData();
@@ -241,6 +242,66 @@ test.describe('Linktree of a lapsed venue', () => {
     await page.goto('/l/testrestaurant/review');
     await expect(page).toHaveURL(/\/plate\/[A-Z]+\/scan\/.+/);
     await expect(page.getByLabel('5 star')).toBeVisible();
+  });
+});
+
+// ── Flow 1g — Feedback threads stay with the subscription they were left under (F12) ──
+
+test.describe('Re-assigned plate', () => {
+  test('old owner keeps the old thread, new owner does not get it, new scans belong to the new owner', async ({ browser, page }) => {
+    await seedReassignablePlate();
+    const appUrl = 'http://localhost:' + (process.env.E2E_PORT ?? '3100');
+    const inbox = (sub: number) => `/portal/${sub}/reviews`;
+
+    // Owner A sees the complaint while the plate is on A's subscription ...
+    await page.context().addCookies(await portalSessionCookies(appUrl, MOVER.ownerA.email));
+    await page.goto(inbox(MOVER.ownerA.subscriptionId));
+    await expect(page.getByText(MOVER.complaint).first()).toBeVisible();
+
+    // ... the plate moves to owner B ...
+    await movePlateTo(MOVER.ownerB.subscriptionId);
+
+    // ... A still sees it (it was left under A's subscription) ...
+    await page.reload();
+    await expect(page.getByText(MOVER.complaint).first()).toBeVisible();
+
+    // ... B does not: the guest's contact data stays with the previous owner.
+    const ctxB = await browser.newContext();
+    try {
+      await ctxB.addCookies(await portalSessionCookies(appUrl, MOVER.ownerB.email));
+      const pageB = await ctxB.newPage();
+      await pageB.goto(`${appUrl}${inbox(MOVER.ownerB.subscriptionId)}`);
+      await expect(pageB.getByText(MOVER.complaint)).toHaveCount(0);
+      await expect(pageB.getByText('guest@example.com')).toHaveCount(0);
+    } finally {
+      await ctxB.close();
+    }
+
+    // A new scan of the moved plate belongs to the new owner's subscription.
+    await page.context().clearCookies();
+    await page.goto(`/plate/${MOVER.plate}/${MOVER.secret}`);
+    await page.waitForURL(/\/plate\/MOVER\/scan\/.+/);
+    expect(await newestReviewSubscription(MOVER.plate)).toBe(MOVER.ownerB.subscriptionId);
+  });
+});
+
+// ── Flow 1h — Staff verifying a coupon of a lapsed venue gets a clear message (P12/P11) ──
+
+test.describe('Coupon verification at a lapsed venue', () => {
+  test('/verify tells staff the venue subscription expired, not a generic error', async ({ page }) => {
+    await seedLapsedVenue();
+    const token = 'e2e-lapsed-lead';
+    await seedPromoLead(token, { slug: LAPSED_VENUE.slug, couponCode: 'LAPSED1', phone: '+48500000002' });
+    try {
+      const appUrl = 'http://localhost:' + (process.env.E2E_PORT ?? '3100');
+      await page.context().addCookies([{ name: 'lang', value: 'pl', url: appUrl }]);
+      await page.goto('/verify?code=LAPSED1');
+
+      await expect(page.getByText('Subskrypcja tego lokalu wygasła — nie można zrealizować kodu.')).toBeVisible();
+      await expect(page.getByText('something_went_wrong')).toHaveCount(0);
+    } finally {
+      await deletePromoLead(token);
+    }
   });
 });
 

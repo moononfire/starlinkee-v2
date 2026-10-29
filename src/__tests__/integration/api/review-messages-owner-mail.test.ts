@@ -44,9 +44,9 @@ function post(body: unknown) {
 beforeEach(() => {
   vi.clearAllMocks();
   reviewId += 1; // the throttle is keyed per review, so each test gets its own thread
-  m.getReviewByScanId.mockResolvedValue({ review_id: reviewId, plate_id: 7, feedback_time: "2026-10-29T10:00:00Z" });
+  m.getReviewByScanId.mockResolvedValue({ review_id: reviewId, plate_id: 7, subscription_id: 50, feedback_time: "2026-10-29T10:00:00Z" });
   m.insertMessage.mockResolvedValue({ message_id: 1, sender: "reporter", body: "Still waiting", created_at: "now" });
-  m.plateRow.current = { plate_language: "de", subscription_id: 50 };
+  m.plateRow.current = { plate_language: "de" };
   m.getLocation.mockResolvedValue({ location_name: "Cafe", support_email: "owner@cafe.com" });
   m.getSubscription.mockResolvedValue({ subscription_id: 50, customer_id: 9 });
   m.getCustomer.mockResolvedValue({ customer_id: 9, preferred_language: "pl" });
@@ -76,7 +76,7 @@ describe("POST /api/review/messages — owner is told about a guest reply (F7)",
 
   it("another thread is throttled separately", async () => {
     await post({ scanId: "scan-1", body: "a" });
-    m.getReviewByScanId.mockResolvedValue({ review_id: reviewId + 500, plate_id: 7, feedback_time: "x" });
+    m.getReviewByScanId.mockResolvedValue({ review_id: reviewId + 500, plate_id: 7, subscription_id: 50, feedback_time: "x" });
     await post({ scanId: "scan-2", body: "b" });
 
     expect(m.sendGuestReply).toHaveBeenCalledTimes(2);

@@ -108,6 +108,8 @@ export interface CustomerLocation {
 export interface Review {
   review_id: number;
   plate_id: number;
+  /** The subscription the plate belonged to when the guest scanned; owner of this review and its thread. */
+  subscription_id: number | null;
   scan_id: string;
   scan_time: string;
   rating: number | null;

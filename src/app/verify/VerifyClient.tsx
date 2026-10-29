@@ -172,6 +172,11 @@ export default function VerifyClient({ initialCode, lang }: Props) {
       setNotFound(true);
       return;
     }
+    if (res.status === 403) {
+      // The venue's subscription is not active: say so to the staff member instead of a generic error.
+      setError(t("venue_subscription_inactive", lang));
+      return;
+    }
     if (!res.ok) {
       setError(t("something_went_wrong", lang));
       return;
@@ -199,6 +204,10 @@ export default function VerifyClient({ initialCode, lang }: Props) {
     }
     if (res.status === 410) {
       setResult((prev) => (prev ? { ...prev, expired: true } : prev));
+      return;
+    }
+    if (res.status === 403) {
+      setError(t("venue_subscription_inactive", lang));
       return;
     }
     if (!res.ok) {
