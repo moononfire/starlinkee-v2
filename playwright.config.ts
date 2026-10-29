@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
+import { assertLocalSupabase } from './scripts/local-guard.mjs';
 
 const envFile = resolve('.env.local');
 if (existsSync(envFile)) {
@@ -12,6 +13,9 @@ if (existsSync(envFile)) {
 
 const port = process.env.E2E_PORT ?? '3000';
 const baseURL = `http://localhost:${port}`;
+
+// e2e writes and deletes data: refuse to start against anything but a local Supabase.
+assertLocalSupabase(process.env.NEXT_PUBLIC_SUPABASE_URL, 'playwright.config');
 
 export default defineConfig({
   testDir: './e2e',

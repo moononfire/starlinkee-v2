@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { assertLocalSupabase } from "../scripts/local-guard.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -12,6 +13,8 @@ const env = Object.fromEntries(
     .map((l) => l.split("=").map((s) => s.trim()))
     .map(([k, ...v]) => [k, v.join("=").replace(/^["']|["']$/g, "")])
 );
+
+assertLocalSupabase(env.NEXT_PUBLIC_SUPABASE_URL, "supabase/run-seed");
 
 const supabase = createClient(
   env.NEXT_PUBLIC_SUPABASE_URL,

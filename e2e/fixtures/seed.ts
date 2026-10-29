@@ -1,5 +1,8 @@
 import { createServerClient } from '@supabase/ssr';
+import { assertLocalSupabase } from '../../scripts/local-guard.mjs';
+
 const BASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+assertLocalSupabase(BASE_URL, 'e2e/fixtures/seed');
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 function headers() {
