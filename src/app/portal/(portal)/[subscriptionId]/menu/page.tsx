@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getPortalSession } from "@/lib/portal-session";
-import { getLanguage } from "@/lib/language";
+import { getPortalLanguage } from "@/lib/portal-language";
 import { t } from "@/lib/translations";
 import MenuSettings from "./MenuSettings";
 
@@ -24,7 +24,7 @@ export default async function SubscriptionMenuPage({ params }: Props) {
     redirect(`/portal/${subscriptionId}`);
   }
 
-  const lang = await getLanguage();
+  const lang = await getPortalLanguage();
 
   if (sub.status === "inactive") {
     return (

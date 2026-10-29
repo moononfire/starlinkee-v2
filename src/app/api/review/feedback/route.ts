@@ -6,6 +6,7 @@ import { getSubscriptionById } from "@/lib/db/subscriptions";
 import { getCustomerById } from "@/lib/db/customers";
 import { sendFeedbackNotification } from "@/lib/email";
 import { insertMessage } from "@/lib/db/review-messages";
+import { ownerLanguage } from "@/lib/languages";
 import { broadcastToChannel } from "@/lib/realtime/broadcast";
 
 export async function POST(request: NextRequest) {
@@ -81,7 +82,7 @@ async function sendNotification(
   const supabase = (await import("@/lib/supabase/admin")).createAdminClient();
   const { data: plate, error: plateError } = await supabase
     .from("plates")
-    .select("plate_number, subscription_id")
+    .select("plate_number, plate_language, subscription_id")
     .eq("plate_id", review.plate_id)
     .single();
 
@@ -108,7 +109,7 @@ async function sendNotification(
   const customer = subscription ? await getCustomerById(subscription.customer_id) : null;
 
   console.log(`[sendNotification] Znalazłem support_email: ${location.support_email}. Wywołuję sendFeedbackNotification...`);
-  await sendFeedbackNotification(location.support_email, customer?.preferred_language ?? "en", {
+  await sendFeedbackNotification(location.support_email, ownerLanguage(customer, plate), {
     locationName: location.location_name,
     rating: review.rating ?? 0,
     message,

@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getPortalSession } from "@/lib/portal-session";
 import { listThreadsBySubscriptionId } from "@/lib/db/review-messages";
 import { getSmsQuota } from "@/lib/sms-quota";
-import { getLanguage } from "@/lib/language";
+import { getPortalLanguage } from "@/lib/portal-language";
 import MessagesInbox from "./MessagesInbox";
 
 interface Props {
@@ -22,7 +22,7 @@ export default async function MessagesPage({ params, searchParams }: Props) {
   const sub = subscriptions.find((s) => s.subscription_id === subscriptionId);
   if (!sub) notFound();
 
-  const lang = await getLanguage();
+  const lang = await getPortalLanguage();
   const [threads, smsQuota] = await Promise.all([
     listThreadsBySubscriptionId(subscriptionId),
     getSmsQuota(customer.customer_id),

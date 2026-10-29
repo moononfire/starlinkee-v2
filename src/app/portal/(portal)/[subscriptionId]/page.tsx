@@ -4,7 +4,7 @@ import { getPortalSession } from "@/lib/portal-session";
 import { getPlateStatsBySubscription, type PlateCounts } from "@/lib/db/portal";
 import { LanguageFlag } from "@/components/flags";
 import PortalSetupForm from "../settings/PortalSetupForm";
-import { getLanguage } from "@/lib/language";
+import { getPortalLanguage } from "@/lib/portal-language";
 import { t } from "@/lib/translations";
 
 import { getPlatesBySubscriptionId } from "@/lib/db/plates";
@@ -41,7 +41,7 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
   const sub = subscriptions.find((s) => s.subscription_id === subscriptionId);
   if (!sub) notFound();
 
-  const lang = await getLanguage();
+  const lang = await getPortalLanguage();
   const { scans, reviewVisits } = await getPlateStatsBySubscription(subscriptionId);
 
   // --- PENDING ---

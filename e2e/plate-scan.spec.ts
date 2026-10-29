@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { seedTestData, cleanupTestReviews } from './fixtures/seed';
+import { seedTestData, cleanupTestReviews, seedGermanPortalUser, PORTAL_DE_USER } from './fixtures/seed';
 
 test.beforeAll(async () => {
   await seedTestData();
@@ -78,6 +78,31 @@ test.describe('Returning guest', () => {
     await page.goto('/plate/ACTIVE/testsecretactive');
     await expect(page).toHaveURL(/\/plate\/ACTIVE\/scan\/.+/);
     await expect(page.locator('textarea[name="feedback_message"]')).toBeVisible();
+  });
+});
+
+// ── Flow 1c — Language rule: guest follows the plate, owner follows the customer ──
+
+test.describe('Languages', () => {
+  test('guest on a German plate sees German even though the customer is Polish', async ({ page }) => {
+    await page.goto('/plate/DEPLAT/testsecretde');
+    await expect(page).toHaveURL(/\/plate\/DEPLAT\/scan\/.+/);
+    await expect(page.getByText('Wie bewerten Sie Ihre Erfahrung?')).toBeVisible();
+  });
+
+  test('guest language cookie beats the plate language', async ({ page }) => {
+    await page.context().addCookies([{ name: 'lang_DEPLAT', value: 'en', url: 'http://localhost:' + (process.env.E2E_PORT ?? '3000') }]);
+    await page.goto('/plate/DEPLAT/testsecretde');
+    await expect(page.getByText('Wie bewerten Sie Ihre Erfahrung?')).toHaveCount(0);
+  });
+
+  test('portal opens in the customer preferred_language', async ({ page }) => {
+    await seedGermanPortalUser();
+    await page.goto('/portal/login');
+    await page.locator('input[name="email"]').fill(PORTAL_DE_USER.email);
+    await page.locator('input[name="password"]').fill(PORTAL_DE_USER.password);
+    await page.locator('button[type="submit"]').click();
+    await expect(page.getByText('Sie haben noch keine Abonnements.')).toBeVisible();
   });
 });
 

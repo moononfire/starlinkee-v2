@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ownerLanguage } from "@/lib/languages";
 import { requireAdmin } from "@/lib/api-auth";
 import { getPlateById, assignPlateToSubscription } from "@/lib/db/plates";
 import { createSubscription, setSubscriptionActive } from "@/lib/db/subscriptions";
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
       source: "Quick plate activation",
       customer_name: businessName,
       email,
-      preferred_language: "pl",
+      preferred_language: ownerLanguage(null, plate),
       is_activated: true,
     });
 

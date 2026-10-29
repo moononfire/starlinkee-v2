@@ -1,3 +1,4 @@
+import { ownerLanguage } from "@/lib/languages";
 import { generateActivationCode, hashActivationCode, formatActivationCode } from "../activation-code";
 import { getSubscriptionById, setActivationCodeHash } from "../db/subscriptions";
 import { listPlateNumbersBySubscription } from "../db/plates";
@@ -25,7 +26,7 @@ export async function issueActivationCode(subscriptionId: number): Promise<boole
     await setActivationCodeHash(subscriptionId, hashActivationCode(code));
 
     const plateNumbers = await listPlateNumbersBySubscription(subscriptionId);
-    await sendPlateActivationCode(customer.email, customer.preferred_language ?? "en", {
+    await sendPlateActivationCode(customer.email, ownerLanguage(customer), {
       plateNumbers,
       code: formatActivationCode(code),
     });

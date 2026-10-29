@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getPortalSession } from "@/lib/portal-session";
-import { getLanguage } from "@/lib/language";
+import { getPortalLanguage } from "@/lib/portal-language";
 import { t } from "@/lib/translations";
 import SubmitButton from "../../SubmitButton";
 import SavableForm from "../../SavableForm";
@@ -31,7 +31,7 @@ export default async function LoyaltyPortalPage({ params }: Props) {
     redirect(`/portal/${subscriptionId}`);
   }
 
-  const lang = await getLanguage();
+  const lang = await getPortalLanguage();
   const location = sub.location;
   const stats = await getLoyaltyStatsForLocation(location.location_id);
 

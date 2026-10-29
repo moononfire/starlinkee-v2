@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getPortalSession } from "@/lib/portal-session";
 import { getUnreadThreadCountBySubscriptionId } from "@/lib/db/review-messages";
-import { getLanguage } from "@/lib/language";
+import { getPortalLanguage } from "@/lib/portal-language";
 import { t } from "@/lib/translations";
 import SubTabs from "./SubTabs";
 import SidebarLogoPlaceholder from "./SidebarLogoPlaceholder";
@@ -25,7 +25,7 @@ export default async function SubscriptionLayout({
   const sub = subscriptions.find((s) => s.subscription_id === subscriptionId);
   if (!sub) notFound();
 
-  const lang = await getLanguage();
+  const lang = await getPortalLanguage();
   const unreadMessageCount =
     sub.status === "active" ? await getUnreadThreadCountBySubscriptionId(subscriptionId) : 0;
 

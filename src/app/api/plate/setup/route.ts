@@ -1,3 +1,4 @@
+import { ownerLanguage } from "@/lib/languages";
 import { NextRequest, NextResponse } from "next/server";
 import { getPlateByNumber } from "@/lib/db/plates";
 import { getSubscriptionById, setSubscriptionActive } from "@/lib/db/subscriptions";
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
   // Send confirmation email (non-blocking) — language follows the customer's
   // preference from the clients table, not the plate's own language
   const customer = await getCustomerById(subscription.customer_id);
-  await sendPlateSetupConfirmation(supportEmail, customer?.preferred_language ?? plate.plate_language, {
+  await sendPlateSetupConfirmation(supportEmail, ownerLanguage(customer, plate), {
     locationName,
   }).catch(() => {});
 

@@ -75,6 +75,7 @@ export async function seedTestData() {
       { plate_number: 'PENDNG', plate_language: 'pl', secret_key: 'testsecretpending', subscription_id: 2 },
       { plate_number: 'NOSSUB', plate_language: 'pl', secret_key: 'testsecretnosub', subscription_id: null },
       { plate_number: 'ENACTL', plate_language: 'en', secret_key: 'testsecreteng', subscription_id: 1 },
+      { plate_number: 'DEPLAT', plate_language: 'de', secret_key: 'testsecretde', subscription_id: 1 },
     ],
     'plate_number',
   );
@@ -103,7 +104,7 @@ export async function seedTestData() {
 
 export async function cleanupTestReviews() {
   const res = await fetch(
-    `${BASE_URL}/rest/v1/plates?plate_number=in.(ACTIVE,PENDNG,NOSSUB,ENACTL)&select=plate_id`,
+    `${BASE_URL}/rest/v1/plates?plate_number=in.(ACTIVE,PENDNG,NOSSUB,ENACTL,DEPLAT)&select=plate_id`,
     { headers: headers() },
   );
   if (!res.ok) return;
@@ -112,4 +113,29 @@ export async function cleanupTestReviews() {
 
   const ids = plates.map((p) => p.plate_id).join(',');
   await del('reviews', `plate_id=in.(${ids})`);
+}
+
+export const PORTAL_DE_USER = { email: 'e2e-portal-de@example.com', password: 'e2e-portal-pass-1' };
+
+/** Owner with preferred_language=de and no subscriptions: /portal shows a language-dependent empty state. */
+export async function seedGermanPortalUser() {
+  await upsert(
+    'customers',
+    {
+      customer_id: 9001,
+      customer_type: 'individual',
+      customer_name: 'E2E Portal DE',
+      email: PORTAL_DE_USER.email,
+      preferred_language: 'de',
+      country: 'DE',
+    },
+    'customer_id',
+  );
+  const res = await fetch(`${BASE_URL}/auth/v1/admin/users`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ ...PORTAL_DE_USER, email_confirm: true }),
+  });
+  // 422 = user already exists from a previous run
+  if (!res.ok && res.status !== 422) throw new Error(`create auth user failed: ${await res.text()}`);
 }

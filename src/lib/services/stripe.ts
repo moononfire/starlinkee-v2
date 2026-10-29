@@ -1,3 +1,4 @@
+import { ownerLanguage, languageFromCountry } from "@/lib/languages";
 import Stripe from "stripe";
 import type { Subscription } from "../types";
 import { upsertCustomerByEmail } from "../db/customers";
@@ -41,10 +42,6 @@ function getStripe() {
 function getPriceId(price: string | Stripe.Price | null | undefined): string | undefined {
   if (!price) return undefined;
   return typeof price === "string" ? price : price.id;
-}
-
-function toCustomerLanguage(lang: string | undefined): "en" | "de" | "pl" {
-  return lang === "de" || lang === "pl" ? lang : "en";
 }
 
 const RENEWAL_DURATION_DAYS: Record<"month" | "year", number> = {
@@ -176,7 +173,7 @@ export async function processRenewalInvoicePaid(
 
     if (email) {
       const customer = await getCustomerByEmail(email);
-      const lang = customer?.preferred_language ?? metadata.plate_language ?? "en";
+      const lang = ownerLanguage(customer, { plate_language: metadata.plate_language });
       await sendRenewalConfirmation(email, lang, { plateNumber }).catch((err) =>
         console.error("[stripe] renewal confirmation email failed:", err)
       );
@@ -234,7 +231,7 @@ export async function processRenewalInvoicePaid(
       source: "Stripe",
       country: invoice.customer_address?.country ?? undefined,
       phone: invoice.customer_phone ?? undefined,
-      preferred_language: toCustomerLanguage(metadata.plate_language),
+      preferred_language: ownerLanguage(null, { plate_language: metadata.plate_language }),
     });
 
     // Left as "pending" — the plate page will show the setup form so the
@@ -296,12 +293,7 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
     }
   }
 
-  const countryLanguage =
-    invoice.customer_address?.country === "DE"
-      ? "de"
-      : invoice.customer_address?.country === "PL"
-        ? "pl"
-        : "en";
+  const countryLanguage = languageFromCountry(invoice.customer_address?.country);
 
   const customerId = await upsertCustomerByEmail({
     email,

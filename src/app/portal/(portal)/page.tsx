@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getPortalSession } from "@/lib/portal-session";
-import { getLanguage } from "@/lib/language";
+import { getPortalLanguage } from "@/lib/portal-language";
 import { t } from "@/lib/translations";
 
 export default async function PortalIndexPage() {
@@ -8,7 +8,7 @@ export default async function PortalIndexPage() {
   if (!user || !customer) redirect("/portal/login");
 
   if (subscriptions.length === 0) {
-    const lang = await getLanguage();
+    const lang = await getPortalLanguage();
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 p-8 text-center">
         <p className="text-gray-500 dark:text-gray-400 text-sm">

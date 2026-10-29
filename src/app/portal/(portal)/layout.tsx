@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getPortalSession } from "@/lib/portal-session";
 import { portalLogoutAction } from "./actions";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import { getLanguage } from "@/lib/language";
+import { getPortalLanguage } from "@/lib/portal-language";
 import { t } from "@/lib/translations";
 import UserMenu from "./UserMenu";
 
@@ -18,7 +18,7 @@ export default async function PortalLayout({
     redirect("/portal/login");
   }
 
-  const lang = await getLanguage();
+  const lang = await getPortalLanguage();
 
   if (!customer) {
     return (
