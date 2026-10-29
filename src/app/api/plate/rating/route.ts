@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isPositiveRating } from "@/lib/review-rating";
 import { updateRating, getRedirectFourStarReviews } from "@/lib/db/reviews";
 
 export async function POST(request: NextRequest) {
@@ -13,11 +14,12 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     if (err instanceof Error && err.message === "Rating already submitted") {
       const { existingRating } = err as Error & { existingRating: number };
-      return NextResponse.json({ error: "already_rated", rating: existingRating }, { status: 409 });
+      const positive = isPositiveRating(existingRating, await getRedirectFourStarReviews(scanId));
+      return NextResponse.json({ error: "already_rated", rating: existingRating, positive }, { status: 409 });
     }
     return NextResponse.json({ error: "Failed to save rating" }, { status: 500 });
   }
 
   const redirectFourStar = rating === 4 ? await getRedirectFourStarReviews(scanId) : false;
-  return NextResponse.json({ redirectToGoogle: rating === 5 || redirectFourStar });
+  return NextResponse.json({ redirectToGoogle: isPositiveRating(rating, redirectFourStar) });
 }

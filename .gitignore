@@ -55,3 +55,4 @@ next-env.d.ts
 # Legacy DB dumps contain production data - never commit
 *.sql.dump
 mysql2_*.sql
+.next-e2e/

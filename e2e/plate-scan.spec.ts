@@ -49,6 +49,38 @@ test.describe('Active plate', () => {
   });
 });
 
+// ── Flow 1b — Returning guest (same device) ─────────────────────────────────
+
+test.describe('Returning guest', () => {
+  test('5 stars then rescan shows thank-you, not the complaint form', async ({ page }) => {
+    await page.goto('/plate/ACTIVE/testsecretactive');
+    await page.waitForURL(/\/plate\/ACTIVE\/scan\/.+/);
+
+    await page.route('https://g.page/**', (route) =>
+      route.fulfill({ status: 200, contentType: 'text/html', body: '<html>ok</html>' })
+    );
+    await page.getByLabel('5 star').click();
+    await page.waitForURL('https://g.page/**');
+
+    // Rescan with the same browser context (same _did cookie)
+    await page.goto('/plate/ACTIVE/testsecretactive');
+    await expect(page).toHaveURL(/\/plate\/ACTIVE\/scan\/.+/);
+    await expect(page.getByText('Dziękujemy za wysoką ocenę!')).toBeVisible();
+    await expect(page.locator('textarea[name="feedback_message"]')).toHaveCount(0);
+  });
+
+  test('1 star then rescan still shows the complaint form', async ({ page }) => {
+    await page.goto('/plate/ACTIVE/testsecretactive');
+    await page.waitForURL(/\/plate\/ACTIVE\/scan\/.+/);
+    await page.getByLabel('1 star').click();
+    await expect(page.locator('textarea[name="feedback_message"]')).toBeVisible();
+
+    await page.goto('/plate/ACTIVE/testsecretactive');
+    await expect(page).toHaveURL(/\/plate\/ACTIVE\/scan\/.+/);
+    await expect(page.locator('textarea[name="feedback_message"]')).toBeVisible();
+  });
+});
+
 // ── Flow 2 — Pending plate (setup form) ─────────────────────────────────────
 
 test.describe('Pending plate (setup)', () => {
@@ -74,7 +106,7 @@ test.describe('Error cases', () => {
 
   test('plate without subscription shows inactive message', async ({ page }) => {
     await page.goto('/plate/NOSSUB/testsecretnosub');
-    // NOSSUB has plate_language=pl → "Tablica Nieaktywna"
-    await expect(page.getByText('Tablica Nieaktywna')).toBeVisible();
+    // NOSSUB has plate_language=pl → neutral guest screen
+    await expect(page.getByText('Ta tabliczka jest chwilowo niedostępna')).toBeVisible();
   });
 });

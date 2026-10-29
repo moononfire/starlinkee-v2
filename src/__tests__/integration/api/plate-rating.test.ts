@@ -88,7 +88,17 @@ describe("POST /api/plate/rating", () => {
     const res = await POST(makeRequest({ scanId: "scan-1", rating: 3 }));
     expect(res.status).toBe(409);
     const body = await res.json();
-    expect(body).toEqual({ error: "already_rated", rating: 5 });
+    expect(body).toEqual({ error: "already_rated", rating: 5, positive: true });
+  });
+
+  it("flags a stored low rating as not positive on 409", async () => {
+    const err = new Error("Rating already submitted") as Error & { existingRating: number };
+    err.existingRating = 1;
+    mockUpdateRating.mockRejectedValue(err);
+
+    const res = await POST(makeRequest({ scanId: "scan-1", rating: 5 }));
+    expect(res.status).toBe(409);
+    expect((await res.json()).positive).toBe(false);
   });
 
   it("calls updateRating with correct arguments", async () => {

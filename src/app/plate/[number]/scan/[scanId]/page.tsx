@@ -13,6 +13,7 @@ import { hasOwnerReply } from "@/lib/review-thread";
 import { getLanguage } from "@/lib/language";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { isSafeGoogleReviewUrl } from "@/lib/urls";
+import { isPositiveRating } from "@/lib/review-rating";
 
 interface Props {
   params: Promise<{ number: string; scanId: string }>;
@@ -67,6 +68,32 @@ export default async function ScanPage({ params }: Props) {
   // Rating submitted but no feedback yet (e.g. came back from Google or closed tab).
   // Don't show stars again to prevent 409 conflict, unless it's the test plate.
   if (review.rating !== null && plate.plate_number !== "TJRUAO") {
+    // A positive rating already sent the guest to Google, so a rescan must not
+    // show the complaint form — just thank them (and offer the Google link again).
+    if (isPositiveRating(review.rating, location.redirect_four_star_reviews ?? true)) {
+      const googleLink =
+        location.google_review_link && isSafeGoogleReviewUrl(location.google_review_link)
+          ? location.google_review_link
+          : null;
+      return (
+        <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
+          <div className="max-w-sm w-full flex flex-col items-center gap-4 text-center">
+            <p className="text-lg font-semibold text-gray-800">{t("thank_you_short", lang)}</p>
+            <p className="text-gray-500">{t("rated_thanks_text", lang)}</p>
+            {googleLink && (
+              <a
+                href={googleLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full rounded-lg bg-blue-600 px-4 py-3 text-center font-semibold text-white"
+              >
+                {t("leave_review", lang)}
+              </a>
+            )}
+          </div>
+        </main>
+      );
+    }
     return (
       <>
         <PageTracker locationId={location.location_id} pagePath={`/plate/${number}/scan`} pageType="plate_scan" />

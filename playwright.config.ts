@@ -10,6 +10,9 @@ if (existsSync(envFile)) {
   }
 }
 
+const port = process.env.E2E_PORT ?? '3000';
+const baseURL = `http://localhost:${port}`;
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
@@ -17,7 +20,7 @@ export default defineConfig({
   workers: 1,
   reporter: [['html', { open: 'never' }]],
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -28,8 +31,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'next dev',
-    url: 'http://localhost:3000',
+    command: `next dev -p ${port}`,
+    url: baseURL,
     reuseExistingServer: true,
     timeout: 60_000,
   },
