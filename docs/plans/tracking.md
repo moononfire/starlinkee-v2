@@ -1,4 +1,4 @@
-# P16 — Śledzenie interakcji (plan, 2026-10-29)
+# P16 — Śledzenie interakcji (WYKREŚLONY — dotyczyło gaskizrzaski, nie starlinkee-v2; nie wdrażać)
 
 Źródło: VB przez kernel advisora (qitem-20261029033602-edd98679). Start po P15. Twarde zasady jak w `audit-2026-10.md` (migracja tylko lokalnie, bez pushu, e2e lokalnie).
 
