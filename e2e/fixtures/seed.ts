@@ -500,3 +500,34 @@ export async function seedCancelOwner() {
   });
   if (!res.ok && res.status !== 422) throw new Error(`create auth user failed: ${await res.text()}`);
 }
+
+export const ITALIAN_OWNER = { email: 'e2e-owner-it@example.com', password: 'e2e-portal-pass-4', customerId: 9005 };
+
+/** Owner with preferred_language=it and one active subscription: portal must speak Italian without any switcher cookie. */
+export async function seedItalianOwner() {
+  await upsert(
+    'customers',
+    { customer_id: ITALIAN_OWNER.customerId, customer_type: 'individual', customer_name: 'E2E Italiano', email: ITALIAN_OWNER.email, preferred_language: 'it', country: 'IT' },
+    'customer_id',
+  );
+  await upsert(
+    'subscriptions',
+    {
+      subscription_id: 9005,
+      customer_id: ITALIAN_OWNER.customerId,
+      subscription_name: '1_YEAR_SUB',
+      duration_in_days: 365,
+      status: 'active',
+      activation_datetime: new Date(Date.now() - 30 * 86_400_000).toISOString(),
+      expiration_datetime: new Date(Date.now() + 200 * 86_400_000).toISOString(),
+      stripe_subscription_id: 'sub_e2e_9005',
+    },
+    'subscription_id',
+  );
+  const res = await fetch(`${BASE_URL}/auth/v1/admin/users`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ email: ITALIAN_OWNER.email, password: ITALIAN_OWNER.password, email_confirm: true }),
+  });
+  if (!res.ok && res.status !== 422) throw new Error(`create auth user failed: ${await res.text()}`);
+}

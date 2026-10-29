@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 
-type Lang = "en" | "de" | "pl";
+type Lang = "en" | "de" | "pl" | "it";
 
 // ---------------------------------------------------------------------------
 // HTML layout helpers
@@ -151,10 +151,31 @@ const strings = {
       `Twoja subskrypcja dla tabliczki <strong>${plateNumber}</strong> została pomyślnie odnowiona. Dziękujemy za płatność.`,
     renewalFooter: "Dziękujemy za korzystanie z Starlinkee.",
   },
+  it: {
+    orderSubject: (id: number) => `Ordine confermato — #${id}`,
+    orderGreeting: (name: string) => `Buongiorno ${name},`,
+    orderBody: () =>
+      "Grazie per il tuo ordine! Lo elaboreremo a breve e spediremo le tue targhette Starlinkee al tuo indirizzo.",
+    orderNumberLabel: "Numero d'ordine",
+    orderQuestions: "Per qualsiasi domanda, rispondi semplicemente a questa e-mail.",
+
+    setupSubject: "La tua targhetta Starlinkee è ora attiva",
+    setupGreeting: "Buongiorno,",
+    setupBody: (name: string) =>
+      `La tua targhetta Starlinkee per <strong>${name}</strong> è stata configurata correttamente ed è ora attiva.`,
+    setupBody2: "Ora gli ospiti possono scansionare la targhetta e lasciare direttamente le recensioni.",
+    setupFooter: "Grazie per aver scelto Starlinkee.",
+
+    renewalSubject: "Il tuo abbonamento Starlinkee è stato rinnovato",
+    renewalGreeting: "Buongiorno,",
+    renewalBody: (plateNumber: string) =>
+      `Il tuo abbonamento per la targhetta <strong>${plateNumber}</strong> è stato rinnovato con successo. Grazie per il pagamento.`,
+    renewalFooter: "Grazie per aver scelto Starlinkee.",
+  },
 } satisfies Record<Lang, object>;
 
 function toLang(l: string): Lang {
-  if (l === "de" || l === "pl") return l;
+  if (l === "de" || l === "pl" || l === "it") return l;
   return "en";
 }
 
@@ -444,6 +465,18 @@ const feedbackStrings = {
     phoneLabel: "Telefon",
     replyBtn: "Odpowiedz na opinię",
   },
+  it: {
+    title: (locationName: string) => `Nuovo feedback — ${locationName}`,
+    subject: (locationName: string, rating: number) =>
+      `Nuovo feedback per ${locationName} — ${rating}/5`,
+    textTitle: (locationName: string) => `Nuovo feedback per ${locationName}`,
+    ratingText: (rating: number) => `Valutazione: ${rating}/5`,
+    messageText: (message: string) => `Messaggio:\n${message}`,
+    nameLabel: "Nome",
+    emailLabel: "E-mail",
+    phoneLabel: "Telefono",
+    replyBtn: "Rispondi al feedback",
+  },
 } satisfies Record<Lang, object>;
 
 const guestReplyStrings = {
@@ -464,6 +497,12 @@ const guestReplyStrings = {
     subject: (locationName: string) => `Nowa odpowiedź gościa — ${locationName}`,
     intro: "Gość odpisał w rozmowie o swojej opinii:",
     btn: "Otwórz rozmowę",
+  },
+  it: {
+    title: (locationName: string) => `Nuova risposta di un ospite — ${locationName}`,
+    subject: (locationName: string) => `Nuova risposta di un ospite — ${locationName}`,
+    intro: "Un ospite ha risposto nella conversazione sul suo feedback:",
+    btn: "Apri la conversazione",
   },
 } satisfies Record<Lang, object>;
 
@@ -562,20 +601,19 @@ const replyStrings = {
     title: (locationName: string) => `${locationName} odpowiedział na Twoją opinię`,
     viewConversationBtn: "Zobacz rozmowę",
   },
-  // The only email a guest receives, so it is the only one with Italian.
   it: {
     subject: (locationName: string) => `Nuova risposta da ${locationName}`,
     title: (locationName: string) => `${locationName} ha risposto al tuo feedback`,
     viewConversationBtn: "Vedi la conversazione",
   },
-} satisfies Record<Lang | "it", object>;
+} satisfies Record<Lang, object>;
 
 export async function sendReplyNotification(
   to: string,
   language: string,
   data: { locationName: string; message: string; scanUrl: string }
 ) {
-  const s = replyStrings[language === "it" ? "it" : toLang(language)];
+  const s = replyStrings[toLang(language)];
 
   const html = layout(
     h1(s.title(esc(data.locationName))) +
@@ -642,6 +680,18 @@ const portalCredentialsStrings = {
     passwordLabel: "Hasło",
     btnLabel: "Zaloguj się do panelu",
     footer: "Jeśli nie dokonywałeś tego zakupu, skontaktuj się z nami.",
+  },
+  it: {
+    subject: "Il tuo account Starlinkee è pronto",
+    greeting: (name: string) => `Buongiorno ${name},`,
+    bodyNew: () =>
+      "Il tuo acquisto Starlinkee è completato! Abbiamo creato il tuo account per il portale clienti. Usa le credenziali qui sotto per accedere — ti consigliamo di cambiare la password dopo il primo accesso.",
+    bodyExisting: () =>
+      "Il tuo acquisto Starlinkee è completato! Hai già un account per il portale clienti, quindi puoi accedere con la tua e-mail e password attuali.",
+    emailLabel: "E-mail",
+    passwordLabel: "Password",
+    btnLabel: "Accedi al portale",
+    footer: "Se non hai effettuato tu questo acquisto, contattaci.",
   },
 } satisfies Record<Lang, object>;
 
@@ -722,6 +772,14 @@ const activationStrings = {
     codeLabel: "Kod aktywacyjny",
     footer: "Nie udostępniaj tego kodu. Jeśli nie zamawiałeś tabliczki Starlinkee, zignoruj tę wiadomość.",
   },
+  it: {
+    subject: "Il tuo codice di attivazione Starlinkee",
+    title: "Attiva la tua targhetta Starlinkee",
+    body: "La tua targhetta Starlinkee è stata assegnata al tuo account. Per configurarla, scansiona la targhetta e inserisci questo codice di attivazione quando richiesto:",
+    plates: "Targhette",
+    codeLabel: "Codice di attivazione",
+    footer: "Non condividere questo codice. Se non hai ordinato una targhetta Starlinkee, ignora questa e-mail.",
+  },
 } satisfies Record<Lang, object>;
 
 export async function sendPlateActivationCode(
@@ -779,6 +837,17 @@ const accountLinkStrings = {
     passwordBody: "Kliknij przycisk poniżej, aby wybrać hasło i otworzyć panel klienta Starlinkee.",
     passwordBtn: "Ustaw hasło",
     footer: "Jeśli to nie Ty, zignoruj tę wiadomość.",
+  },
+  it: {
+    confirmSubject: "Conferma il tuo account Starlinkee",
+    confirmTitle: "Conferma il tuo indirizzo e-mail",
+    confirmBody: "Grazie per la registrazione. Clicca sul pulsante qui sotto per confermare il tuo indirizzo e-mail e aprire il portale clienti.",
+    confirmBtn: "Conferma e-mail",
+    passwordSubject: "Imposta la tua password Starlinkee",
+    passwordTitle: "Imposta la password",
+    passwordBody: "Clicca sul pulsante qui sotto per scegliere una password e aprire il portale clienti Starlinkee.",
+    passwordBtn: "Imposta password",
+    footer: "Se non l'hai richiesto tu, puoi ignorare questa e-mail.",
   },
 } satisfies Record<Lang, object>;
 

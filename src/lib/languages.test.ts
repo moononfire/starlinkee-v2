@@ -9,9 +9,10 @@ describe("ownerLanguage", () => {
     expect(ownerLanguage(null, { plate_language: "pl" })).toBe("pl");
     expect(ownerLanguage({ preferred_language: null }, null)).toBe("en");
   });
-  it("never returns Italian (no owner-facing Italian texts)", () => {
-    expect(ownerLanguage(null, { plate_language: "it" })).toBe("en");
-    expect(ownerLanguage({ preferred_language: "it" }, null)).toBe("en");
+  it("returns Italian: portal and e-mails exist in it (no it -> en mapping)", () => {
+    expect(ownerLanguage(null, { plate_language: "it" })).toBe("it");
+    expect(ownerLanguage({ preferred_language: "it" }, null)).toBe("it");
+    expect(ownerLanguage({ preferred_language: "it" }, { plate_language: "de" })).toBe("it");
   });
 });
 
@@ -29,10 +30,11 @@ describe("guestLanguage", () => {
 });
 
 describe("languageFromCountry", () => {
-  it("maps DE and PL, everything else is English", () => {
+  it("maps DE, PL and IT, everything else is English", () => {
     expect(languageFromCountry("DE")).toBe("de");
     expect(languageFromCountry("PL")).toBe("pl");
-    expect(languageFromCountry("IT")).toBe("en");
+    expect(languageFromCountry("IT")).toBe("it");
+    expect(languageFromCountry("FR")).toBe("en");
     expect(languageFromCountry(undefined)).toBe("en");
   });
 });

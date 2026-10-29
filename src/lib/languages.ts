@@ -1,10 +1,11 @@
-// UI language of the owner portal (switcher, /verify, getLanguage() without arguments).
-export const SUPPORTED_LANGUAGES = ["en", "de", "pl"] as const;
+// Every language of the product: owner portal (switcher, /verify, getLanguage() without arguments),
+// e-mails, plate screens, /l/* pages and per-language content stored in the DB.
+export const SUPPORTED_LANGUAGES = ["en", "de", "pl", "it"] as const;
 export type Language = (typeof SUPPORTED_LANGUAGES)[number];
 
-// Everything an end customer sees: plate screens, /l/* pages and per-language content stored in the DB.
-export const PLATE_LANGUAGES = [...SUPPORTED_LANGUAGES, "it"] as const;
-export type PlateLanguage = (typeof PLATE_LANGUAGES)[number];
+// What an end customer (guest) sees; the same set as the owner's, kept as a separate name for readability.
+export const PLATE_LANGUAGES = SUPPORTED_LANGUAGES;
+export type PlateLanguage = Language;
 
 export const DEFAULT_LANGUAGE: Language = "en";
 
@@ -19,7 +20,6 @@ const isPlateLanguage = (l: unknown): l is PlateLanguage => PLATE_LANGUAGES.incl
 /**
  * Language for anything the OWNER sees or receives (portal, emails to the owner or venue,
  * Stripe checkout): the customer's preferred language, else the plate's language, else English.
- * Owner-facing texts exist in en/de/pl only, so an Italian plate falls back to English.
  */
 export function ownerLanguage(
   customer?: { preferred_language?: string | null } | null,
@@ -46,5 +46,5 @@ export function guestLanguage(
 
 /** Billing country → owner language, used only when nothing better is known (Stripe signups). */
 export function languageFromCountry(country?: string | null): Language {
-  return country === "DE" ? "de" : country === "PL" ? "pl" : DEFAULT_LANGUAGE;
+  return country === "DE" ? "de" : country === "PL" ? "pl" : country === "IT" ? "it" : DEFAULT_LANGUAGE;
 }

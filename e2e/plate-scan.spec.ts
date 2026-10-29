@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { seedTestData, cleanupTestReviews, seedGermanPortalUser, portalSessionCookies, setLocationGoogleLink, seedMixedCaseExpiredOwner, PORTAL_MIXED_USER, seedPromoLead, deletePromoLead, seedLapsedVenue, LAPSED_VENUE,
-  seedReassignablePlate, movePlateTo, newestReviewSubscription, newestReviewGuestLanguage, MOVER, seedCancelOwner, CANCEL_OWNER } from './fixtures/seed';
+  seedReassignablePlate, movePlateTo, newestReviewSubscription, newestReviewGuestLanguage, MOVER, seedCancelOwner, CANCEL_OWNER, seedItalianOwner, ITALIAN_OWNER } from './fixtures/seed';
 
 test.beforeAll(async () => {
   await seedTestData();
@@ -385,6 +385,31 @@ test.describe('Cancel renewal in the portal', () => {
     await page.goto(`/portal/${CANCEL_OWNER.cancellingSubscriptionId}`);
     await expect(page.getByTestId('renewal-cancelled')).toContainText('nie zostanie odnowiona');
     await expect(page.getByRole('button', { name: 'Zrezygnuj z odnowienia' })).toHaveCount(0);
+  });
+});
+
+// ── Flow 1j — Portal in Italian (P15) ──────────────────────────────────────
+
+test.describe('Portal in Italian', () => {
+  const appUrl = 'http://localhost:' + (process.env.E2E_PORT ?? '3100');
+
+  test('owner with preferred_language it sees the portal in Italian, not English', async ({ page }) => {
+    await seedItalianOwner();
+    await page.context().addCookies(await portalSessionCookies(appUrl, ITALIAN_OWNER.email));
+    await page.goto('/portal');
+    await expect(page).toHaveURL(/\/portal\/9005$/);
+    await expect(page.getByText('Scansioni').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Disdici il rinnovo' })).toBeVisible();
+    await expect(page.getByText('Scans', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Cancel renewal' })).toHaveCount(0);
+  });
+
+  test('Italian owner can open the cancel confirmation in Italian', async ({ page }) => {
+    await seedItalianOwner();
+    await page.context().addCookies(await portalSessionCookies(appUrl, ITALIAN_OWNER.email));
+    await page.goto('/portal/9005');
+    await page.getByRole('button', { name: 'Disdici il rinnovo' }).click();
+    await expect(page.getByRole('alertdialog')).toContainText("L'abbonamento resta attivo fino al");
   });
 });
 

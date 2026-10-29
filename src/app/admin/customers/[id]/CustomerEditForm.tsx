@@ -182,6 +182,7 @@ export default function CustomerEditForm({ customer }: Props) {
             <option value="pl">Polski</option>
             <option value="en">English</option>
             <option value="de">Deutsch</option>
+            <option value="it">Italiano</option>
           </select>
         </div>
       </section>

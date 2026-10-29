@@ -105,14 +105,16 @@ describe("sendGuestReplyNotification()", () => {
     expect(call.text).toContain("/portal/50/reviews");
   });
 
-  it("is written in the owner's language (pl, de) and falls back to English", async () => {
+  it("is written in the owner's language (pl, de, it) and falls back to English", async () => {
     await sendGuestReplyNotification("o@x.com", "pl", data);
     await sendGuestReplyNotification("o@x.com", "de", data);
     await sendGuestReplyNotification("o@x.com", "it", data);
+    await sendGuestReplyNotification("o@x.com", "xx", data);
 
     expect(mockSendMail.mock.calls[0][0].subject).toBe("Nowa odpowiedź gościa — My Bistro");
     expect(mockSendMail.mock.calls[1][0].subject).toBe("Neue Antwort eines Gastes — My Bistro");
-    expect(mockSendMail.mock.calls[2][0].subject).toBe("New reply from a guest — My Bistro");
+    expect(mockSendMail.mock.calls[2][0].subject).toBe("Nuova risposta di un ospite — My Bistro");
+    expect(mockSendMail.mock.calls[3][0].subject).toBe("New reply from a guest — My Bistro");
   });
 
   it("escapes the guest's text in the HTML body", async () => {

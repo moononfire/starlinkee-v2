@@ -2,6 +2,7 @@ import { createAdminClient } from "../supabase/admin";
 import { ilikeValue } from "./search";
 import { normalizeEmail, escapeLikePattern, pickByEmail } from "../customer-email";
 import type { Customer } from "../types";
+import type { Language } from "../languages";
 
 interface CustomerInsert {
   customer_type: "business" | "individual";
@@ -16,7 +17,7 @@ interface CustomerInsert {
   address_city?: string;
   address_postal_code?: string;
   country?: string;
-  preferred_language?: "en" | "de" | "pl";
+  preferred_language?: Language;
   is_activated?: boolean;
 }
 
