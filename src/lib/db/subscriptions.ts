@@ -89,11 +89,13 @@ export async function extendSubscription(subscriptionId: number, expirationDatet
   if (error) throw new Error(`Failed to extend subscription: ${error.message}`);
 }
 
+// Called only when the row moves to a DIFFERENT Stripe subscription (e.g. renewal after a cancelled one ended).
+// The new Stripe subscription renews, so a "will not renew" flag of the old one must not carry over.
 export async function setSubscriptionStripeId(subscriptionId: number, stripeSubscriptionId: string): Promise<void> {
   const supabase = createAdminClient();
   const { error } = await supabase
     .from("subscriptions")
-    .update({ stripe_subscription_id: stripeSubscriptionId })
+    .update({ stripe_subscription_id: stripeSubscriptionId, cancel_at_period_end: false })
     .eq("subscription_id", subscriptionId);
   if (error) throw new Error(`Failed to store the Stripe subscription id: ${error.message}`);
 }
