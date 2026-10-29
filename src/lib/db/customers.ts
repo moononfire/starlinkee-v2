@@ -1,6 +1,8 @@
 import { createAdminClient } from "../supabase/admin";
 import { ilikeValue } from "./search";
+import { normalizeEmail, escapeLikePattern, pickByEmail } from "../customer-email";
 import type { Customer } from "../types";
+import type { Language } from "../languages";
 
 interface CustomerInsert {
   customer_type: "business" | "individual";
@@ -15,7 +17,7 @@ interface CustomerInsert {
   address_city?: string;
   address_postal_code?: string;
   country?: string;
-  preferred_language?: "en" | "de" | "pl";
+  preferred_language?: Language;
   is_activated?: boolean;
 }
 
@@ -25,14 +27,16 @@ interface CustomerInsert {
  * stranger paying with someone else's address must not rewrite their billing
  * details); only fields that are still empty are filled in.
  */
-export async function upsertCustomerByEmail(data: CustomerInsert): Promise<number> {
+export async function upsertCustomerByEmail(input: CustomerInsert): Promise<number> {
   const supabase = createAdminClient();
+  const data = { ...input, email: normalizeEmail(input.email) };
 
-  const { data: existing } = await supabase
+  const { data: matches } = await supabase
     .from("customers")
     .select("*")
-    .eq("email", data.email)
-    .single();
+    .ilike("email", escapeLikePattern(data.email))
+    .order("customer_id", { ascending: true });
+  const existing = pickByEmail(matches, data.email);
 
   if (existing) {
     const { email: _email, preferred_language: _preferredLanguage, source: _source, ...candidates } = data;
@@ -99,12 +103,14 @@ export async function updateCustomer(
   const supabase = createAdminClient();
 
   if (updates.email) {
-    const { data: existing } = await supabase
+    const email = normalizeEmail(updates.email);
+    updates = { ...updates, email };
+    const { data: matches } = await supabase
       .from("customers")
-      .select("customer_id")
-      .eq("email", updates.email)
-      .neq("customer_id", id)
-      .maybeSingle();
+      .select("customer_id, email")
+      .ilike("email", escapeLikePattern(email))
+      .neq("customer_id", id);
+    const existing = pickByEmail(matches, email);
     if (existing) throw new Error("Ten adres e-mail jest już przypisany do innego klienta.");
   }
 
@@ -118,15 +124,16 @@ export async function updateCustomer(
   return customer;
 }
 
-export async function createCustomer(data: CustomerInsert): Promise<Customer> {
+export async function createCustomer(input: CustomerInsert): Promise<Customer> {
   const supabase = createAdminClient();
+  const data = input.email ? { ...input, email: normalizeEmail(input.email) } : input;
 
   if (data.email) {
-    const { data: existing } = await supabase
+    const { data: matches } = await supabase
       .from("customers")
-      .select("customer_id")
-      .eq("email", data.email)
-      .maybeSingle();
+      .select("customer_id, email")
+      .ilike("email", escapeLikePattern(data.email));
+    const existing = pickByEmail(matches, data.email);
     if (existing) throw new Error("Ten adres e-mail jest już przypisany do innego klienta.");
   }
 

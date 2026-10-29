@@ -1,3 +1,4 @@
+import { ownerLanguage, languageFromCountry } from "@/lib/languages";
 import Stripe from "stripe";
 import type { Subscription } from "../types";
 import { upsertCustomerByEmail } from "../db/customers";
@@ -12,6 +13,8 @@ import {
 import {
   createSubscription,
   setSubscriptionActive,
+  extendSubscription,
+  setSubscriptionStripeId,
   getSubscriptionById,
   listSubscriptionsByStripeInvoice,
   listSubscriptionsByStripeSubscription,
@@ -21,6 +24,7 @@ import {
   sendPortalCredentials,
   sendRenewalConfirmation,
   sendRenewalConfirmationToAdmin,
+  sendDuplicateStripeSubscriptionToAdmin,
 } from "../email";
 import { getCustomerByEmail } from "../db/portal";
 import { getCustomerById } from "../db/customers";
@@ -43,14 +47,43 @@ function getPriceId(price: string | Stripe.Price | null | undefined): string | u
   return typeof price === "string" ? price : price.id;
 }
 
-function toCustomerLanguage(lang: string | undefined): "en" | "de" | "pl" {
-  return lang === "de" || lang === "pl" ? lang : "en";
-}
+// Extra days of access after the paid period ends, so a late or retried payment does not switch the plate off.
+export const RENEWAL_GRACE_DAYS = 2;
+const DAY_MS = 86_400_000;
 
 const RENEWAL_DURATION_DAYS: Record<"month" | "year", number> = {
   month: 30,
   year: 365,
 };
+
+/**
+ * Expires this row's earlier open renewal Checkout sessions (e.g. the month tab while the year tab is opened),
+ * so one subscription cannot end up with two paid Stripe subscriptions. Best effort: never blocks a new renewal.
+ */
+async function expireOpenRenewalSessions(subscriptionId: number): Promise<void> {
+  try {
+    const stripe = getStripe();
+    const open = await stripe.checkout.sessions.list({ status: "open", limit: 100 });
+    for (const session of open.data) {
+      if (session.metadata?.renewal_subscription_id === String(subscriptionId)) {
+        await stripe.checkout.sessions.expire(session.id);
+      }
+    }
+  } catch (err) {
+    console.error(`[stripe] could not expire earlier renewal sessions for subscription ${subscriptionId}:`, err);
+  }
+}
+
+async function isStripeSubscriptionLive(stripeSubscriptionId: string): Promise<boolean> {
+  try {
+    const sub = await getStripe().subscriptions.retrieve(stripeSubscriptionId);
+    return ["active", "trialing", "past_due", "unpaid"].includes(sub.status);
+  } catch (err) {
+    // Cannot tell: better one unneeded alert than a silent double charge.
+    console.error(`[stripe] could not look up Stripe subscription ${stripeSubscriptionId}:`, err);
+    return true;
+  }
+}
 
 export async function createRenewalCheckoutSession(params: {
   subscriptionId: number;
@@ -67,8 +100,11 @@ export async function createRenewalCheckoutSession(params: {
     throw new Error(`STRIPE_PRICE_ID_RENEWAL_${interval === "year" ? "YEARLY" : "MONTHLY"} is not configured`);
   }
 
+  await expireOpenRenewalSessions(subscriptionId);
+
   const session = await getStripe().checkout.sessions.create({
     mode: "subscription",
+    metadata: { renewal_subscription_id: String(subscriptionId) },
     line_items: [{ price: priceId, quantity: 1 }],
     locale: ["en", "de", "pl", "it"].includes(lang) ? (lang as Stripe.Checkout.SessionCreateParams.Locale) : "auto",
     success_url: returnUrl,
@@ -154,6 +190,40 @@ async function extendSubscriptionsForCycle(invoice: Stripe.Invoice): Promise<voi
   }
 }
 
+/** Moves the end date for a later billing cycle: keeps activation_datetime and never shortens granted time. */
+async function extendOnCycle(sub: Subscription, expiration: Date): Promise<void> {
+  const granted = sub.expiration_datetime ? new Date(sub.expiration_datetime) : null;
+  const until = granted && granted > expiration ? granted : expiration;
+  await extendSubscription(sub.subscription_id, until.toISOString());
+}
+
+/**
+ * Remembers which Stripe subscription pays for this row. If the row already had a different one that is still
+ * live, the customer is now paying twice: tell the admin (no automatic cancellation).
+ */
+async function recordStripeSubscription(
+  current: Subscription | null,
+  stripeSubscriptionId: string,
+  context: { plateNumber: string; customerEmail: string }
+): Promise<void> {
+  if (!current) return;
+  const previous = current.stripe_subscription_id;
+  if (previous === stripeSubscriptionId) return;
+
+  await setSubscriptionStripeId(current.subscription_id, stripeSubscriptionId);
+  if (previous && (await isStripeSubscriptionLive(previous))) {
+    console.error(
+      `[stripe] subscription ${current.subscription_id} now has two live Stripe subscriptions: ${previous} and ${stripeSubscriptionId}`
+    );
+    await sendDuplicateStripeSubscriptionToAdmin({
+      subscriptionId: current.subscription_id,
+      previousStripeSubscriptionId: previous,
+      newStripeSubscriptionId: stripeSubscriptionId,
+      ...context,
+    }).catch((err) => console.error("[stripe] duplicate-subscription admin email failed:", err));
+  }
+}
+
 export async function processRenewalInvoicePaid(
   invoice: Stripe.Invoice,
   phase: "create" | "cycle" = "create"
@@ -163,20 +233,41 @@ export async function processRenewalInvoicePaid(
 
   const durationDays = Number(metadata.renewal_duration_days) || RENEWAL_DURATION_DAYS.month;
   const now = new Date();
-  const expiration = new Date(now);
-  expiration.setDate(expiration.getDate() + durationDays);
+  // Access runs to the end of the period Stripe billed (not "now + N days": Stripe bills calendar months),
+  // plus the grace days for late or retried payments.
+  const paidUntil = paidThrough(invoice) ?? new Date(now.getTime() + durationDays * DAY_MS);
+  const expiration = new Date(paidUntil.getTime() + RENEWAL_GRACE_DAYS * DAY_MS);
 
   const plateNumber = metadata.plate_number ?? "";
   const interval = metadata.renewal_interval === "year" ? "year" : "month";
   const email = invoice.customer_email;
+  const stripeSubscriptionId = stripeSubscriptionIdOf(invoice);
 
   const existingSubscriptionId = Number(metadata.renewal_subscription_id);
   if (existingSubscriptionId) {
+    const current = await getSubscriptionById(existingSubscriptionId);
+
+    if (phase === "cycle") {
+      // A later billing cycle of an already renewed subscription: move the end date, nothing else.
+      // No "renewed" emails and activation_datetime stays; never shorten what is already granted.
+      if (!current) {
+        console.error(`[stripe] renewal cycle invoice ${invoice.id}: subscription ${existingSubscriptionId} not found`);
+        return;
+      }
+      if (current.status === "pending") return;
+      await extendOnCycle(current, expiration);
+      return;
+    }
+
     await setSubscriptionActive(existingSubscriptionId, now.toISOString(), expiration.toISOString());
+
+    if (stripeSubscriptionId) {
+      await recordStripeSubscription(current, stripeSubscriptionId, { plateNumber, customerEmail: email ?? "unknown" });
+    }
 
     if (email) {
       const customer = await getCustomerByEmail(email);
-      const lang = customer?.preferred_language ?? metadata.plate_language ?? "en";
+      const lang = ownerLanguage(customer, { plate_language: metadata.plate_language });
       await sendRenewalConfirmation(email, lang, { plateNumber }).catch((err) =>
         console.error("[stripe] renewal confirmation email failed:", err)
       );
@@ -192,8 +283,6 @@ export async function processRenewalInvoicePaid(
   const plateId = Number(metadata.renewal_plate_id);
   if (!plateId) return;
 
-  const stripeSubscriptionId = stripeSubscriptionIdOf(invoice);
-
   if (phase === "cycle") {
     // Later billing cycles extend the subscription created by the first
     // invoice. They must not create another one or move the plate onto it.
@@ -207,10 +296,7 @@ export async function processRenewalInvoicePaid(
       console.error(`[stripe] renewal cycle invoice ${invoice.id}: no subscription found for plate ${plateId}`);
       return;
     }
-    if (target.status !== "pending") {
-      const expiration = paidThrough(invoice) ?? new Date(now.getTime() + durationDays * 86_400_000);
-      await setSubscriptionActive(target.subscription_id, now.toISOString(), expiration.toISOString());
-    }
+    if (target.status !== "pending") await extendOnCycle(target, expiration);
     return;
   }
 
@@ -234,7 +320,7 @@ export async function processRenewalInvoicePaid(
       source: "Stripe",
       country: invoice.customer_address?.country ?? undefined,
       phone: invoice.customer_phone ?? undefined,
-      preferred_language: toCustomerLanguage(metadata.plate_language),
+      preferred_language: ownerLanguage(null, { plate_language: metadata.plate_language }),
     });
 
     // Left as "pending" — the plate page will show the setup form so the
@@ -251,7 +337,12 @@ export async function processRenewalInvoicePaid(
 
   const plate = await getPlateById(plateId);
   if (plate?.subscription_id !== subscription.subscription_id) {
-    await assignPlateToSubscription(plateId, subscription.subscription_id);
+    const assigned = await assignPlateToSubscription(plateId, subscription.subscription_id);
+    // Paid, but the plate is gone or belongs to someone else: fail loudly (the event is recorded as failed)
+    // rather than leave a paying customer with a subscription that has no plate.
+    if (!assigned) {
+      throw new Error(`renewal invoice ${invoice.id}: plate ${plateId} could not be assigned to subscription ${subscription.subscription_id}`);
+    }
   }
   // Without the code the customer cannot set the plate up (/api/plate/setup).
   if (!subscription.activation_code_hash && subscription.status === "pending") {
@@ -296,12 +387,7 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
     }
   }
 
-  const countryLanguage =
-    invoice.customer_address?.country === "DE"
-      ? "de"
-      : invoice.customer_address?.country === "PL"
-        ? "pl"
-        : "en";
+  const countryLanguage = languageFromCountry(invoice.customer_address?.country);
 
   const customerId = await upsertCustomerByEmail({
     email,

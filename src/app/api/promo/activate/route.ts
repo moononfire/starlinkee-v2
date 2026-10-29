@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getLeadByToken, getLeadByCouponCode, markLeadAsUsed, CLAIM_WINDOW_MS } from "@/lib/db/leads";
 import { getLoyaltyCardByRedeemCode, confirmRedemption } from "@/lib/db/loyalty";
 import { REDEEM_WINDOW_MS } from "@/lib/loyalty-collect";
+import { isLocationActiveById, SUBSCRIPTION_INACTIVE } from "@/lib/location-access";
 
 function isExpired(requestedAt: string | null, windowMs: number): boolean {
   return !!requestedAt && Date.now() - new Date(requestedAt).getTime() > windowMs;
@@ -21,6 +22,9 @@ export async function POST(request: NextRequest) {
     : await getLeadByToken(token);
 
   if (lead) {
+    if (!(await isLocationActiveById(lead.location_id))) {
+      return NextResponse.json(SUBSCRIPTION_INACTIVE, { status: 403 });
+    }
     if (lead.is_used) {
       return NextResponse.json({ error: "Already used" }, { status: 409 });
     }
@@ -36,6 +40,9 @@ export async function POST(request: NextRequest) {
   if (normalizedCode) {
     const card = await getLoyaltyCardByRedeemCode(normalizedCode);
     if (card) {
+      if (!(await isLocationActiveById(card.location_id))) {
+        return NextResponse.json(SUBSCRIPTION_INACTIVE, { status: 403 });
+      }
       if (card.redeem_used_at) {
         return NextResponse.json({ error: "Already used" }, { status: 409 });
       }

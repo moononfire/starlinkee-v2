@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { t } from "@/lib/translations";
+import { dateLocale } from "@/lib/languages";
 
 declare global {
   interface Window {
@@ -172,6 +173,11 @@ export default function VerifyClient({ initialCode, lang }: Props) {
       setNotFound(true);
       return;
     }
+    if (res.status === 403) {
+      // The venue's subscription is not active: say so to the staff member instead of a generic error.
+      setError(t("venue_subscription_inactive", lang));
+      return;
+    }
     if (!res.ok) {
       setError(t("something_went_wrong", lang));
       return;
@@ -199,6 +205,10 @@ export default function VerifyClient({ initialCode, lang }: Props) {
     }
     if (res.status === 410) {
       setResult((prev) => (prev ? { ...prev, expired: true } : prev));
+      return;
+    }
+    if (res.status === 403) {
+      setError(t("venue_subscription_inactive", lang));
       return;
     }
     if (!res.ok) {
@@ -253,7 +263,7 @@ export default function VerifyClient({ initialCode, lang }: Props) {
           <p className="text-gray-600 text-sm font-medium">{t("coupon_used", lang)}</p>
           {result.usedAt && (
             <p className="text-gray-400 text-xs mt-1">
-              {new Date(result.usedAt).toLocaleString(lang === "pl" ? "pl-PL" : lang === "de" ? "de-DE" : "en-GB")}
+              {new Date(result.usedAt).toLocaleString(dateLocale(lang))}
             </p>
           )}
         </div>

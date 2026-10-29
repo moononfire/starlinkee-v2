@@ -52,9 +52,12 @@ describe("Italian translations", () => {
     expect(t("thank_you_short", "it")).not.toBe(t("thank_you_short", "en"));
   });
 
-  it("falls back to English for a key that has no Italian text", () => {
-    expect(it_["portal_password_title"]).toBeUndefined();
-    expect(t("portal_password_title", "it")).toBe(t("portal_password_title", "en"));
+  it("has Italian text for portal keys too (no fallback to English)", () => {
+    expect(it_["portal_password_title"]).toBeDefined();
+    expect(t("portal_scans", "it")).toBe("Scansioni");
+  });
+  it("falls back to English for a key that does not exist in Italian", () => {
+    expect(t("no_such_key_xyz", "it")).toBe("no_such_key_xyz");
   });
 
 });
@@ -65,10 +68,10 @@ describe("getLanguage with Italian", () => {
     expect(await getLanguage("P1", "en", PLATE_LANGUAGES)).toBe("it");
   });
 
-  it("never returns it for the portal (default allowed list)", async () => {
+  it("returns it for the portal too (default allowed list)", async () => {
     cookieValue = "it";
-    expect(await getLanguage()).toBe("en");
-    expect(await getLanguage(undefined, "it")).toBe("en");
+    expect(await getLanguage()).toBe("it");
+    expect(await getLanguage(undefined, "it")).toBe("it");
   });
 
   it("uses plate_language it as the default when there is no cookie", async () => {
@@ -95,8 +98,8 @@ describe("/l/* pages with Italian", () => {
 });
 
 describe("LanguageSwitcher visibility", () => {
-  it("hides IT by default (portal, /verify)", () => {
-    expect(visibleSwitcherLanguages().map((l) => l.code)).toEqual(["en", "de", "pl"]);
+  it("shows IT by default (portal, /verify)", () => {
+    expect(visibleSwitcherLanguages().map((l) => l.code)).toEqual(["en", "de", "pl", "it"]);
   });
   it("shows IT when the plate languages are passed", () => {
     expect(visibleSwitcherLanguages(PLATE_LANGUAGES).map((l) => l.code)).toContain("it");

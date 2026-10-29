@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
+import { assertLocalSupabase } from './scripts/local-guard.mjs';
 
 const envFile = resolve('.env.local');
 if (existsSync(envFile)) {
@@ -10,6 +11,12 @@ if (existsSync(envFile)) {
   }
 }
 
+const port = process.env.E2E_PORT ?? '3100';
+const baseURL = `http://localhost:${port}`;
+
+// e2e writes and deletes data: refuse to start against anything but a local Supabase.
+assertLocalSupabase(process.env.NEXT_PUBLIC_SUPABASE_URL, 'playwright.config');
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
@@ -17,7 +24,7 @@ export default defineConfig({
   workers: 1,
   reporter: [['html', { open: 'never' }]],
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -28,9 +35,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'next dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: true,
+    command: `next dev -p ${port}`,
+    url: baseURL,
+    reuseExistingServer: false,
     timeout: 60_000,
   },
 });

@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getPortalSession } from "@/lib/portal-session";
 import { getLocationLinksByLocationId, ensureLinktreeSlug } from "@/lib/db/locations";
 import type { CustomerLocationLink } from "@/lib/types";
-import { getLanguage } from "@/lib/language";
+import { getPortalLanguage } from "@/lib/portal-language";
 import { t } from "@/lib/translations";
 import LinktreeSettings from "./LinktreeSettings";
 
@@ -25,7 +25,7 @@ export default async function SubscriptionLinktreePage({ params }: Props) {
     redirect(`/portal/${subscriptionId}`);
   }
 
-  const lang = await getLanguage();
+  const lang = await getPortalLanguage();
 
   const [locationLinks, ensuredSlug] = await Promise.all([
     getLocationLinksByLocationId(sub.location.location_id),

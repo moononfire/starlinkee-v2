@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import FeedbackForm from "./FeedbackForm";
 import { postDemoStep } from "@/lib/demoTour";
 import { isSafeGoogleReviewUrl } from "@/lib/urls";
+import { t } from "@/lib/translations";
 
 interface Props {
   scanId: string;
@@ -16,6 +17,7 @@ export default function RatingStars({ scanId, googleReviewLink, lang }: Props) {
   const [hovered, setHovered] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [alreadyPositive, setAlreadyPositive] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // A back/forward navigation can restore this exact DOM from the browser's
@@ -62,11 +64,13 @@ export default function RatingStars({ scanId, googleReviewLink, lang }: Props) {
     setSubmitted(true);
 
     // A rating already exists for this scan (e.g. a repeat visit after
-    // already rating this plate) — never redirect to Google a second time,
-    // just route straight to the contact form regardless of what was clicked.
+    // already rating this plate) — never redirect to Google a second time.
+    // A stored positive rating gets a thank-you, a negative one the contact form.
     if (res.status === 409) {
       popup?.close();
-      setShowFeedback(true);
+      const body = await res.json().catch(() => ({}));
+      if (body.positive) setAlreadyPositive(true);
+      else setShowFeedback(true);
       return;
     }
 
@@ -85,8 +89,22 @@ export default function RatingStars({ scanId, googleReviewLink, lang }: Props) {
       }
     } else {
       popup?.close();
-      setShowFeedback(true);
+      // A positive rating with no safe Google link has nowhere to send the guest: thank them,
+      // do not show the complaint form ("sorry to hear that") after 5 stars.
+      if (redirectToGoogle) setAlreadyPositive(true);
+      else setShowFeedback(true);
     }
+  }
+
+  if (alreadyPositive) {
+    return (
+      <div className="flex flex-col items-center gap-2 text-center">
+        <p className="text-lg font-semibold text-gray-800">{t("thank_you_short", lang)}</p>
+        <p className="text-gray-500">
+          {t(isSafeGoogleReviewUrl(googleReviewLink) ? "rated_thanks_text" : "rated_thanks_text_no_google", lang)}
+        </p>
+      </div>
+    );
   }
 
   if (showFeedback) {

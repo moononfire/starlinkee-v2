@@ -76,15 +76,15 @@ interface ReviewThreadRow {
   contact_email: string | null;
   rating: number | null;
   owner_last_read_at: string | null;
-  plates: { plate_number: string; subscription_id: number } | null;
+  plates: { plate_number: string } | null;
 }
 
 export async function listThreadsBySubscriptionId(subscriptionId: number): Promise<ReviewThreadSummary[]> {
   const supabase = createAdminClient();
   const { data: reviews, error } = await supabase
     .from("reviews")
-    .select("review_id, scan_id, user_name, contact_email, rating, owner_last_read_at, plates!inner(plate_number, subscription_id)")
-    .eq("plates.subscription_id", subscriptionId)
+    .select("review_id, scan_id, user_name, contact_email, rating, owner_last_read_at, plates(plate_number)")
+    .eq("subscription_id", subscriptionId)
     .not("feedback_time", "is", null)
     .returns<ReviewThreadRow[]>();
   if (error) throw new Error(`Failed to list threads: ${error.message}`);

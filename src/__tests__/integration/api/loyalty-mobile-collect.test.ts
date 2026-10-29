@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const accessMock = vi.hoisted(() => ({ active: vi.fn(), activeById: vi.fn() }));
+vi.mock("@/lib/location-access", () => ({
+  isLocationActive: accessMock.active,
+  isLocationActiveById: accessMock.activeById,
+  SUBSCRIPTION_INACTIVE: { error: "subscription_inactive" },
+}));
+
 const {
   mockVerifyMobileToken,
   mockGetLocationBySlug,
@@ -54,6 +61,8 @@ function requestWithoutToken(slug = "my-restaurant") {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  accessMock.active.mockResolvedValue(true);
+  accessMock.activeById.mockResolvedValue(true);
   mockVerifyMobileToken.mockResolvedValue(session);
   mockGetLocationBySlug.mockResolvedValue(location);
   mockGetLocationById.mockResolvedValue(location);
@@ -148,5 +157,18 @@ describe("POST /api/mobile/loyalty/collect", () => {
     const body = await res.json();
     expect(body.stamps).toBe(6);
     expect(body.reward_ready).toBe(false);
+  });
+});
+
+describe("POST /api/mobile/loyalty/collect — venue subscription not active (F11)", () => {
+  it("returns 403 subscription_inactive before the scan token is consumed or a stamp is added", async () => {
+    accessMock.active.mockResolvedValue(false);
+
+    const res = await POST(requestWithToken());
+
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe("subscription_inactive");
+    expect(mockConsumeScanToken).not.toHaveBeenCalled();
+    expect(mockIncrementStamp).not.toHaveBeenCalled();
   });
 });

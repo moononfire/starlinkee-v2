@@ -4,7 +4,7 @@ import { listCustomers } from "@/lib/db/customers";
 import { listUnassignedPlates } from "@/lib/db/plates";
 import { createOrderManual, createOrderItem, createShipment } from "@/lib/db/orders";
 import { createSubscription } from "@/lib/db/subscriptions";
-import { assignPlateToSubscription } from "@/lib/db/plates";
+import { assignPlateToSubscription, unassignPlateFromSubscription } from "@/lib/db/plates";
 import { issueActivationCode } from "@/lib/services/activation";
 import { sendOrderConfirmationToAdmin } from "@/lib/email";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -55,8 +55,15 @@ async function createOrderAction(formData: FormData) {
     is_free: product.is_free,
   });
 
+  const assignedPlates: number[] = [];
   for (const plateId of plateNumbers) {
-    await assignPlateToSubscription(plateId, sub.subscription_id);
+    if (await assignPlateToSubscription(plateId, sub.subscription_id)) {
+      assignedPlates.push(plateId);
+    } else {
+      // Undo what this order already took and stop: no code for a plate that is not ours.
+      await Promise.all(assignedPlates.map((id) => unassignPlateFromSubscription(id, sub.subscription_id)));
+      throw new Error(`Tabliczka ${plateId} jest już przypisana albo nie istnieje; zamówienie ${orderId} wymaga ręcznego sprawdzenia.`);
+    }
   }
   if (plateNumbers.length > 0) await issueActivationCode(sub.subscription_id);
 
@@ -124,10 +131,10 @@ export default async function NewOrderPage() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Płytki *
+            Tabliczki *
           </label>
           {plates.length === 0 ? (
-            <p className="text-sm text-gray-400">Brak dostępnych płytek (wszystkie przypisane)</p>
+            <p className="text-sm text-gray-400">Brak dostępnych tabliczek (wszystkie przypisane)</p>
           ) : (
             <PlatesPicker plates={plates} />
           )}

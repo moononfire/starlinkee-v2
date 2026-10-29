@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getPortalSession } from "@/lib/portal-session";
 import { getAllReviewsBySubscription } from "@/lib/db/portal";
 import { getPlatesBySubscriptionId } from "@/lib/db/plates";
-import { getLanguage } from "@/lib/language";
+import { getPortalLanguage } from "@/lib/portal-language";
 import DashboardAnalytics from "../DashboardAnalytics";
 
 interface Props {
@@ -21,7 +21,7 @@ export default async function AnalyticsPage({ params, searchParams }: Props) {
   const sub = subscriptions.find((s) => s.subscription_id === subscriptionId);
   if (!sub || sub.status !== "active") notFound();
 
-  const lang = await getLanguage();
+  const lang = await getPortalLanguage();
   const allReviews = await getAllReviewsBySubscription(subscriptionId);
   const plates = await getPlatesBySubscriptionId(subscriptionId);
   const { stars, scrollTo } = await searchParams;

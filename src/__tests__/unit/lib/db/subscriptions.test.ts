@@ -6,7 +6,7 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => supabaseMock,
 }));
 
-import { getSubscriptionById, setSubscriptionActive, createSubscription, listSubscriptions } from "@/lib/db/subscriptions";
+import { getSubscriptionById, setSubscriptionActive, setSubscriptionStripeId, createSubscription, listSubscriptions } from "@/lib/db/subscriptions";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -191,5 +191,16 @@ describe("listSubscriptions()", () => {
   it("throws when the plates lookup fails", async () => {
     setup({ platesError: { message: "boom" } });
     await expect(listSubscriptions("jan")).rejects.toThrow("Failed to list subscriptions");
+  });
+});
+
+describe("setSubscriptionStripeId()", () => {
+  it("clears cancel_at_period_end together with the switch to a new Stripe subscription", async () => {
+    const eq = vi.fn().mockResolvedValue({ error: null });
+    const update = vi.fn(() => ({ eq }));
+    supabaseMock.from.mockReturnValue({ update });
+    await setSubscriptionStripeId(50, "sub_new");
+    expect(update).toHaveBeenCalledWith({ stripe_subscription_id: "sub_new", cancel_at_period_end: false });
+    expect(eq).toHaveBeenCalledWith("subscription_id", 50);
   });
 });

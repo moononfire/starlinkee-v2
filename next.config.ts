@@ -12,6 +12,9 @@ const baseHeaders = [
 const DEMO_EMBEDDERS = "'self' https://starlinkee.com https://www.starlinkee.com";
 
 const nextConfig: NextConfig = {
+  // The local e2e script sets this so its dev server doesn't collide with a dev server
+  // already running on .next (Next allows one per dist dir).
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   async headers() {
     return [
       { source: "/:path*", headers: baseHeaders },

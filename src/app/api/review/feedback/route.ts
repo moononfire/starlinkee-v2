@@ -6,18 +6,21 @@ import { getSubscriptionById } from "@/lib/db/subscriptions";
 import { getCustomerById } from "@/lib/db/customers";
 import { sendFeedbackNotification } from "@/lib/email";
 import { insertMessage } from "@/lib/db/review-messages";
+import { guestLanguage, ownerLanguage } from "@/lib/languages";
 import { broadcastToChannel } from "@/lib/realtime/broadcast";
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { scanId, feedback_message, user_name, contact_email, contact_phone } = body;
+  const body = await request.json().catch(() => null);
+  const { scanId, feedback_message, user_name, contact_email, contact_phone, language } = body ?? {};
 
-  if (!scanId || !feedback_message?.trim() || !contact_email?.trim()) {
+  if (!scanId || typeof feedback_message !== "string" || !feedback_message.trim() || typeof contact_email !== "string" || !contact_email.trim()) {
     return NextResponse.json({ error: "Invalid input: missing email or message" }, { status: 400 });
   }
 
   try {
-    const saved = await updateFeedback(scanId, { feedback_message, user_name, contact_email, contact_phone });
+    // Only a supported language is stored; anything else stays NULL and the reply falls back to the plate's language.
+    const guest_language = typeof language === "string" && guestLanguage(language) === language ? language : undefined;
+    const saved = await updateFeedback(scanId, { feedback_message, user_name, contact_email, contact_phone, guest_language });
     if (!saved) {
       return NextResponse.json({ error: "Feedback already submitted" }, { status: 409 });
     }
@@ -49,15 +52,10 @@ async function seedThread(scanId: string, message: string) {
     created_at: created.created_at,
   });
 
-  const supabase = (await import("@/lib/supabase/admin")).createAdminClient();
-  const { data: plate } = await supabase
-    .from("plates")
-    .select("subscription_id")
-    .eq("plate_id", review.plate_id)
-    .single();
-  if (!plate?.subscription_id) return;
+  // The thread belongs to the subscription the review was created under, not to the plate's current one.
+  if (!review.subscription_id) return;
 
-  await broadcastToChannel(`review-portal:${plate.subscription_id}`, "thread_updated", {
+  await broadcastToChannel(`review-portal:${review.subscription_id}`, "thread_updated", {
     review_id: review.review_id,
     last_message_at: created.created_at,
     last_message_sender: created.sender,
@@ -81,7 +79,7 @@ async function sendNotification(
   const supabase = (await import("@/lib/supabase/admin")).createAdminClient();
   const { data: plate, error: plateError } = await supabase
     .from("plates")
-    .select("plate_number, subscription_id")
+    .select("plate_number, plate_language, subscription_id")
     .eq("plate_id", review.plate_id)
     .single();
 
@@ -89,14 +87,16 @@ async function sendNotification(
     console.error("[sendNotification] PRZERWANO: Błąd pobierania płytki:", plateError);
     return;
   }
-  if (!plate?.subscription_id) {
-    console.log("[sendNotification] PRZERWANO: Płytka nie ma przypisanej subskrypcji.");
+  // The owner is the subscription the review was created under (F12); an older row without one falls back to the plate.
+  const subscriptionId = review.subscription_id ?? plate?.subscription_id;
+  if (!subscriptionId) {
+    console.log("[sendNotification] PRZERWANO: Opinia nie ma przypisanej subskrypcji.");
     return;
   }
 
-  const location = await getLocationBySubscriptionId(plate.subscription_id);
+  const location = await getLocationBySubscriptionId(subscriptionId);
   if (!location) {
-    console.log("[sendNotification] PRZERWANO: Nie znaleziono lokalizacji dla subskrypcji:", plate.subscription_id);
+    console.log("[sendNotification] PRZERWANO: Nie znaleziono lokalizacji dla subskrypcji:", subscriptionId);
     return;
   }
   if (!location.support_email) {
@@ -104,17 +104,17 @@ async function sendNotification(
     return;
   }
 
-  const subscription = await getSubscriptionById(plate.subscription_id);
+  const subscription = await getSubscriptionById(subscriptionId);
   const customer = subscription ? await getCustomerById(subscription.customer_id) : null;
 
   console.log(`[sendNotification] Znalazłem support_email: ${location.support_email}. Wywołuję sendFeedbackNotification...`);
-  await sendFeedbackNotification(location.support_email, customer?.preferred_language ?? "en", {
+  await sendFeedbackNotification(location.support_email, ownerLanguage(customer, plate), {
     locationName: location.location_name,
     rating: review.rating ?? 0,
     message,
     userName,
     contactEmail,
     contactPhone,
-    subscriptionId: plate.subscription_id,
+    subscriptionId,
   });
 }

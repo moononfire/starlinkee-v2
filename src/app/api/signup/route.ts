@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkWwwKey } from "@/lib/www-auth";
+import { SUPPORTED_LANGUAGES } from "@/lib/languages";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { upsertCustomerByEmail } from "@/lib/db/customers";
 import { getCustomerByEmail } from "@/lib/db/portal";
@@ -8,7 +9,7 @@ import { isEmailExistsError } from "@/lib/services/portal-account";
 import { clientIp } from "@/lib/rate-limit";
 import { rateLimitPersistent } from "@/lib/rate-limit-persistent";
 
-const ALLOWED_LANGUAGES = ["en", "de", "pl"] as const;
+const ALLOWED_LANGUAGES = SUPPORTED_LANGUAGES;
 
 function appUrl(): string {
   return (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.starlinkee.com").replace(/\/$/, "");

@@ -6,6 +6,7 @@ import { subscribeToPortalChannel } from "@/lib/supabase/realtime";
 import type { ReviewThreadSummary } from "@/lib/db/review-messages";
 import type { SmsQuota } from "@/lib/sms-quota";
 import MessageThread from "./MessageThread";
+import { dateLocale } from "@/lib/languages";
 
 interface Props {
   subscriptionId: number;
@@ -15,10 +16,8 @@ interface Props {
   lang: string;
 }
 
-const DATE_LOCALES: Record<string, string> = { en: "en-US", de: "de-DE", pl: "pl-PL" };
-
 function formatTime(iso: string, lang: string): string {
-  const locale = DATE_LOCALES[lang] ?? "en-US";
+  const locale = dateLocale(lang);
   return new Date(iso).toLocaleString(locale, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 

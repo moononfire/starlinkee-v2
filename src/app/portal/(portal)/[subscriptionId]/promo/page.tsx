@@ -5,7 +5,7 @@ import { updatePromoSettings, updatePromoEnabled } from "./actions";
 import PromoPreviewEditor from "./PromoPreviewEditor";
 import PromoContactsTable from "./PromoContactsTable";
 import SavableForm from "../../SavableForm";
-import { getLanguage } from "@/lib/language";
+import { getPortalLanguage } from "@/lib/portal-language";
 import { t } from "@/lib/translations";
 import {
   AutoSaveToggle,
@@ -31,7 +31,7 @@ export default async function PromoPortalPage({ params }: Props) {
     redirect(`/portal/${subscriptionId}`);
   }
 
-  const lang = await getLanguage();
+  const lang = await getPortalLanguage();
   const location = sub.location;
   const leads = await getLeadsByLocationId(location.location_id);
   const locationName = location.location_name;

@@ -1,3 +1,5 @@
+import { isLocationActive } from "@/lib/location-access";
+import LocationInactive from "@/components/linktree/LocationInactive";
 import { notFound } from "next/navigation";
 import { getLeadByToken } from "@/lib/db/leads";
 import { getLocationBySlug } from "@/lib/db/locations";
@@ -22,6 +24,7 @@ export default async function ClaimPage({ params }: Props) {
 
   const location = await getLocationBySlug(slug);
   if (!location) notFound();
+  if (!(await isLocationActive(location))) return <LocationInactive location={location} slug={slug} />;
 
   const plates = await getPlatesBySubscriptionId(location.subscription_id);
   const plateLanguage = firstPlateLanguage(plates);

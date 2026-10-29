@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { insertMessage, listThreadsBySubscriptionId, markOwnerRead } from "@/lib/db/review-messages";
 import { broadcastToChannel } from "@/lib/realtime/broadcast";
 import { sendReplyNotification } from "@/lib/email";
+import { guestLanguage } from "@/lib/languages";
 import { sendSms } from "@/lib/sms";
 import { consumeSmsCredit } from "@/lib/sms-quota";
 
@@ -24,8 +25,9 @@ export async function POST(request: NextRequest) {
   const { customer, subscriptions } = await getPortalSession();
   if (!customer) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { reviewId, body } = await request.json();
-  if (!reviewId || !body?.trim()) {
+  const parsed = await request.json().catch(() => null);
+  const { reviewId, body } = parsed ?? {};
+  if (!reviewId || typeof body !== "string" || !body.trim()) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 
@@ -50,7 +52,8 @@ export async function POST(request: NextRequest) {
   let smsQuotaExceeded = false;
 
   if (review.contact_email) {
-    await sendReplyNotification(review.contact_email, customer.preferred_language, {
+    // The reporter is a guest: write in the language they used, else the plate's, never the owner's.
+    await sendReplyNotification(review.contact_email, guestLanguage(review.guest_language, { plate_language: review.plate_language }), {
       locationName: review.location_name ?? "",
       message: created.body,
       scanUrl: buildScanUrl(review.plate_number, review.scan_id),
@@ -74,7 +77,8 @@ export async function PATCH(request: NextRequest) {
   const { customer, subscriptions } = await getPortalSession();
   if (!customer) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { reviewId } = await request.json();
+  const parsed = await request.json().catch(() => null);
+  const { reviewId } = parsed ?? {};
   if (!reviewId) return NextResponse.json({ error: "Missing reviewId" }, { status: 400 });
 
   const review = await getReviewForOwner(reviewId, subscriptions.map((s) => s.subscription_id));
@@ -87,27 +91,28 @@ export async function PATCH(request: NextRequest) {
 interface OwnerReviewRow {
   review_id: number;
   scan_id: string;
+  subscription_id: number | null;
+  guest_language: string | null;
   contact_email: string | null;
   contact_phone: string | null;
-  plates: {
-    plate_number: string;
-    subscription_id: number;
-    subscriptions: { customer_locations: { location_name: string }[] | null } | null;
-  } | null;
+  plates: { plate_number: string; plate_language: string } | null;
+  subscriptions: { customer_locations: { location_name: string }[] | null } | null;
 }
 
+// The owner of a thread is the subscription the review was created under (reviews.subscription_id),
+// not whoever holds the plate today (F12).
 async function getReviewForOwner(reviewId: number, ownedSubscriptionIds: number[]) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("reviews")
     .select(
-      "review_id, scan_id, contact_email, contact_phone, plates!inner(plate_number, subscription_id, subscriptions(customer_locations(location_name)))"
+      "review_id, scan_id, subscription_id, guest_language, contact_email, contact_phone, plates!inner(plate_number, plate_language), subscriptions(customer_locations(location_name))"
     )
     .eq("review_id", reviewId)
     .returns<OwnerReviewRow[]>()
     .single();
 
-  if (!data?.plates?.subscription_id || !ownedSubscriptionIds.includes(data.plates.subscription_id)) {
+  if (!data?.subscription_id || !ownedSubscriptionIds.includes(data.subscription_id) || !data.plates) {
     return null;
   }
 
@@ -116,9 +121,11 @@ async function getReviewForOwner(reviewId: number, ownedSubscriptionIds: number[
     scan_id: data.scan_id,
     contact_email: data.contact_email,
     contact_phone: data.contact_phone,
-    subscription_id: data.plates.subscription_id,
+    subscription_id: data.subscription_id,
     plate_number: data.plates.plate_number,
-    location_name: data.plates.subscriptions?.customer_locations?.[0]?.location_name ?? null,
+    plate_language: data.plates.plate_language,
+    guest_language: data.guest_language,
+    location_name: data.subscriptions?.customer_locations?.[0]?.location_name ?? null,
   };
 }
 

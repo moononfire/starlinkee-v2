@@ -1,3 +1,4 @@
+import { ownerLanguage } from "@/lib/languages";
 import { NextRequest, NextResponse } from "next/server";
 import { getPortalSession } from "@/lib/portal-session";
 import { getPlatesBySubscriptionId } from "@/lib/db/plates";
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
       subscriptionId,
       plateNumber: plates[0]?.plate_number ?? "",
       returnUrl: `${appUrl}/portal/${subscriptionId}`,
-      lang: customer.preferred_language,
+      lang: ownerLanguage(customer, plates[0]),
       interval,
     });
     return NextResponse.redirect(checkoutUrl, 303);

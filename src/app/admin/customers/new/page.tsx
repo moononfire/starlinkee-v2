@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { assertAdmin } from "@/lib/api-auth";
 import { createCustomer } from "@/lib/db/customers";
 import { sendCustomerRegistration } from "@/lib/email";
+import type { Language } from "@/lib/languages";
 
 async function createCustomerAction(formData: FormData) {
   "use server";
@@ -15,7 +16,7 @@ async function createCustomerAction(formData: FormData) {
   const phone = formData.get("phone") as string | null;
   const billingAddress = formData.get("billing_address") as string | null;
   const country = formData.get("country") as string | null;
-  const preferredLanguage = formData.get("preferred_language") as "en" | "de" | "pl";
+  const preferredLanguage = formData.get("preferred_language") as Language;
 
   const customer = await createCustomer({
     customer_name: customerName,
@@ -92,6 +93,7 @@ export default function NewCustomerPage() {
               <option value="en">EN</option>
               <option value="de">DE</option>
               <option value="pl">PL</option>
+              <option value="it">IT</option>
             </select>
           </div>
         </div>

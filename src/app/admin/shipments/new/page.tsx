@@ -100,7 +100,7 @@ export default async function NewShipmentPage() {
               />
             </div>
             <div>
-              <label className={labelClass}>Liczba płytek</label>
+              <label className={labelClass}>Liczba tabliczek</label>
               <input
                 name="number_of_plates"
                 type="number"

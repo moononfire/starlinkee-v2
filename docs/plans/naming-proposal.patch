@@ -1,0 +1,347 @@
+diff --git a/e2e/plate-scan.spec.ts b/e2e/plate-scan.spec.ts
+index 1fb5148..5540190 100644
+--- a/e2e/plate-scan.spec.ts
++++ b/e2e/plate-scan.spec.ts
+@@ -123,8 +123,8 @@ test.describe('Languages', () => {
+ test.describe('Pending plate (setup)', () => {
+   test('shows PlateSetupForm', async ({ page }) => {
+     await page.goto('/plate/PENDNG/testsecretpending');
+-    await expect(page.getByRole('heading', { name: 'Skonfiguruj swoją płytkę' })).toBeVisible();
+-    await expect(page.getByRole('button', { name: 'Aktywuj płytkę' })).toBeVisible();
++    await expect(page.getByRole('heading', { name: 'Skonfiguruj swoją tabliczkę' })).toBeVisible();
++    await expect(page.getByRole('button', { name: 'Aktywuj tabliczkę' })).toBeVisible();
+   });
+ });
+ 
+diff --git a/src/app/portal/(portal)/[subscriptionId]/SidebarLogoPlaceholder.tsx b/src/app/portal/(portal)/[subscriptionId]/SidebarLogoPlaceholder.tsx
+index c43bd02..39fb5bc 100644
+--- a/src/app/portal/(portal)/[subscriptionId]/SidebarLogoPlaceholder.tsx
++++ b/src/app/portal/(portal)/[subscriptionId]/SidebarLogoPlaceholder.tsx
+@@ -25,7 +25,7 @@ export default function SidebarLogoPlaceholder({ subscriptionId, lang }: Props)
+ 
+       {/* Tooltip */}
+       <div className="absolute top-full mt-2 w-48 p-2.5 bg-gray-900 dark:bg-gray-700 text-white text-[11px] font-medium text-center rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 shadow-xl pointer-events-none left-1/2 -translate-x-1/2">
+-        Dodaj logo swojego lokalu, aby klienci widzieli je po zeskanowaniu płytki.
++        Dodaj logo swojego lokalu, aby klienci widzieli je po zeskanowaniu tabliczki.
+         <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-gray-900 dark:bg-gray-700 rotate-45"></div>
+       </div>
+     </div>
+diff --git a/src/lib/email.ts b/src/lib/email.ts
+index 2a31a5e..cd21a7a 100644
+--- a/src/lib/email.ts
++++ b/src/lib/email.ts
+@@ -112,43 +112,43 @@ const strings = {
+     orderSubject: (id: number) => `Bestellung bestätigt — #${id}`,
+     orderGreeting: (name: string) => `Hallo ${name},`,
+     orderBody: () =>
+-      "Vielen Dank für Ihre Bestellung! Wir werden sie in Kürze bearbeiten und Ihre Starlinkee-Platte(n) an Ihre Adresse versenden.",
++      "Vielen Dank für Ihre Bestellung! Wir werden sie in Kürze bearbeiten und Ihre Starlinkee-Aufsteller an Ihre Adresse versenden.",
+     orderNumberLabel: "Bestellnummer",
+     orderQuestions: "Bei Fragen antworten Sie einfach auf diese E-Mail.",
+ 
+-    setupSubject: "Ihre Starlinkee-Platte ist jetzt aktiv",
++    setupSubject: "Ihr Starlinkee-Aufsteller ist jetzt aktiv",
+     setupGreeting: "Hallo,",
+     setupBody: (name: string) =>
+-      `Ihre Starlinkee-Platte für <strong>${name}</strong> wurde erfolgreich eingerichtet und ist jetzt aktiv.`,
++      `Ihr Starlinkee-Aufsteller für <strong>${name}</strong> wurde erfolgreich eingerichtet und ist jetzt aktiv.`,
+     setupBody2:
+-      "Gäste können jetzt Ihre Platte scannen und direkt Bewertungen hinterlassen.",
++      "Gäste können jetzt Ihren Aufsteller scannen und direkt Bewertungen hinterlassen.",
+     setupFooter: "Vielen Dank, dass Sie Starlinkee nutzen.",
+ 
+     renewalSubject: "Ihr Starlinkee-Abonnement wurde verlängert",
+     renewalGreeting: "Hallo,",
+     renewalBody: (plateNumber: string) =>
+-      `Ihr Abonnement für Platte <strong>${plateNumber}</strong> wurde erfolgreich verlängert. Vielen Dank für Ihre Zahlung.`,
++      `Ihr Abonnement für Aufsteller <strong>${plateNumber}</strong> wurde erfolgreich verlängert. Vielen Dank für Ihre Zahlung.`,
+     renewalFooter: "Vielen Dank, dass Sie Starlinkee nutzen.",
+   },
+   pl: {
+     orderSubject: (id: number) => `Zamówienie potwierdzone — #${id}`,
+     orderGreeting: (name: string) => `Cześć ${name},`,
+     orderBody: () =>
+-      "Dziękujemy za zamówienie! Wkrótce je zrealizujemy i wyślemy Twoje płytki Starlinkee na podany adres.",
++      "Dziękujemy za zamówienie! Wkrótce je zrealizujemy i wyślemy Twoje tabliczki Starlinkee na podany adres.",
+     orderNumberLabel: "Numer zamówienia",
+     orderQuestions: "W razie pytań odpowiedz na tę wiadomość.",
+ 
+-    setupSubject: "Twoja płytka Starlinkee jest już aktywna",
++    setupSubject: "Twoja tabliczka Starlinkee jest już aktywna",
+     setupGreeting: "Cześć,",
+     setupBody: (name: string) =>
+-      `Twoja płytka Starlinkee dla <strong>${name}</strong> została pomyślnie skonfigurowana i jest już aktywna.`,
+-    setupBody2: "Goście mogą teraz skanować Twoją płytkę i zostawiać opinie.",
++      `Twoja tabliczka Starlinkee dla <strong>${name}</strong> została pomyślnie skonfigurowana i jest już aktywna.`,
++    setupBody2: "Goście mogą teraz skanować Twoją tabliczkę i zostawiać opinie.",
+     setupFooter: "Dziękujemy za korzystanie z Starlinkee.",
+ 
+     renewalSubject: "Twoja subskrypcja Starlinkee została odnowiona",
+     renewalGreeting: "Cześć,",
+     renewalBody: (plateNumber: string) =>
+-      `Twoja subskrypcja dla płytki <strong>${plateNumber}</strong> została pomyślnie odnowiona. Dziękujemy za płatność.`,
++      `Twoja subskrypcja dla tabliczki <strong>${plateNumber}</strong> została pomyślnie odnowiona. Dziękujemy za płatność.`,
+     renewalFooter: "Dziękujemy za korzystanie z Starlinkee.",
+   },
+ } satisfies Record<Lang, object>;
+@@ -636,11 +636,11 @@ const activationStrings = {
+   },
+   de: {
+     subject: "Ihr Starlinkee-Aktivierungscode",
+-    title: "Starlinkee-Schild aktivieren",
+-    body: "Ihr Starlinkee-Schild wurde Ihrem Konto zugeordnet. Scannen Sie zur Einrichtung das Schild und geben Sie bei Aufforderung diesen Aktivierungscode ein:",
+-    plates: "Schild(er)",
++    title: "Starlinkee-Aufsteller aktivieren",
++    body: "Ihr Starlinkee-Aufsteller wurde Ihrem Konto zugeordnet. Scannen Sie zur Einrichtung den Aufsteller und geben Sie bei Aufforderung diesen Aktivierungscode ein:",
++    plates: "Aufsteller",
+     codeLabel: "Aktivierungscode",
+-    footer: "Halten Sie diesen Code geheim. Wenn Sie kein Starlinkee-Schild bestellt haben, ignorieren Sie diese E-Mail.",
++    footer: "Halten Sie diesen Code geheim. Wenn Sie keinen Starlinkee-Aufsteller bestellt haben, ignorieren Sie diese E-Mail.",
+   },
+   pl: {
+     subject: "Twój kod aktywacyjny Starlinkee",
+diff --git a/src/lib/translations.json b/src/lib/translations.json
+index f8c32a9..c21cc56 100644
+--- a/src/lib/translations.json
++++ b/src/lib/translations.json
+@@ -508,7 +508,7 @@
+     "invalid_plate_secret_message": "Der Plate-Schlüssel ist ungültig.",
+     "plate_already_scanned_title": "Plate bereits gescannt",
+     "plate_already_scanned_message": "Die Plate, die Sie scannen möchten, wurde bereits gescannt.",
+-    "plate_already_scanned_message_detailed": "Diese Bewertungsplatte wurde bereits auf diesem Gerät gescannt. Jede Platte kann nur einmal pro Gerät gescannt werden, um präzise Feedback-Statistiken zu erstellen.",
++    "plate_already_scanned_message_detailed": "Dieser Bewertungsaufsteller wurde bereits auf diesem Gerät gescannt. Jeder Aufsteller kann nur einmal pro Gerät gescannt werden, um präzise Feedback-Statistiken zu erstellen.",
+     "email_registration_subject": "Willkommen bei Starlinkee.com!",
+     "subscription_report_title": "Ihr Starlinkee-Abonnement Fortschrittsbericht",
+     "subscription_details_header": "Abonnement-Details:",
+@@ -533,20 +533,20 @@
+     "subscription_report": "Sehr geehrte(r) {CUSTOMER_NAME},\n\nHier ist Ihr Abonnement-Bericht:\n\n{SUBSCRIPTION_DETAILS}\n\nBei Fragen kontaktieren Sie bitte unser Support-Team.\n\nMit freundlichen Grüßen,\nIhr Service-Team",
+     "setup_form_title": "Richten Sie Ihre Plate ein",
+     "setup_form_business_name": "Firmenname",
+-    "setup_form_business_name_hint": "So wird Ihr Unternehmensname angezeigt, wenn Kunden Ihre Platte scannen.",
++    "setup_form_business_name_hint": "So wird Ihr Unternehmensname angezeigt, wenn Kunden Ihren Aufsteller scannen.",
+     "setup_form_google_search": "Finden Sie Ihr Unternehmen auf Google",
+     "setup_form_google_search_hint": "Geben Sie Ihren Unternehmensnamen oder Ihre Adresse ein — wählen Sie aus den Vorschlägen, um Ihr Google Maps-Profil zu verknüpfen.",
+     "setup_form_google_selected": "Ausgewähltes Unternehmen",
+     "setup_form_support_email": "Support-E-Mail",
+     "setup_form_support_email_hint": "Wenn ein Kunde unzufrieden ist und eine Beschwerde einreicht, erhalten Sie eine Benachrichtigung an diese Adresse.",
+     "setup_form_logo": "Logo",
+-    "setup_form_logo_hint": "Ihr Logo wird über Ihrem Unternehmensnamen angezeigt, wenn Kunden die Platte scannen.",
++    "setup_form_logo_hint": "Ihr Logo wird über Ihrem Unternehmensnamen angezeigt, wenn Kunden den Aufsteller scannen.",
+     "setup_form_choose_file": "Datei auswählen",
+     "setup_form_no_file": "Keine Datei ausgewählt",
+     "setup_form_submitting": "Einrichtung läuft...",
+     "setup_form_submit": "Plate aktivieren",
+     "setup_plate_title": "Plate Einrichten",
+-    "setup_plate_header": "Richten Sie Ihre Platten Ein",
++    "setup_plate_header": "Richten Sie Ihre Aufsteller ein",
+     "setup_plate_instructions": "Auf dieser Seite können Sie Ihre Plate mit Ihren Unternehmensinformationen konfigurieren. Füllen Sie das Formular unten aus, um die Einrichtung Ihrer Plate abzuschließen.",
+     "business_name_label": "Unternehmensname",
+     "business_name_hint": "Geben Sie den Namen Ihres Unternehmens ein, wie er für Kunden angezeigt werden soll.",
+@@ -577,7 +577,7 @@
+     "invalid_plate_secret_exception": "Ungültiger Kennzeichenschlüssel.",
+     "plate_processing_failed_exception": "Verarbeitung des Kennzeichens fehlgeschlagen.",
+     "subscription_not_found": "Keine Abonnement für dieses Kennzeichen gefunden.",
+-    "plate_renew_description": "Verlängern Sie das Abonnement, und das Schild sammelt wieder Bewertungen. Das dauert nur einen Moment.",
++    "plate_renew_description": "Verlängern Sie das Abonnement, und der Aufsteller sammelt wieder Bewertungen. Das dauert nur einen Moment.",
+     "plate_renew_button_monthly": "Für einen Monat verlängern",
+     "plate_renew_button_yearly": "Für ein Jahr verlängern",
+     "location_not_found_exception": "Standort nicht gefunden.",
+@@ -590,12 +590,12 @@
+     "your_promo_coupon": "Ihr Promo-Gutschein",
+     "verify_coupon_title": "Code-Verifizierung",
+     "enter_coupon_status": "Geben Sie den Promo- oder Treueprämiencode ein, um den Status zu überprüfen.",
+-    "scan_nfc_for_promo": "Scannen Sie die NFC-Platte, um die Promotion abzuholen.",
++    "scan_nfc_for_promo": "Scannen Sie den NFC-Aufsteller, um die Promotion abzuholen.",
+     "email_optional_placeholder": "E-Mail (optional)",
+     "consent_text": "Ich stimme der Verarbeitung personenbezogener Daten zu Marketingzwecken zu.",
+     "consent_required": "Dieses Feld ist erforderlich.",
+     "phone_already_claimed": "Diese Telefonnummer hat diese Promotion bereits eingelöst.",
+-    "link_expired": "Link abgelaufen. Scannen Sie die Platte erneut.",
++    "link_expired": "Link abgelaufen. Scannen Sie den Aufsteller erneut.",
+     "something_went_wrong": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+     "promo_sent_sms": "Der Promotion-Link wurde per SMS gesendet!",
+     "check_messages": "Überprüfen Sie Ihre Nachrichten.",
+@@ -715,7 +715,7 @@
+     "portal_review_visits": "Aufrufe der Bewertungsseite",
+     "portal_review_visit_suffix": "Bewertungsaufrufe",
+     "portal_subscription_inactive_title": "Abonnement inaktiv",
+-    "portal_subscription_inactive_message": "Das Abonnement ist abgelaufen oder die letzte Zahlung ist fehlgeschlagen. Die Schilder dieses Lokals sind vorerst ausgeschaltet, deshalb können Gäste sie nicht scannen.",
++    "portal_subscription_inactive_message": "Das Abonnement ist abgelaufen oder die letzte Zahlung ist fehlgeschlagen. Die Aufsteller dieses Lokals sind vorerst ausgeschaltet, deshalb können Gäste sie nicht scannen.",
+     "portal_contact_to_renew": "Schreiben Sie uns, wir helfen Ihnen bei der Verlängerung:",
+     "portal_data_preserved": "Die Standortdaten bleiben erhalten und werden nach der Verlängerung des Abonnements wiederhergestellt.",
+     "portal_google_reviews": "Google-Bewertungen",
+@@ -891,10 +891,10 @@
+     "portal_loyalty_total_stamps": "Gesammelte Stempel",
+     "email_required_input": "E-Mail (erforderlich)",
+     "setup_form_activation_code": "Aktivierungscode",
+-    "setup_form_activation_code_hint": "Der Code aus der E-Mail, die wir Ihnen bei der Zuordnung Ihres Schilds zu Ihrem Konto geschickt haben.",
++    "setup_form_activation_code_hint": "Der Code aus der E-Mail, die wir Ihnen bei der Zuordnung Ihres Aufstellers zu Ihrem Konto geschickt haben.",
+     "portal_password_current": "Aktuelles Passwort",
+     "portal_password_wrong_current": "Das aktuelle Passwort ist falsch.",
+-    "plate_unavailable_title": "Dieses Schild ist vorübergehend nicht verfügbar",
++    "plate_unavailable_title": "Dieser Aufsteller ist vorübergehend nicht verfügbar",
+     "plate_unavailable_message": "Bitte versuchen Sie es später noch einmal.",
+     "prefer_google_review_link": "Lieber eine Bewertung bei Google hinterlassen?"
+   },
+@@ -934,8 +934,8 @@
+     "admin_added_message": "Administrator został dodany.",
+     "admin_add_failed_title": "Nie udało się dodać administratora",
+     "admin_add_failed_message": "Wystąpił błąd podczas dodawania administratora. Spróbuj ponownie później.",
+-    "plate_setup_success_title": "Płytka została pomyślnie skonfigurowana",
+-    "plate_setup_success_message": "Płytka została skonfigurowana. Potwierdzenie otrzymasz emailem.",
++    "plate_setup_success_title": "Tabliczka została pomyślnie skonfigurowana",
++    "plate_setup_success_message": "Tabliczka została skonfigurowana. Potwierdzenie otrzymasz emailem.",
+     "plate_setup_failed_title": "Konfiguracja Plate nie powiodła się",
+     "plate_setup_failed_message": "Wystąpił błąd podczas konfiguracji Plate. Spróbuj ponownie później.",
+     "order_added_title": "Zamówienie zostało pomyślnie dodane!",
+@@ -965,38 +965,38 @@
+     "subscription_start_date": "Data rozpoczęcia",
+     "subscription_end_date": "Data zakończenia",
+     "subscription_status": "Status",
+-    "registered_plates_header": "Zarejestrowane tablice:",
++    "registered_plates_header": "Zarejestrowane tabliczki:",
+     "plate_reviews": "Recenzje",
+     "plate_avg_rating": "Średnia ocena",
+     "subscription_number": "Subskrypcja #",
+-    "plate_added_success": "Tablica została pomyślnie dodana.",
+-    "plate_add_failed": "Nie udało się dodać tablicy.",
++    "plate_added_success": "Tabliczka została pomyślnie dodana.",
++    "plate_add_failed": "Nie udało się dodać tabliczki.",
+     "invalid_request_method": "Nieprawidłowa metoda żądania.",
+-    "plates_import_success": "Tablice zostały pomyślnie zaimportowane.",
+-    "plates_import_failed": "Nie udało się zaimportować tablic.",
++    "plates_import_success": "Tabliczki zostały pomyślnie zaimportowane.",
++    "plates_import_failed": "Nie udało się zaimportować tabliczek.",
+     "file_missing": "Nie przesłano żadnego pliku.",
+-    "invalid_plate_secret": "Nieprawidłowy klucz tablicy.",
+-    "plate_processing_failed": "Nie udało się przetworzyć tablicy.",
+-    "plate_setup_success": "Konfiguracja tablicy zakończona pomyślnie.",
+-    "plate_setup_failed": "Nie udało się zakończyć konfiguracji tablicy.",
+-    "plate_already_scanned": "Tablica, którą próbujesz zeskanować, została już zeskanowana.",
++    "invalid_plate_secret": "Nieprawidłowy klucz tabliczki.",
++    "plate_processing_failed": "Nie udało się przetworzyć tabliczki.",
++    "plate_setup_success": "Konfiguracja tabliczki zakończona pomyślnie.",
++    "plate_setup_failed": "Nie udało się zakończyć konfiguracji tabliczki.",
++    "plate_already_scanned": "Tabliczka, którą próbujesz zeskanować, została już zeskanowana.",
+     "subscription_report": "Szanowny(a) {CUSTOMER_NAME},\n\nOto raport Twojej subskrypcji:\n\n{SUBSCRIPTION_DETAILS}\n\nW przypadku pytań prosimy o kontakt z naszym zespołem wsparcia.\n\nPozdrawiamy,\nTwój Zespół Serwisowy",
+-    "setup_form_title": "Skonfiguruj swoją płytkę",
++    "setup_form_title": "Skonfiguruj swoją tabliczkę",
+     "setup_form_business_name": "Nazwa firmy",
+-    "setup_form_business_name_hint": "Tak będzie wyświetlać się nazwa Twojego lokalu kiedy klient zeskanuje płytkę.",
++    "setup_form_business_name_hint": "Tak będzie wyświetlać się nazwa Twojego lokalu kiedy klient zeskanuje tabliczkę.",
+     "setup_form_google_search": "Znajdź swoją firmę na Google",
+     "setup_form_google_search_hint": "Wpisz nazwę firmy lub adres — wybierz ją z listy, aby powiązać z profilem Google Maps.",
+     "setup_form_google_selected": "Wybrana firma",
+     "setup_form_support_email": "Email wsparcia",
+     "setup_form_support_email_hint": "Kiedy klient jest niezadowolony i zgłosi problem, dostaniesz powiadomienie na ten adres.",
+     "setup_form_logo": "Logo",
+-    "setup_form_logo_hint": "Logo wyświetla się nad nazwą Twojego lokalu gdy klient skanuje płytkę.",
++    "setup_form_logo_hint": "Logo wyświetla się nad nazwą Twojego lokalu gdy klient skanuje tabliczkę.",
+     "setup_form_choose_file": "Wybierz plik",
+     "setup_form_no_file": "Nie wybrano pliku",
+     "setup_form_submitting": "Konfigurowanie...",
+-    "setup_form_submit": "Aktywuj płytkę",
++    "setup_form_submit": "Aktywuj tabliczkę",
+     "setup_plate_title": "Konfiguracja Plate",
+-    "setup_plate_instructions": "Ta strona pozwala skonfigurować Twoją tablicę z informacjami o Twojej firmie. Wypełnij poniższy formularz, aby zakończyć konfigurację tablicy.",
++    "setup_plate_instructions": "Ta strona pozwala skonfigurować Twoją tabliczkę z informacjami o Twojej firmie. Wypełnij poniższy formularz, aby zakończyć konfigurację tabliczki.",
+     "business_name_label": "Nazwa firmy",
+     "business_name_hint": "Wprowadź nazwę swojej firmy tak, jak ma być widoczna dla klientów.",
+     "business_address_label": "Adres firmy w Google",
+@@ -1022,15 +1022,15 @@
+     "invalid_scan_id": "Podany identyfikator skanowania jest nieprawidłowy lub wygasł.",
+     "exception_message": "Wystąpił błąd podczas przetwarzania Twojego żądania. Spróbuj ponownie później.",
+     "technical_exception_message": "Błąd techniczny:",
+-    "plate_not_found_exception": "Nie znaleziono tablicy.",
+-    "invalid_plate_secret_exception": "Nieprawidłowy klucz tablicy.",
+-    "plate_processing_failed_exception": "Nie udało się przetworzyć tablicy.",
+-    "subscription_not_found": "Nie znaleziono subskrypcji dla tej tablicy.",
++    "plate_not_found_exception": "Nie znaleziono tabliczki.",
++    "invalid_plate_secret_exception": "Nieprawidłowy klucz tabliczki.",
++    "plate_processing_failed_exception": "Nie udało się przetworzyć tabliczki.",
++    "subscription_not_found": "Nie znaleziono subskrypcji dla tej tabliczki.",
+     "plate_renew_description": "Odnów subskrypcję, a tabliczka znów zacznie zbierać opinie. Zajmie to chwilę.",
+     "plate_renew_button_monthly": "Odnów na miesiąc",
+     "plate_renew_button_yearly": "Odnów na rok",
+     "location_not_found_exception": "Nie znaleziono lokalizacji.",
+-    "subscription_not_found_exception": "Nie znaleziono subskrypcji dla tej tablicy.",
++    "subscription_not_found_exception": "Nie znaleziono subskrypcji dla tej tabliczki.",
+     "leave_review": "Zostaw opinię",
+     "collect_promo_default": "Odbierz promocję",
+     "loyalty_card_link": "Karta lojalnościowa",
+@@ -1155,11 +1155,11 @@
+     "portal_status_active": "Aktywna",
+     "portal_status_pending": "Wymaga konfiguracji",
+     "portal_unassigned": "Nieprzypisana",
+-    "portal_plates": "Płytki",
++    "portal_plates": "Tabliczki",
+     "portal_scans": "Skanowania",
+     "portal_activation": "Aktywacja",
+     "portal_valid_until": "Ważna do",
+-    "portal_plate_numbers": "Numery płytek",
++    "portal_plate_numbers": "Numery tabliczek",
+     "portal_scan_suffix": "skan.",
+     "portal_review_visits": "Przejścia na stronę review",
+     "portal_review_visit_suffix": "wejść na review",
+@@ -1178,7 +1178,7 @@
+     "portal_recent_reviews": "Ostatnie opinie",
+     "portal_all_reviews": "Wszystkie opinie",
+     "portal_date": "Data",
+-    "portal_plate": "Płytka",
++    "portal_plate": "Tabliczka",
+     "portal_rating": "Ocena",
+     "portal_comment": "Komentarz",
+     "portal_open_in_messages": "Otwórz w Wiadomościach",
+@@ -1190,16 +1190,16 @@
+     "portal_password_too_short": "Hasło musi mieć co najmniej 8 znaków.",
+     "portal_password_failed": "Nie udało się zmienić hasła. Spróbuj ponownie.",
+     "portal_location_name_title": "Nazwa lokalu",
+-    "portal_location_name_desc": "Wyświetlana na stronie po skanowaniu płytki.",
++    "portal_location_name_desc": "Wyświetlana na stronie po skanowaniu tabliczki.",
+     "portal_save": "Zapisz",
+     "portal_google_maps_location_title": "Lokalizacja Google Maps",
+-    "portal_google_maps_location_desc": "Firma powiązana z płytką — zmiana aktualizuje link do opinii Google.",
++    "portal_google_maps_location_desc": "Firma powiązana z tabliczką — zmiana aktualizuje link do opinii Google.",
+     "portal_theme_title": "Wygląd",
+     "portal_theme_desc": "Wybierz jasny lub ciemny motyw portalu klienta.",
+     "portal_theme_light": "Jasny",
+     "portal_theme_dark": "Ciemny",
+     "portal_logo_title": "Logo firmy",
+-    "portal_logo_desc": "Wyświetlane na stronie po skanowaniu płytki.",
++    "portal_logo_desc": "Wyświetlane na stronie po skanowaniu tabliczki.",
+     "portal_support_email_title": "Adres e-mail pomocniczy",
+     "portal_support_email_desc": "Na ten adres trafią zgłoszenia od klientów, którzy skontaktują się z Tobą przez formularz przy niskiej ocenie.",
+     "portal_fixed_modules_title": "Moduły główne",
+@@ -1216,7 +1216,7 @@
+     "portal_active_languages_desc": "Wybierz, które języki są dostępne dla Twoich klientów. Tylko aktywne języki można wybrać na stronach publicznych i tylko dla nich pojawiają się poniżej pola do tłumaczenia.",
+     "portal_active_languages_min_one": "Przynajmniej jeden język musi zostać aktywny.",
+     "portal_scan_mode_title": "Tryb skanowania",
+-    "portal_scan_mode_desc": "Co widzi klient po zeskanowaniu płytki.",
++    "portal_scan_mode_desc": "Co widzi klient po zeskanowaniu tabliczki.",
+     "portal_scan_mode_review_title": "Bezpośrednio do opinii",
+     "portal_scan_mode_review_desc": "Klient od razu widzi stronę z oceną i może zostawić opinię Google.",
+     "portal_scan_mode_linktree_title": "Linktree",
+@@ -1226,18 +1226,18 @@
+     "portal_four_star_checkbox_label": "Ocena 4 gwiazdki też przekierowuje do opinii Google",
+     "portal_four_star_checkbox_desc": "Jeśli odznaczone, ocena 4 gwiazdki pokaże formularz opinii wewnętrznej zamiast przekierowania do Google.",
+     "portal_customer_preview_title": "Jak widzi to klient",
+-    "portal_simulate_scan_link": "Odwiedź swoją płytkę i zasymuluj skanowanie",
+-    "portal_simulate_scan_desc": "Otwiera prawdziwą stronę, którą widzi klient po zeskanowaniu Twojej płytki. Zostanie to zarejestrowane jako prawdziwe skanowanie.",
+-    "portal_simulate_scan_unavailable": "Do tego lokalu nie przypisano jeszcze żadnej płytki.",
++    "portal_simulate_scan_link": "Odwiedź swoją tabliczkę i zasymuluj skanowanie",
++    "portal_simulate_scan_desc": "Otwiera prawdziwą stronę, którą widzi klient po zeskanowaniu Twojej tabliczki. Zostanie to zarejestrowane jako prawdziwe skanowanie.",
++    "portal_simulate_scan_unavailable": "Do tego lokalu nie przypisano jeszcze żadnej tabliczki.",
+     "portal_setup_error_place": "Nie udało się wczytać danych firmy",
+     "portal_setup_select_place": "Wybierz firmę z listy Google Maps",
+     "portal_setup_generic_error": "Coś poszło nie tak",
+     "portal_setup_badge": "Skonfiguruj lokal",
+-    "portal_setup_intro": "Uzupełnij dane lokalu, aby aktywować płytki Starlinkee przypisane do tej subskrypcji.",
++    "portal_setup_intro": "Uzupełnij dane lokalu, aby aktywować tabliczki Starlinkee przypisane do tej subskrypcji.",
+     "portal_setup_location_name_label": "Nazwa lokalu *",
+     "portal_setup_location_name_desc": "Jak się nazywa Twój lokal lub firma?",
+     "portal_setup_google_maps_label": "Firma w Google Maps *",
+-    "portal_setup_google_maps_desc": "Wyszukaj swój lokal, aby połączyć płytkę z wizytówką Google.",
++    "portal_setup_google_maps_desc": "Wyszukaj swój lokal, aby połączyć tabliczkę z wizytówką Google.",
+     "portal_setup_search_placeholder": "Wpisz nazwę firmy lub adres...",
+     "portal_setup_loading_place": "Wczytywanie danych firmy...",
+     "portal_setup_support_email_label": "Adres e-mail pomocniczy *",

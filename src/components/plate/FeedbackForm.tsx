@@ -15,6 +15,8 @@ export default function FeedbackForm({ scanId, lang, googleReviewLink }: Props) 
   const googleLink = googleReviewLink && isSafeGoogleReviewUrl(googleReviewLink) ? googleReviewLink : null;
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [alreadySent, setAlreadySent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     postDemoStep("low_rating_feedback");
@@ -23,23 +25,36 @@ export default function FeedbackForm({ scanId, lang, googleReviewLink }: Props) 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
     const form = new FormData(e.currentTarget);
     const feedbackMessage = form.get("feedback_message") as string;
-    await fetch("/api/review/feedback", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        scanId,
-        feedback_message: feedbackMessage,
-        user_name: form.get("user_name") || undefined,
-        contact_email: form.get("contact_email") || undefined,
-        contact_phone: form.get("contact_phone") || undefined,
-      }),
-    });
-
-    setLoading(false);
-    setSubmitted(true);
+    try {
+      const res = await fetch("/api/review/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scanId,
+          feedback_message: feedbackMessage,
+          user_name: form.get("user_name") || undefined,
+          contact_email: form.get("contact_email") || undefined,
+          contact_phone: form.get("contact_phone") || undefined,
+          language: lang,
+        }),
+      });
+      // 409: feedback for this scan was already saved. Anything else that is not ok means it was NOT saved:
+      // keep the form (and the typed text) and say so instead of pretending it was sent.
+      if (res.ok || res.status === 409) {
+        setAlreadySent(res.status === 409);
+        setSubmitted(true);
+      } else {
+        setError(t("feedback_send_failed", lang));
+      }
+    } catch {
+      setError(t("feedback_send_failed", lang));
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (submitted) {
@@ -47,8 +62,14 @@ export default function FeedbackForm({ scanId, lang, googleReviewLink }: Props) 
       <div className="w-full flex flex-col items-center gap-4">
         <div className="text-center">
           <p className="text-lg font-semibold text-gray-800">{t("thank_you_short", lang)}</p>
-          <p className="text-gray-500 mt-1">{t("appreciate_feedback", lang)}</p>
-          <p className="text-gray-500 mt-1">{t("we_will_be_in_touch", lang)}</p>
+          {alreadySent ? (
+            <p className="text-gray-500 mt-1">{t("feedback_already_sent", lang)}</p>
+          ) : (
+            <>
+              <p className="text-gray-500 mt-1">{t("appreciate_feedback", lang)}</p>
+              <p className="text-gray-500 mt-1">{t("we_will_be_in_touch", lang)}</p>
+            </>
+          )}
         </div>
       </div>
     );
@@ -89,6 +110,12 @@ export default function FeedbackForm({ scanId, lang, googleReviewLink }: Props) 
         placeholder={t("phone_optional", lang)}
         className="w-full border border-gray-300 rounded-lg p-3 text-sm text-black bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400"
       />
+
+      {error && (
+        <p role="alert" className="text-center text-sm text-red-600">
+          {error}
+        </p>
+      )}
 
       <button
         type="submit"

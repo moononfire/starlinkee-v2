@@ -1,3 +1,4 @@
+import { isLocationActive, SUBSCRIPTION_INACTIVE } from "@/lib/location-access";
 import { NextRequest, NextResponse } from "next/server";
 import { getLocationBySlug } from "@/lib/db/locations";
 import { checkLeadExists, createLead, generateCouponCode } from "@/lib/db/leads";
@@ -40,6 +41,9 @@ export async function POST(request: NextRequest) {
   const location = await getLocationBySlug(slug);
   if (!location || !location.has_promo_enabled) {
     return NextResponse.json({ error: "Location not found" }, { status: 404 });
+  }
+  if (!(await isLocationActive(location))) {
+    return NextResponse.json(SUBSCRIPTION_INACTIVE, { status: 403 });
   }
 
   const scanResult = await validateScanToken(scanToken);

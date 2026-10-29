@@ -1,3 +1,5 @@
+import { isLocationActive } from "@/lib/location-access";
+import LocationInactive from "@/components/linktree/LocationInactive";
 import { notFound } from "next/navigation";
 import { getLocationBySlug, getLocationLinksByLocationId, incrementLinktreeVisits } from "@/lib/db/locations";
 import { getPlatesBySubscriptionId } from "@/lib/db/plates";
@@ -18,6 +20,7 @@ export default async function LinktreePage({ params, searchParams }: Props) {
 
   const location = await getLocationBySlug(slug);
   if (!location) notFound();
+  if (!(await isLocationActive(location))) return <LocationInactive location={location} slug={slug} />;
 
   const [links, plates] = await Promise.all([
     getLocationLinksByLocationId(location.location_id),

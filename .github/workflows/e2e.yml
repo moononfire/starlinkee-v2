@@ -15,7 +15,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -33,7 +33,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - uses: supabase/setup-cli@v1
@@ -41,7 +41,22 @@ jobs:
           version: 2.105.0
 
       - name: Start Supabase
-        run: supabase start
+        run: |
+          # Only what the app and e2e use (db, auth, rest, kong, storage-api: the logos bucket migration needs storage).
+          # Fewer images keeps the anonymous registry pull under the rate limit of shared runner IPs.
+          EXCLUDE=studio,imgproxy,edge-runtime,logflare,vector,mailpit,postgres-meta,supavisor,realtime
+          for attempt in 1 2 3; do
+            if supabase start -x "$EXCLUDE"; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "supabase start failed (attempt $attempt/3), retrying in $((attempt * 20))s"
+              supabase stop --no-backup || true
+              sleep $((attempt * 20))
+            fi
+          done
+          echo "supabase start failed after 3 attempts"
+          exit 1
 
       - name: Reset and seed database
         run: supabase db reset
@@ -49,12 +64,15 @@ jobs:
       - name: Export Supabase local keys
         run: |
           supabase status -o env > /tmp/supabase.env
+          # The API port comes from supabase/config.toml (56321), so read it back instead of hardcoding it.
+          API=$(grep '^API_URL=' /tmp/supabase.env | cut -d= -f2- | tr -d '"')
           ANON=$(grep '^ANON_KEY=' /tmp/supabase.env | cut -d= -f2- | tr -d '"')
           SRK=$(grep '^SERVICE_ROLE_KEY=' /tmp/supabase.env | cut -d= -f2- | tr -d '"')
-          echo "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321" >> $GITHUB_ENV
+          test -n "$API" -a -n "$ANON" -a -n "$SRK" || { echo "supabase status did not return API_URL/ANON_KEY/SERVICE_ROLE_KEY"; exit 1; }
+          echo "NEXT_PUBLIC_SUPABASE_URL=$API" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON" >> $GITHUB_ENV
           echo "SUPABASE_SERVICE_ROLE_KEY=$SRK" >> $GITHUB_ENV
-          echo "anon key length: ${#ANON}, service_role key length: ${#SRK}"
+          echo "supabase API: $API, anon key length: ${#ANON}, service_role key length: ${#SRK}"
 
       - name: Install dependencies
         run: npm ci
@@ -86,7 +104,11 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ env.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ env.SUPABASE_SERVICE_ROLE_KEY }}
-          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          # Playwright starts its own `next dev` on E2E_PORT (reuseExistingServer is off), apart from the .next
+          # of the build step above, exactly like scripts/test-e2e-local.sh.
+          E2E_PORT: "3100"
+          NEXT_DIST_DIR: .next-e2e
+          NEXT_PUBLIC_APP_URL: http://localhost:3100
           SESSION_SECRET: test-session-secret-at-least-32-chars!!
           STRIPE_SECRET_KEY: sk_test_placeholder
           STRIPE_WEBHOOK_SECRET: whsec_test_placeholder

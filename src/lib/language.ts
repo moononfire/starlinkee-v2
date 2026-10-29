@@ -17,6 +17,8 @@ export async function getLanguage(
   if (allowedLanguages.includes(fallback) && PLATE_LANGUAGES.includes(fallback as PlateLanguage)) {
     return fallback as PlateLanguage;
   }
+  // The wanted language isn't offered here: English is the neutral default, not whatever is listed first.
+  if (allowedLanguages.includes("en")) return "en";
   const firstAllowed = allowedLanguages.find((l) => PLATE_LANGUAGES.includes(l as PlateLanguage));
   return (firstAllowed as PlateLanguage) ?? "en";
 }

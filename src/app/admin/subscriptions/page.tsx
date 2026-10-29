@@ -46,7 +46,7 @@ export default async function SubscriptionsPage({
       )}
 
       <div className="mb-6">
-        <SearchInput placeholder="Szukaj po kliencie, email, nazwie planu, tablicy..." />
+        <SearchInput placeholder="Szukaj po kliencie, email, nazwie planu, tabliczce..." />
       </div>
 
       <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg overflow-hidden">
@@ -56,7 +56,7 @@ export default async function SubscriptionsPage({
             <tr>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">ID</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Klient</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Płytka</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Tabliczka</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Dni</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Status</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Aktywacja</th>

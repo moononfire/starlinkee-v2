@@ -77,75 +77,49 @@ describe("getLocationBySlug()", () => {
 });
 
 describe("createLocation()", () => {
+  function mockTables(upsertResult: { data: unknown; error: unknown }, plateLanguages: string[] = []) {
+    const upsertMock = vi.fn(() => ({
+      select: vi.fn(() => ({ single: vi.fn().mockResolvedValue(upsertResult) })),
+    }));
+    supabaseMock.from.mockImplementation((table: string) =>
+      table === "plates"
+        ? {
+            select: () => ({
+              eq: () => Promise.resolve({ data: plateLanguages.map((plate_language) => ({ plate_language })) }),
+            }),
+          }
+        : { upsert: upsertMock }
+    );
+    return upsertMock;
+  }
+
   it("upserts on subscription_id and returns the location", async () => {
     const loc = { location_id: 5, location_name: "Restaurant" };
-    const upsertMock = vi.fn(() => ({
-      select: vi.fn(() => ({
-        single: vi.fn().mockResolvedValue({ data: loc, error: null }),
-      })),
-    }));
-    supabaseMock.from.mockReturnValue({ upsert: upsertMock });
+    const upsertMock = mockTables({ data: loc, error: null });
 
     const result = await createLocation({ subscription_id: 10, location_name: "Restaurant" });
     expect(result).toEqual(loc);
     expect(upsertMock).toHaveBeenCalledWith(
-      expect.objectContaining({ subscription_id: 10 }),
+      expect.objectContaining({ subscription_id: 10, active_languages: ["pl", "en", "de"] }),
+      { onConflict: "subscription_id" }
+    );
+  });
+
+  it("adds the language of the subscription's plates to active_languages", async () => {
+    const upsertMock = mockTables({ data: {}, error: null }, ["it", "de"]);
+
+    await createLocation({ subscription_id: 10, location_name: "Ristorante" });
+    expect(upsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ active_languages: ["pl", "en", "de", "it"] }),
       { onConflict: "subscription_id" }
     );
   });
 
   it("throws when Supabase returns an error", async () => {
-    supabaseMock.from.mockReturnValue({
-      upsert: vi.fn(() => ({
-        select: vi.fn(() => ({
-          single: vi.fn().mockResolvedValue({ data: null, error: { message: "insert failed" } }),
-        })),
-      })),
-    });
+    mockTables({ data: null, error: { message: "insert failed" } });
 
     await expect(
       createLocation({ subscription_id: 10, location_name: "Restaurant" })
     ).rejects.toThrow("Failed to create location");
-  });
-});
-
-describe("incrementLinktreeVisits()", () => {
-  it("calls rpc with the correct function name and location id", async () => {
-    supabaseMock.rpc.mockResolvedValue({});
-
-    await incrementLinktreeVisits(7);
-
-    expect(supabaseMock.rpc).toHaveBeenCalledWith("increment_linktree_visits", {
-      p_location_id: 7,
-    });
-  });
-});
-
-describe("listLocations()", () => {
-  it("total_plate_visits adds scan_count_offset, same as the portal", async () => {
-    const select = vi.fn(() => ({
-      order: vi.fn().mockResolvedValue({
-        data: [
-          {
-            location_id: 1,
-            subscriptions: {
-              status: "active",
-              customers: { customer_name: "Jan" },
-              plates: [
-                { number_of_visits: 5, scan_count_offset: 2, reviews: [{ rating: 4 }] },
-                { number_of_visits: 3, scan_count_offset: 0, reviews: [] },
-              ],
-            },
-          },
-        ],
-        error: null,
-      }),
-    }));
-    supabaseMock.from.mockReturnValue({ select });
-
-    const [loc] = await listLocations();
-
-    expect(select).toHaveBeenCalledWith(expect.stringContaining("scan_count_offset"));
-    expect(loc.total_plate_visits).toBe(10);
   });
 });

@@ -79,6 +79,27 @@ export async function setSubscriptionActive(
   if (error) throw new Error(`Failed to activate subscription: ${error.message}`);
 }
 
+/** Extends an existing subscription to a new end date and keeps it active; activation_datetime stays as it was. */
+export async function extendSubscription(subscriptionId: number, expirationDatetime: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({ status: "active", expiration_datetime: expirationDatetime })
+    .eq("subscription_id", subscriptionId);
+  if (error) throw new Error(`Failed to extend subscription: ${error.message}`);
+}
+
+// Called only when the row moves to a DIFFERENT Stripe subscription (e.g. renewal after a cancelled one ended).
+// The new Stripe subscription renews, so a "will not renew" flag of the old one must not carry over.
+export async function setSubscriptionStripeId(subscriptionId: number, stripeSubscriptionId: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({ stripe_subscription_id: stripeSubscriptionId, cancel_at_period_end: false })
+    .eq("subscription_id", subscriptionId);
+  if (error) throw new Error(`Failed to store the Stripe subscription id: ${error.message}`);
+}
+
 export async function createSubscription(data: {
   customer_id: number;
   subscription_name: string;
@@ -145,4 +166,14 @@ export async function listSubscriptions(search?: string): Promise<SubscriptionWi
     customer_email: row.customers?.email ?? "",
     plate_numbers: (row.plates ?? []).map((p: any) => p.plate_number),
   }));
+}
+
+/** Mirrors Stripe's cancel_at_period_end for every row linked to that Stripe subscription. */
+export async function setCancelAtPeriodEnd(stripeSubscriptionId: string, cancelAtPeriodEnd: boolean): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({ cancel_at_period_end: cancelAtPeriodEnd })
+    .eq("stripe_subscription_id", stripeSubscriptionId);
+  if (error) throw new Error(`Failed to store cancel_at_period_end: ${error.message}`);
 }

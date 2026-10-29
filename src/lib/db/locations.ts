@@ -2,6 +2,7 @@ import { createAdminClient } from "../supabase/admin";
 import { ilikeValue } from "./search";
 import { plateScanCount } from "../plate-scans";
 import { isSafeGoogleReviewUrl } from "../urls";
+import { PLATE_LANGUAGES, type PlateLanguage } from "../languages";
 import type { CustomerLocation, CustomerLocationLink } from "../types";
 
 const PL_CHAR_MAP: Record<string, string> = {
@@ -100,6 +101,8 @@ function assertSafeReviewLink(link: string | null | undefined): void {
   if (link && !isSafeGoogleReviewUrl(link)) throw new Error("Invalid google_review_link");
 }
 
+const DEFAULT_ACTIVE_LANGUAGES = ["pl", "en", "de"];
+
 export async function createLocation(data: {
   subscription_id: number;
   location_name: string;
@@ -121,6 +124,15 @@ export async function createLocation(data: {
 }): Promise<CustomerLocation> {
   assertSafeReviewLink(data.google_review_link);
   const supabase = createAdminClient();
+  // The plates of this subscription must be readable in their own language (e.g. an Italian
+  // plate on a new venue), so their languages join the defaults.
+  const { data: plates } = await supabase
+    .from("plates")
+    .select("plate_language")
+    .eq("subscription_id", data.subscription_id);
+  const activeLanguages = [
+    ...new Set([...DEFAULT_ACTIVE_LANGUAGES, ...(plates ?? []).map((p) => p.plate_language)]),
+  ].filter((l) => PLATE_LANGUAGES.includes(l as PlateLanguage));
   const { data: location, error } = await supabase
     .from("customer_locations")
     .upsert(
@@ -129,7 +141,7 @@ export async function createLocation(data: {
         has_linktree_access: true,
         has_promo_enabled: true,
         has_loyalty_enabled: true,
-        active_languages: ["pl", "en", "de"],
+        active_languages: activeLanguages,
       },
       { onConflict: "subscription_id" }
     )

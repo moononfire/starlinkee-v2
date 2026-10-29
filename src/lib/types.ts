@@ -25,6 +25,8 @@ export interface Subscription {
   status: "pending" | "active" | "inactive";
   activation_code_hash?: string | null;
   stripe_subscription_id?: string | null;
+  /** Renewal switched off: the Stripe subscription ends with the paid period. */
+  cancel_at_period_end?: boolean;
   stripe_invoice_id?: string | null;
   created_at: string;
   updated_at: string;
@@ -108,6 +110,8 @@ export interface CustomerLocation {
 export interface Review {
   review_id: number;
   plate_id: number;
+  /** The subscription the plate belonged to when the guest scanned; owner of this review and its thread. */
+  subscription_id: number | null;
   scan_id: string;
   scan_time: string;
   rating: number | null;
@@ -116,6 +120,8 @@ export interface Review {
   contact_email: string | null;
   contact_phone: string | null;
   user_name: string | null;
+  /** Language the guest used when leaving feedback; replies to the guest are e-mailed in it. */
+  guest_language: string | null;
   feedback_time: string | null;
   ip_address: string | null;
   user_agent: string | null;
@@ -178,7 +184,7 @@ export interface Customer {
   address_line1: string | null;
   address_city: string | null;
   address_postal_code: string | null;
-  preferred_language: "en" | "de" | "pl";
+  preferred_language: PlateLanguage;
   country: string | null;
   is_activated: boolean;
   sms_credits_used: number;

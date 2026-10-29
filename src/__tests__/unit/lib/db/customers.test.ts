@@ -19,12 +19,15 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+/** select().ilike().order() resolving to the given rows (the lookup returns every ilike match, then picks the exact one). */
+const matching = (rows: unknown[]) => ({ order: vi.fn().mockResolvedValue({ data: rows }) });
+
 describe("upsertCustomerByEmail()", () => {
   it("returns existing customer_id when email already exists", async () => {
     supabaseMock.from.mockReturnValue({
       select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn().mockResolvedValue({ data: { customer_id: 42 } }),
+        ilike: vi.fn(() => ({
+          ...matching([{ customer_id: 42, email: "acme@example.com" }]),
         })),
       })),
       update: vi.fn(() => ({
@@ -40,9 +43,9 @@ describe("upsertCustomerByEmail()", () => {
     const update = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }));
     supabaseMock.from.mockReturnValue({
       select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn().mockResolvedValue({
-            data: {
+        ilike: vi.fn(() => ({
+          ...matching([{
+              email: "acme@example.com",
               customer_id: 42,
               customer_name: "Real Owner",
               customer_type: "individual",
@@ -50,8 +53,7 @@ describe("upsertCustomerByEmail()", () => {
               billing_address: null,
               phone: "",
               is_activated: false,
-            },
-          }),
+          }]),
         })),
       })),
       update,
@@ -77,10 +79,10 @@ describe("upsertCustomerByEmail()", () => {
     const update = vi.fn();
     supabaseMock.from.mockReturnValue({
       select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn().mockResolvedValue({
-            data: { customer_id: 42, customer_name: "Real Owner", customer_type: "business", is_activated: true },
-          }),
+        ilike: vi.fn(() => ({
+          ...matching([
+            { email: "acme@example.com", customer_id: 42, customer_name: "Real Owner", customer_type: "business", is_activated: true },
+          ]),
         })),
       })),
       update,
@@ -97,8 +99,8 @@ describe("upsertCustomerByEmail()", () => {
       if (callCount === 1) {
         return {
           select: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              single: vi.fn().mockResolvedValue({ data: null }),
+            ilike: vi.fn(() => ({
+              ...matching([]),
             })),
           })),
         };
@@ -123,8 +125,8 @@ describe("upsertCustomerByEmail()", () => {
       if (callCount === 1) {
         return {
           select: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              single: vi.fn().mockResolvedValue({ data: null }),
+            ilike: vi.fn(() => ({
+              ...matching([]),
             })),
           })),
         };
@@ -139,6 +141,54 @@ describe("upsertCustomerByEmail()", () => {
     });
 
     await expect(upsertCustomerByEmail(customerData)).rejects.toThrow("Failed to create customer");
+  });
+});
+
+describe("upsertCustomerByEmail() e-mail normalization", () => {
+  it("looks the customer up case-insensitively and stores the trimmed, lowercased address", async () => {
+    const ilike = vi.fn(() => ({
+      ...matching([]),
+    }));
+    const insert = vi.fn(() => ({
+      select: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { customer_id: 7 }, error: null }) })),
+    }));
+    supabaseMock.from
+      .mockReturnValueOnce({ select: vi.fn(() => ({ ilike })) })
+      .mockReturnValueOnce({ insert });
+
+    await upsertCustomerByEmail({ ...customerData, email: "  Jan.Kowalski@Firma.PL " });
+
+    expect(ilike).toHaveBeenCalledWith("email", "jan.kowalski@firma.pl");
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({ email: "jan.kowalski@firma.pl" }));
+  });
+
+  it("escapes LIKE wildcards in the address so it is matched exactly", async () => {
+    const ilike = vi.fn(() => ({
+      ...matching([{ customer_id: 3, email: "a_b%c@x.com" }]),
+    }));
+    supabaseMock.from.mockReturnValue({
+      select: vi.fn(() => ({ ilike })),
+      update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) })),
+    });
+
+    await upsertCustomerByEmail({ ...customerData, email: "a_b%c@x.com" });
+
+    expect(ilike).toHaveBeenCalledWith("email", "a\\_b\\%c@x.com");
+  });
+});
+
+describe("upsertCustomerByEmail() never adopts a different address matched by a wildcard", () => {
+  it("'*' cannot be used to hit another customer: the pattern has no wildcard star and rows are re-checked", async () => {
+    const ilike = vi.fn(() => matching([{ customer_id: 1, email: "victim@evil.com" }]));
+    const insert = vi.fn(() => ({
+      select: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { customer_id: 8 }, error: null }) })),
+    }));
+    supabaseMock.from.mockReturnValueOnce({ select: vi.fn(() => ({ ilike })) }).mockReturnValueOnce({ insert });
+
+    const id = await upsertCustomerByEmail({ ...customerData, email: "*@evil.com" });
+
+    expect(ilike).toHaveBeenCalledWith("email", "_@evil.com");
+    expect(id).toBe(8); // a new customer, not customer 1
   });
 });
 

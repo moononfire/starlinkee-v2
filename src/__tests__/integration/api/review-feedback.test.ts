@@ -42,6 +42,16 @@ beforeEach(() => {
 });
 
 describe("POST /api/review/feedback", () => {
+  it("returns 400 (not 500) for a body that is not valid JSON", async () => {
+    const res = await POST(new NextRequest("http://localhost/api/review/feedback", { method: "POST", body: "{nope" }));
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when the message or email is not a string", async () => {
+    const res = await POST(makeRequest({ scanId: "s", feedback_message: 5, contact_email: "a@b.c" }));
+    expect(res.status).toBe(400);
+  });
+
   it("returns 400 when scanId is missing", async () => {
     const res = await POST(makeRequest({ feedback_message: "great" }));
     expect(res.status).toBe(400);
@@ -95,5 +105,15 @@ describe("POST /api/review/feedback", () => {
     mockUpdateFeedback.mockRejectedValue(new Error("DB error"));
     const res = await POST(makeRequest({ scanId: "scan-1", feedback_message: "Bad food.", contact_email: "test@example.com" }));
     expect(res.status).toBe(500);
+  });
+
+  it("stores the language the guest used", async () => {
+    await POST(makeRequest({ scanId: "scan-1", feedback_message: "Kalt", contact_email: "a@b.com", language: "de" }));
+    expect(mockUpdateFeedback).toHaveBeenCalledWith("scan-1", expect.objectContaining({ guest_language: "de" }));
+  });
+
+  it("ignores an unsupported language instead of storing it", async () => {
+    await POST(makeRequest({ scanId: "scan-1", feedback_message: "x", contact_email: "a@b.com", language: "xx" }));
+    expect(mockUpdateFeedback).toHaveBeenCalledWith("scan-1", expect.objectContaining({ guest_language: undefined }));
   });
 });

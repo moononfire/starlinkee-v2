@@ -32,7 +32,7 @@ export default async function ReviewsPage({
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">ID</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Lokalizacja</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">ID lokalizacji</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Płytka</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Tabliczka</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Ocena</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Wiadomość</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Kontakt</th>

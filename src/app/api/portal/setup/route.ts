@@ -1,3 +1,4 @@
+import { ownerLanguage } from "@/lib/languages";
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
   expiration.setDate(expiration.getDate() + subscription.duration_in_days);
   await setSubscriptionActive(subscriptionId, now.toISOString(), expiration.toISOString());
 
-  await sendPlateSetupConfirmation(supportEmail.trim(), customer.preferred_language, {
+  await sendPlateSetupConfirmation(supportEmail.trim(), ownerLanguage(customer), {
     locationName: locationName.trim(),
   }).catch(() => {});
 

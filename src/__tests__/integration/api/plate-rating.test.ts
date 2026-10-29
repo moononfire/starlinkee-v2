@@ -54,6 +54,18 @@ describe("POST /api/plate/rating", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 400 for a non-integer rating (4.5 used to hit the integer column -> 500)", async () => {
+    const res = await POST(makeRequest({ scanId: "scan-1", rating: 4.5 }));
+    expect(res.status).toBe(400);
+    expect(mockUpdateRating).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for a body that is not valid JSON", async () => {
+    const req = new NextRequest("http://localhost/api/plate/rating", { method: "POST", body: "{not json" });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+  });
+
   it("returns redirectToGoogle=false for rating <= 3", async () => {
     const res = await POST(makeRequest({ scanId: "scan-1", rating: 3 }));
     expect(res.status).toBe(200);
@@ -88,7 +100,17 @@ describe("POST /api/plate/rating", () => {
     const res = await POST(makeRequest({ scanId: "scan-1", rating: 3 }));
     expect(res.status).toBe(409);
     const body = await res.json();
-    expect(body).toEqual({ error: "already_rated", rating: 5 });
+    expect(body).toEqual({ error: "already_rated", rating: 5, positive: true });
+  });
+
+  it("flags a stored low rating as not positive on 409", async () => {
+    const err = new Error("Rating already submitted") as Error & { existingRating: number };
+    err.existingRating = 1;
+    mockUpdateRating.mockRejectedValue(err);
+
+    const res = await POST(makeRequest({ scanId: "scan-1", rating: 5 }));
+    expect(res.status).toBe(409);
+    expect((await res.json()).positive).toBe(false);
   });
 
   it("calls updateRating with correct arguments", async () => {

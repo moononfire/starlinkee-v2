@@ -48,7 +48,7 @@ export default async function ShipmentsPage({
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Zamów.</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Klient</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Batch</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Płytki</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Tabliczki</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Status</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Tracking</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-300">Adres</th>

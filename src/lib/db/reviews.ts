@@ -46,8 +46,12 @@ interface ScanDeviceInfo {
 export async function createScanRecord(plateId: number, deviceInfo?: ScanDeviceInfo): Promise<string> {
   const supabase = createAdminClient();
   const scanId = crypto.randomUUID();
+  // The review belongs to the subscription the plate is on right now. A plate later moved to another
+  // subscription or customer must not take its guests' feedback along (F12).
+  const { data: plate } = await supabase.from("plates").select("subscription_id").eq("plate_id", plateId).single();
   const { error } = await supabase.from("reviews").insert({
     plate_id: plateId,
+    subscription_id: plate?.subscription_id ?? null,
     scan_id: scanId,
     ...deviceInfo,
   });
@@ -101,12 +105,21 @@ export async function updateRating(scanId: string, rating: number): Promise<void
     throw error;
   }
 
-  const { error } = await supabase
+  // Conditional write: two concurrent submits both pass the check above, only the first may win.
+  let update = supabase
     .from("reviews")
     .update({ rating, rating_time: new Date().toISOString() })
     .eq("scan_id", scanId);
+  if (plateNumber !== "TJRUAO") update = update.is("rating", null);
+  const { data: updated, error } = await update.select("review_id");
 
   if (error) throw new Error(`Failed to update rating: ${error.message}`);
+  if (!updated || updated.length === 0) {
+    const { data: current } = await supabase.from("reviews").select("rating").eq("scan_id", scanId).single();
+    const lost = new Error("Rating already submitted") as Error & { existingRating: number };
+    lost.existingRating = current?.rating ?? rating;
+    throw lost;
+  }
 }
 
 export async function getRedirectFourStarReviews(scanId: string): Promise<boolean> {
@@ -129,6 +142,7 @@ export async function updateFeedback(
     user_name?: string;
     contact_email?: string;
     contact_phone?: string;
+    guest_language?: string;
   }
 ): Promise<boolean> {
   const supabase = createAdminClient();

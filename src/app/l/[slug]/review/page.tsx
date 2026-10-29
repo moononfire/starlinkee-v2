@@ -1,3 +1,5 @@
+import { isLocationActive } from "@/lib/location-access";
+import LocationInactive from "@/components/linktree/LocationInactive";
 import { notFound, redirect } from "next/navigation";
 import { headers, cookies } from "next/headers";
 import { getLocationBySlug } from "@/lib/db/locations";
@@ -13,6 +15,7 @@ export default async function LinktreeReviewPage({ params }: Props) {
 
   const location = await getLocationBySlug(slug);
   if (!location) notFound();
+  if (!(await isLocationActive(location))) return <LocationInactive location={location} slug={slug} />;
 
   const plates = await getPlatesBySubscriptionId(location.subscription_id);
   if (plates.length === 0) notFound();

@@ -291,7 +291,7 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
     setError(null);
 
     if (!plateId) {
-      setError("Wybierz płytkę");
+      setError("Wybierz tabliczkę");
       return;
     }
     if (!selectedPlace) {
@@ -348,10 +348,10 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
     return (
       <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-6 max-w-lg">
         <p className="text-sm font-medium text-green-700 dark:text-green-400 mb-2">
-          Płytka {success.plateNumber} aktywowana.
+          Tabliczka {success.plateNumber} aktywowana.
         </p>
         <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-          Dane logowania do portalu zostały wysłane na e-mail administratora. Płytka po zeskanowaniu przekieruje
+          Dane logowania do portalu zostały wysłane na e-mail administratora. Tabliczka po zeskanowaniu przekieruje
           bezpośrednio na:{" "}
           <a href={success.googleReviewLink} target="_blank" rel="noopener" className="text-blue-600 underline">
             opinię Google
@@ -363,7 +363,7 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
             onClick={() => router.push("/admin/plates")}
             className="bg-blue-600 text-white px-5 py-2 rounded text-sm font-medium hover:bg-blue-700 transition-colors"
           >
-            Wróć do płytek
+            Wróć do tabliczek
           </button>
           <button
             onClick={() => router.refresh()}
@@ -379,18 +379,18 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
   return (
     <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-6 max-w-lg">
       {plates.length === 0 && (
-        <p className="text-sm text-gray-400 mb-4">Brak dostępnych płytek (wszystkie przypisane)</p>
+        <p className="text-sm text-gray-400 mb-4">Brak dostępnych tabliczek (wszystkie przypisane)</p>
       )}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Płytka *</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tabliczka *</label>
           <select
             value={plateId}
             onChange={(e) => setPlateId(e.target.value)}
             required
             className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
           >
-            <option value="">— wybierz płytkę —</option>
+            <option value="">— wybierz tabliczkę —</option>
             {plates.map((p) => (
               <option key={p.plate_id} value={p.plate_id}>
                 {p.plate_number} ({p.plate_language})
@@ -648,7 +648,7 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
             disabled={plates.length === 0 || loading}
             className="bg-blue-600 text-white px-5 py-2 rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
-            {loading ? "Aktywowanie..." : `Aktywuj płytkę (${duration} dni)`}
+            {loading ? "Aktywowanie..." : `Aktywuj tabliczkę (${duration} dni)`}
           </button>
           <a
             href="/admin/plates"

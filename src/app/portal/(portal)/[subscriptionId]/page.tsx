@@ -4,22 +4,22 @@ import { getPortalSession } from "@/lib/portal-session";
 import { getPlateStatsBySubscription, type PlateCounts } from "@/lib/db/portal";
 import { LanguageFlag } from "@/components/flags";
 import PortalSetupForm from "../settings/PortalSetupForm";
-import { getLanguage } from "@/lib/language";
+import { getPortalLanguage } from "@/lib/portal-language";
 import { t } from "@/lib/translations";
 
 import { getPlatesBySubscriptionId } from "@/lib/db/plates";
 import DashboardSettings from "./DashboardSettings";
+import CancelRenewal from "./CancelRenewal";
+import { dateLocale } from "@/lib/languages";
 
 interface Props {
   params: Promise<{ subscriptionId: string }>;
   searchParams: Promise<{ stars?: string; scrollTo?: string }>;
 }
 
-const DATE_LOCALES: Record<string, string> = { en: "en-US", de: "de-DE", pl: "pl-PL" };
-
 function formatDate(d: string | null, lang: string) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString(DATE_LOCALES[lang] ?? "en-US");
+  return new Date(d).toLocaleDateString(dateLocale(lang));
 }
 
 function Stars({ rating }: { rating: number }) {
@@ -41,7 +41,7 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
   const sub = subscriptions.find((s) => s.subscription_id === subscriptionId);
   if (!sub) notFound();
 
-  const lang = await getLanguage();
+  const lang = await getPortalLanguage();
   const { scans, reviewVisits } = await getPlateStatsBySubscription(subscriptionId);
 
   // --- PENDING ---
@@ -127,6 +127,14 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
   return (
     <div className="space-y-6">
       <SubscriptionStats sub={sub} scans={scans} reviewVisits={reviewVisits} plateScanUrl={plateScanUrl} lang={lang} />
+      {sub.stripe_subscription_id && (
+        <CancelRenewal
+          subscriptionId={subscriptionId}
+          lang={lang}
+          endDate={formatDate(sub.expiration_datetime, lang)}
+          cancelling={!!sub.cancel_at_period_end}
+        />
+      )}
       <DashboardSettings
         subscriptionId={subscriptionId}
         location={sub.location}

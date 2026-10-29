@@ -1,3 +1,5 @@
+import { isLocationActive } from "@/lib/location-access";
+import LocationInactive from "@/components/linktree/LocationInactive";
 import { notFound, redirect } from "next/navigation";
 import { getLocationBySlug } from "@/lib/db/locations";
 
@@ -12,6 +14,7 @@ export default async function PublicMenuPage({ params }: Props) {
   if (!location || !location.has_menu_enabled) {
     notFound();
   }
+  if (!(await isLocationActive(location))) return <LocationInactive location={location} slug={slug} />;
 
   if (location.menu_type === "link" && location.menu_link) {
     redirect(location.menu_link);
