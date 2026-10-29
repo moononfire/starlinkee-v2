@@ -1,6 +1,6 @@
 import { createAdminClient } from "../supabase/admin";
 import { plateScanCount } from "../plate-scans";
-import { normalizeEmail, escapeLikePattern } from "../customer-email";
+import { normalizeEmail, escapeLikePattern, pickByEmail } from "../customer-email";
 import type { Customer, Subscription, CustomerLocation, Plate, Review } from "../types";
 
 export async function getCustomerByEmail(email: string): Promise<Customer | null> {
@@ -10,10 +10,8 @@ export async function getCustomerByEmail(email: string): Promise<Customer | null
     .from("customers")
     .select("*")
     .ilike("email", escapeLikePattern(normalizeEmail(email)))
-    .order("customer_id", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  return data ?? null;
+    .order("customer_id", { ascending: true });
+  return pickByEmail(data as Customer[] | null, email);
 }
 
 export interface PortalSubscription extends Subscription {

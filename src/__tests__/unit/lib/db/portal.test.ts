@@ -125,27 +125,34 @@ describe("getPlateStatsBySubscription()", () => {
 });
 
 describe("getCustomerByEmail()", () => {
-  it("matches case-insensitively on the trimmed, lowercased address (oldest row wins)", async () => {
-    const ilike = vi.fn(() => ({
-      order: vi.fn(() => ({
-        limit: vi.fn(() => ({ maybeSingle: vi.fn().mockResolvedValue({ data: { customer_id: 5 } }) })),
-      })),
-    }));
+  const lookup = (rows: any[]) => {
+    const ilike = vi.fn(() => ({ order: vi.fn().mockResolvedValue({ data: rows }) }));
     supabaseMock.from.mockReturnValue({ select: vi.fn(() => ({ ilike })) });
+    return ilike;
+  };
+
+  it("matches case-insensitively on the trimmed, lowercased address (oldest row wins)", async () => {
+    const ilike = lookup([
+      { customer_id: 5, email: "Jan@Firma.PL" },
+      { customer_id: 9, email: "jan@firma.pl" },
+    ]);
 
     const customer = await getCustomerByEmail(" Jan@Firma.PL ");
 
-    expect(customer).toEqual({ customer_id: 5 });
+    expect(customer).toMatchObject({ customer_id: 5 });
     expect(ilike).toHaveBeenCalledWith("email", "jan@firma.pl");
   });
 
   it("returns null when nothing matches", async () => {
-    supabaseMock.from.mockReturnValue({
-      select: vi.fn(() => ({
-        ilike: () => ({ order: () => ({ limit: () => ({ maybeSingle: vi.fn().mockResolvedValue({ data: null }) }) }) }),
-      })),
-    });
+    lookup([]);
     expect(await getCustomerByEmail("nobody@x.com")).toBeNull();
+  });
+
+  it("does not return another customer matched only through a wildcard", async () => {
+    const ilike = lookup([{ customer_id: 1, email: "victim@evil.com" }]);
+
+    expect(await getCustomerByEmail("*@evil.com")).toBeNull();
+    expect(ilike).toHaveBeenCalledWith("email", "_@evil.com");
   });
 });
 

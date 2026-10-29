@@ -1,6 +1,6 @@
 import { createAdminClient } from "../supabase/admin";
 import { ilikeValue } from "./search";
-import { normalizeEmail, escapeLikePattern } from "../customer-email";
+import { normalizeEmail, escapeLikePattern, pickByEmail } from "../customer-email";
 import type { Customer } from "../types";
 
 interface CustomerInsert {
@@ -30,13 +30,12 @@ export async function upsertCustomerByEmail(input: CustomerInsert): Promise<numb
   const supabase = createAdminClient();
   const data = { ...input, email: normalizeEmail(input.email) };
 
-  const { data: existing } = await supabase
+  const { data: matches } = await supabase
     .from("customers")
     .select("*")
     .ilike("email", escapeLikePattern(data.email))
-    .order("customer_id", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .order("customer_id", { ascending: true });
+  const existing = pickByEmail(matches, data.email);
 
   if (existing) {
     const { email: _email, preferred_language: _preferredLanguage, source: _source, ...candidates } = data;
@@ -105,13 +104,12 @@ export async function updateCustomer(
   if (updates.email) {
     const email = normalizeEmail(updates.email);
     updates = { ...updates, email };
-    const { data: existing } = await supabase
+    const { data: matches } = await supabase
       .from("customers")
-      .select("customer_id")
+      .select("customer_id, email")
       .ilike("email", escapeLikePattern(email))
-      .neq("customer_id", id)
-      .limit(1)
-      .maybeSingle();
+      .neq("customer_id", id);
+    const existing = pickByEmail(matches, email);
     if (existing) throw new Error("Ten adres e-mail jest już przypisany do innego klienta.");
   }
 
@@ -130,12 +128,11 @@ export async function createCustomer(input: CustomerInsert): Promise<Customer> {
   const data = input.email ? { ...input, email: normalizeEmail(input.email) } : input;
 
   if (data.email) {
-    const { data: existing } = await supabase
+    const { data: matches } = await supabase
       .from("customers")
-      .select("customer_id")
-      .ilike("email", escapeLikePattern(data.email))
-      .limit(1)
-      .maybeSingle();
+      .select("customer_id, email")
+      .ilike("email", escapeLikePattern(data.email));
+    const existing = pickByEmail(matches, data.email);
     if (existing) throw new Error("Ten adres e-mail jest już przypisany do innego klienta.");
   }
 
