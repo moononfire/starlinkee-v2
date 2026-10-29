@@ -91,7 +91,7 @@ test.describe('Languages', () => {
   });
 
   test('guest language cookie beats the plate language', async ({ page }) => {
-    await page.context().addCookies([{ name: 'lang_DEPLAT', value: 'en', url: 'http://localhost:' + (process.env.E2E_PORT ?? '3000') }]);
+    await page.context().addCookies([{ name: 'lang_DEPLAT', value: 'en', url: 'http://localhost:' + (process.env.E2E_PORT ?? '3100') }]);
     await page.goto('/plate/DEPLAT/testsecretde');
     await expect(page.getByText('How would you rate your experience?')).toBeVisible();
     await expect(page.getByText('Wie bewerten Sie Ihre Erfahrung?')).toHaveCount(0);
@@ -111,7 +111,7 @@ test.describe('Languages', () => {
 
   test('portal opens in the customer preferred_language', async ({ page }) => {
     await seedGermanPortalUser();
-    const appUrl = 'http://localhost:' + (process.env.E2E_PORT ?? '3000');
+    const appUrl = 'http://localhost:' + (process.env.E2E_PORT ?? '3100');
     await page.context().addCookies(await portalSessionCookies(appUrl));
     await page.goto('/portal');
     await expect(page.getByText('Sie haben noch keine Abonnements.')).toBeVisible();

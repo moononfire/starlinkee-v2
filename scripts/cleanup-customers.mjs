@@ -2,8 +2,17 @@
 // usuwa wszystkich pozostałych klientów wraz z powiązanymi rekordami, oraz usuwa
 // WSZYSTKIE recenzje (również te należące do klienta 44).
 import { createClient } from "@supabase/supabase-js";
+import { assertLocalOrConfirmedProd } from "./local-guard.mjs";
 
 const KEEP_CUSTOMER_ID = 44;
+
+// Kasuje dane: przed utworzeniem klienta odmawia na nielokalnym URL (prod tylko z parą flag).
+try {
+  assertLocalOrConfirmedProd(process.env.NEXT_PUBLIC_SUPABASE_URL, process.argv.slice(2), "cleanup-customers");
+} catch (err) {
+  console.error(err.message);
+  process.exit(1);
+}
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,

@@ -11,7 +11,7 @@ if (existsSync(envFile)) {
   }
 }
 
-const port = process.env.E2E_PORT ?? '3000';
+const port = process.env.E2E_PORT ?? '3100';
 const baseURL = `http://localhost:${port}`;
 
 // e2e writes and deletes data: refuse to start against anything but a local Supabase.
@@ -37,7 +37,7 @@ export default defineConfig({
   webServer: {
     command: `next dev -p ${port}`,
     url: baseURL,
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     timeout: 60_000,
   },
 });

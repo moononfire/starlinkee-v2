@@ -23,3 +23,48 @@ export function assertLocalSupabase(url, what) {
       `Użyj: supabase start && npm run test:e2e`
   );
 }
+
+// --- Scripts that mutate a remote database (cleanup-customers, db-push) ---
+// Default is refusal. A remote target is allowed only with BOTH flags, and the ref given to
+// --confirm-project must match the ref of the target URL: `--i-know-this-is-prod --confirm-project=<ref>`.
+export const PROD_PROJECT_REF = "sntsftkutpcppszbyjeq";
+
+/** Project ref from a `https://<ref>.supabase.co` API URL; null for anything else. */
+export function projectRefFromUrl(url) {
+  try {
+    const m = new URL(url).hostname.match(/^([a-z0-9]{20})\.supabase\.(?:co|in)$/);
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+/** True only when argv carries --i-know-this-is-prod and --confirm-project=<expectedRef>. */
+export function hasProdConfirmation(argv, expectedRef) {
+  if (!expectedRef) return false;
+  const ack = argv.includes("--i-know-this-is-prod");
+  const confirm = argv.find((a) => a.startsWith("--confirm-project="))?.slice("--confirm-project=".length);
+  return ack && confirm === expectedRef;
+}
+
+function refuse(what, target, hint) {
+  return new Error(
+    `${what}: odmowa startu — cel ${target} nie jest lokalnym Supabase. ${hint} ` +
+      `Obejście (świadome): --i-know-this-is-prod --confirm-project=<ref celu>. Nic nie zostało wykonane.`
+  );
+}
+
+/** Local URL passes; any other URL needs both flags with --confirm-project matching the URL's ref. */
+export function assertLocalOrConfirmedProd(url, argv, what) {
+  if (isLocalSupabaseUrl(url)) return;
+  const ref = projectRefFromUrl(url);
+  if (hasProdConfirmation(argv, ref)) return;
+  throw refuse(what, ref ?? "(nieznany lub brak URL)", ref === PROD_PROJECT_REF ? "To PRODUKCJA." : "");
+}
+
+/** For a DB connection string (remote dev is fine): refuses only when it points at the prod project. */
+export function assertNotProdUnlessConfirmed(dbUrl, argv, what) {
+  if (!dbUrl || !dbUrl.includes(PROD_PROJECT_REF)) return;
+  if (hasProdConfirmation(argv, PROD_PROJECT_REF)) return;
+  throw refuse(what, PROD_PROJECT_REF, "To PRODUKCJA (zawiera ref produkcji).");
+}

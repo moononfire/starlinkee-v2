@@ -2,6 +2,7 @@ import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { spawnSync } from "child_process";
+import { assertNotProdUnlessConfirmed } from "./local-guard.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const target = process.argv[2];
@@ -25,6 +26,13 @@ const env = Object.fromEntries(
 const dbUrl = env.DEV_DB_URL;
 if (!dbUrl || dbUrl.includes("REPLACE_ME")) {
   console.error("Brak połączenia dla 'dev' w .env.supabase-cli (DEV_DB_URL).");
+  process.exit(1);
+}
+
+try {
+  assertNotProdUnlessConfirmed(dbUrl, process.argv.slice(2), "db-push");
+} catch (err) {
+  console.error(err.message);
   process.exit(1);
 }
 
