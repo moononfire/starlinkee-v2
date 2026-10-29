@@ -41,7 +41,22 @@ jobs:
           version: 2.105.0
 
       - name: Start Supabase
-        run: supabase start
+        env:
+          # setup-cli defaults to ghcr.io, which rate-limits shared runner IPs (toomanyrequests); ECR is what the CLI uses by default.
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: public.ecr.aws
+        run: |
+          for attempt in 1 2 3 4; do
+            if supabase start; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 4 ]; then
+              echo "supabase start failed (attempt $attempt/4), retrying in $((attempt * 30))s"
+              supabase stop --no-backup || true
+              sleep $((attempt * 30))
+            fi
+          done
+          echo "supabase start failed after 4 attempts"
+          exit 1
 
       - name: Reset and seed database
         run: supabase db reset
