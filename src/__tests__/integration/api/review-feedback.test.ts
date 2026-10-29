@@ -106,4 +106,14 @@ describe("POST /api/review/feedback", () => {
     const res = await POST(makeRequest({ scanId: "scan-1", feedback_message: "Bad food.", contact_email: "test@example.com" }));
     expect(res.status).toBe(500);
   });
+
+  it("stores the language the guest used", async () => {
+    await POST(makeRequest({ scanId: "scan-1", feedback_message: "Kalt", contact_email: "a@b.com", language: "de" }));
+    expect(mockUpdateFeedback).toHaveBeenCalledWith("scan-1", expect.objectContaining({ guest_language: "de" }));
+  });
+
+  it("ignores an unsupported language instead of storing it", async () => {
+    await POST(makeRequest({ scanId: "scan-1", feedback_message: "x", contact_email: "a@b.com", language: "xx" }));
+    expect(mockUpdateFeedback).toHaveBeenCalledWith("scan-1", expect.objectContaining({ guest_language: undefined }));
+  });
 });

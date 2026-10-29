@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { seedTestData, cleanupTestReviews, seedGermanPortalUser, portalSessionCookies, setLocationGoogleLink, seedMixedCaseExpiredOwner, PORTAL_MIXED_USER, seedPromoLead, deletePromoLead, seedLapsedVenue, LAPSED_VENUE,
-  seedReassignablePlate, movePlateTo, newestReviewSubscription, MOVER } from './fixtures/seed';
+  seedReassignablePlate, movePlateTo, newestReviewSubscription, newestReviewGuestLanguage, MOVER } from './fixtures/seed';
 
 test.beforeAll(async () => {
   await seedTestData();
@@ -147,6 +147,18 @@ test.describe('Languages', () => {
     await page.goto('/plate/DEPLAT/testsecretde');
     await expect(page).toHaveURL(/\/plate\/DEPLAT\/scan\/.+/);
     await expect(page.getByText('Wie bewerten Sie Ihre Erfahrung?')).toBeVisible();
+  });
+
+  test('feedback left in German on a Polish plate is stored with guest_language de', async ({ page }) => {
+    await page.context().addCookies([{ name: 'lang_ACTIVE', value: 'de', url: 'http://localhost:' + (process.env.E2E_PORT ?? '3100') }]);
+    await page.goto('/plate/ACTIVE/testsecretactive');
+    await page.waitForURL(/\/plate\/ACTIVE\/scan\/.+/);
+    await page.getByLabel('2 star').click();
+    await page.locator('textarea[name="feedback_message"]').fill('Das Essen war kalt');
+    await page.locator('input[name="contact_email"]').fill('gast@example.com');
+    await page.locator('button[type="submit"]').click();
+    await expect(page.getByText('Vielen Dank!')).toBeVisible();
+    expect(await newestReviewGuestLanguage('ACTIVE')).toBe('de');
   });
 
   test('guest language cookie beats the plate language', async ({ page }) => {

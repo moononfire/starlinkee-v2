@@ -452,3 +452,13 @@ export async function newestReviewSubscription(plateNumber: string): Promise<num
   );
   return (await res.json())[0]?.subscription_id ?? null;
 }
+
+/** guest_language of the newest review of a plate. */
+export async function newestReviewGuestLanguage(plateNumber: string): Promise<string | null> {
+  const plate = await getPlate(plateNumber);
+  const res = await fetch(
+    `${BASE_URL}/rest/v1/reviews?plate_id=eq.${plate.plate_id}&order=created_at.desc&limit=1&select=guest_language`,
+    { headers: headers() },
+  );
+  return (await res.json())[0]?.guest_language ?? null;
+}

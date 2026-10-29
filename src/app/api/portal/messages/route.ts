@@ -52,8 +52,8 @@ export async function POST(request: NextRequest) {
   let smsQuotaExceeded = false;
 
   if (review.contact_email) {
-    // The reporter is a guest: write in the plate's language, not the owner's.
-    await sendReplyNotification(review.contact_email, guestLanguage(null, { plate_language: review.plate_language }), {
+    // The reporter is a guest: write in the language they used, else the plate's, never the owner's.
+    await sendReplyNotification(review.contact_email, guestLanguage(review.guest_language, { plate_language: review.plate_language }), {
       locationName: review.location_name ?? "",
       message: created.body,
       scanUrl: buildScanUrl(review.plate_number, review.scan_id),
@@ -92,6 +92,7 @@ interface OwnerReviewRow {
   review_id: number;
   scan_id: string;
   subscription_id: number | null;
+  guest_language: string | null;
   contact_email: string | null;
   contact_phone: string | null;
   plates: { plate_number: string; plate_language: string } | null;
@@ -105,7 +106,7 @@ async function getReviewForOwner(reviewId: number, ownedSubscriptionIds: number[
   const { data } = await supabase
     .from("reviews")
     .select(
-      "review_id, scan_id, subscription_id, contact_email, contact_phone, plates!inner(plate_number, plate_language), subscriptions(customer_locations(location_name))"
+      "review_id, scan_id, subscription_id, guest_language, contact_email, contact_phone, plates!inner(plate_number, plate_language), subscriptions(customer_locations(location_name))"
     )
     .eq("review_id", reviewId)
     .returns<OwnerReviewRow[]>()
@@ -123,6 +124,7 @@ async function getReviewForOwner(reviewId: number, ownedSubscriptionIds: number[
     subscription_id: data.subscription_id,
     plate_number: data.plates.plate_number,
     plate_language: data.plates.plate_language,
+    guest_language: data.guest_language,
     location_name: data.subscriptions?.customer_locations?.[0]?.location_name ?? null,
   };
 }

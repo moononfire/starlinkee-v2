@@ -39,6 +39,7 @@ export default function FeedbackForm({ scanId, lang, googleReviewLink }: Props) 
           user_name: form.get("user_name") || undefined,
           contact_email: form.get("contact_email") || undefined,
           contact_phone: form.get("contact_phone") || undefined,
+          language: lang,
         }),
       });
       // 409: feedback for this scan was already saved. Anything else that is not ok means it was NOT saved:

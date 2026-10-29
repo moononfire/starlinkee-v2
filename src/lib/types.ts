@@ -118,6 +118,8 @@ export interface Review {
   contact_email: string | null;
   contact_phone: string | null;
   user_name: string | null;
+  /** Language the guest used when leaving feedback; replies to the guest are e-mailed in it. */
+  guest_language: string | null;
   feedback_time: string | null;
   ip_address: string | null;
   user_agent: string | null;

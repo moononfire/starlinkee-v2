@@ -55,4 +55,36 @@ describe("POST /api/portal/messages — reporter email language", () => {
     expect(res.status).toBe(200);
     expect(mockSendReply).toHaveBeenCalledWith("guest@example.com", "de", expect.any(Object));
   });
+
+  const post = () =>
+    POST(
+      new NextRequest("http://localhost/api/portal/messages", {
+        method: "POST",
+        body: JSON.stringify({ reviewId: 5, body: "hi" }),
+      })
+    );
+  const row = (guest_language: string | null) => ({
+    data: {
+      review_id: 5,
+      scan_id: "s",
+      contact_email: "guest@example.com",
+      contact_phone: null,
+      subscription_id: 7,
+      guest_language,
+      plates: { plate_number: "PLPLAT", plate_language: "pl" },
+      subscriptions: null,
+    },
+  });
+
+  it("writes in the language the guest used, even when the plate is in another one", async () => {
+    mockSingle.mockResolvedValue(row("de"));
+    await post();
+    expect(mockSendReply).toHaveBeenCalledWith("guest@example.com", "de", expect.any(Object));
+  });
+
+  it("falls back to the plate language when guest_language is empty (older reviews)", async () => {
+    mockSingle.mockResolvedValue(row(null));
+    await post();
+    expect(mockSendReply).toHaveBeenCalledWith("guest@example.com", "pl", expect.any(Object));
+  });
 });

@@ -142,6 +142,7 @@ export async function updateFeedback(
     user_name?: string;
     contact_email?: string;
     contact_phone?: string;
+    guest_language?: string;
   }
 ): Promise<boolean> {
   const supabase = createAdminClient();

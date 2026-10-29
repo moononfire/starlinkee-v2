@@ -6,19 +6,21 @@ import { getSubscriptionById } from "@/lib/db/subscriptions";
 import { getCustomerById } from "@/lib/db/customers";
 import { sendFeedbackNotification } from "@/lib/email";
 import { insertMessage } from "@/lib/db/review-messages";
-import { ownerLanguage } from "@/lib/languages";
+import { guestLanguage, ownerLanguage } from "@/lib/languages";
 import { broadcastToChannel } from "@/lib/realtime/broadcast";
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
-  const { scanId, feedback_message, user_name, contact_email, contact_phone } = body ?? {};
+  const { scanId, feedback_message, user_name, contact_email, contact_phone, language } = body ?? {};
 
   if (!scanId || typeof feedback_message !== "string" || !feedback_message.trim() || typeof contact_email !== "string" || !contact_email.trim()) {
     return NextResponse.json({ error: "Invalid input: missing email or message" }, { status: 400 });
   }
 
   try {
-    const saved = await updateFeedback(scanId, { feedback_message, user_name, contact_email, contact_phone });
+    // Only a supported language is stored; anything else stays NULL and the reply falls back to the plate's language.
+    const guest_language = typeof language === "string" && guestLanguage(language) === language ? language : undefined;
+    const saved = await updateFeedback(scanId, { feedback_message, user_name, contact_email, contact_phone, guest_language });
     if (!saved) {
       return NextResponse.json({ error: "Feedback already submitted" }, { status: 409 });
     }
