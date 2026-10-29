@@ -13,3 +13,19 @@ update reviews r
    and p.subscription_id is not null;
 
 create index if not exists reviews_subscription_id_idx on reviews (subscription_id);
+
+-- Scans written by code that does not set the column yet (old deploy running between this migration and the
+-- new release) get it from the plate, so they never vanish from the owner's portal.
+create or replace function reviews_default_subscription_id() returns trigger
+language plpgsql as $$
+begin
+  if new.subscription_id is null then
+    select subscription_id into new.subscription_id from plates where plate_id = new.plate_id;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists reviews_default_subscription_id on reviews;
+create trigger reviews_default_subscription_id
+  before insert on reviews
+  for each row execute function reviews_default_subscription_id();
