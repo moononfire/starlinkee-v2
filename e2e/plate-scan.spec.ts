@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { seedTestData, cleanupTestReviews, seedGermanPortalUser, portalSessionCookies } from './fixtures/seed';
+import { seedTestData, cleanupTestReviews, seedGermanPortalUser, portalSessionCookies, setLocationGoogleLink } from './fixtures/seed';
 
 test.beforeAll(async () => {
   await seedTestData();
@@ -46,6 +46,63 @@ test.describe('Active plate', () => {
     await page.getByRole('button', { name: 'Wyślij opinię' }).click();
 
     await expect(page.getByText('Dziękujemy!')).toBeVisible();
+  });
+});
+
+// ── Flow 1a — Feedback form never pretends a failed save was sent (F1) ──────
+
+test.describe('Feedback form errors', () => {
+  test('server error keeps the form and the typed text and shows an error', async ({ page }) => {
+    await page.goto('/plate/ACTIVE/testsecretactive');
+    await page.waitForURL(/\/plate\/ACTIVE\/scan\/.+/);
+    await page.getByLabel('2 star').click();
+
+    await page.route('**/api/review/feedback', (route) =>
+      route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"Failed to save feedback"}' })
+    );
+
+    const textarea = page.locator('textarea[name="feedback_message"]');
+    await textarea.fill('This must not be lost');
+    await page.locator('input[name="contact_email"]').fill('test@example.com');
+    await page.getByRole('button', { name: 'Wyślij opinię' }).click();
+
+    await expect(page.locator('form [role="alert"]')).toContainText('Nie udało się wysłać opinii');
+    await expect(page.getByText('Dziękujemy!')).toHaveCount(0);
+    await expect(textarea).toHaveValue('This must not be lost');
+    await expect(page.getByRole('button', { name: 'Wyślij opinię' })).toBeEnabled();
+  });
+
+  test('network failure shows the error and unblocks the button', async ({ page }) => {
+    await page.goto('/plate/ACTIVE/testsecretactive');
+    await page.waitForURL(/\/plate\/ACTIVE\/scan\/.+/);
+    await page.getByLabel('1 star').click();
+
+    await page.route('**/api/review/feedback', (route) => route.abort('failed'));
+
+    await page.locator('textarea[name="feedback_message"]').fill('offline text');
+    await page.locator('input[name="contact_email"]').fill('test@example.com');
+    await page.getByRole('button', { name: 'Wyślij opinię' }).click();
+
+    await expect(page.locator('form [role="alert"]')).toContainText('Nie udało się wysłać opinii');
+    await expect(page.getByRole('button', { name: 'Wyślij opinię' })).toBeEnabled();
+  });
+});
+
+// ── Flow 1a2 — 5 stars without a usable Google link (F8) ────────────────────
+
+test.describe('Positive rating without a Google link', () => {
+  test('5 stars shows the thank-you, not the complaint form', async ({ page }) => {
+    await setLocationGoogleLink(1, null);
+    try {
+      await page.goto('/plate/ACTIVE/testsecretactive');
+      await page.waitForURL(/\/plate\/ACTIVE\/scan\/.+/);
+      await page.getByLabel('5 star').click();
+
+      await expect(page.getByText('Dziękujemy za wysoką ocenę!')).toBeVisible();
+      await expect(page.locator('textarea[name="feedback_message"]')).toHaveCount(0);
+    } finally {
+      await setLocationGoogleLink(1, 'https://g.page/r/test-review-link');
+    }
   });
 });
 

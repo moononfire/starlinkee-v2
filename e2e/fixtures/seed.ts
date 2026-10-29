@@ -214,3 +214,13 @@ export async function portalSessionCookies(appUrl: string) {
   if (error) throw new Error(`verifyOtp failed: ${error.message}`);
   return [...jar].map(([name, value]) => ({ name, value, url: appUrl }));
 }
+
+/** Sets (or clears, with null) the Google review link of a seeded location. Tests that clear it must restore it. */
+export async function setLocationGoogleLink(subscriptionId: number, link: string | null) {
+  const res = await fetch(`${BASE_URL}/rest/v1/customer_locations?subscription_id=eq.${subscriptionId}`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ google_review_link: link }),
+  });
+  if (!res.ok) throw new Error(`setLocationGoogleLink failed: ${await res.text()}`);
+}

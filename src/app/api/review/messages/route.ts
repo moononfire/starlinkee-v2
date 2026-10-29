@@ -17,8 +17,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const { scanId, body } = await request.json();
-  if (!scanId || !body?.trim()) {
+  const parsed = await request.json().catch(() => null);
+  const { scanId, body } = parsed ?? {};
+  if (!scanId || typeof body !== "string" || !body.trim()) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 

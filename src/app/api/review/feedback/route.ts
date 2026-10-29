@@ -10,10 +10,10 @@ import { ownerLanguage } from "@/lib/languages";
 import { broadcastToChannel } from "@/lib/realtime/broadcast";
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { scanId, feedback_message, user_name, contact_email, contact_phone } = body;
+  const body = await request.json().catch(() => null);
+  const { scanId, feedback_message, user_name, contact_email, contact_phone } = body ?? {};
 
-  if (!scanId || !feedback_message?.trim() || !contact_email?.trim()) {
+  if (!scanId || typeof feedback_message !== "string" || !feedback_message.trim() || typeof contact_email !== "string" || !contact_email.trim()) {
     return NextResponse.json({ error: "Invalid input: missing email or message" }, { status: 400 });
   }
 

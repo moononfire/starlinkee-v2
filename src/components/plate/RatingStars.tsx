@@ -89,7 +89,10 @@ export default function RatingStars({ scanId, googleReviewLink, lang }: Props) {
       }
     } else {
       popup?.close();
-      setShowFeedback(true);
+      // A positive rating with no safe Google link has nowhere to send the guest: thank them,
+      // do not show the complaint form ("sorry to hear that") after 5 stars.
+      if (redirectToGoogle) setAlreadyPositive(true);
+      else setShowFeedback(true);
     }
   }
 

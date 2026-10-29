@@ -25,8 +25,9 @@ export async function POST(request: NextRequest) {
   const { customer, subscriptions } = await getPortalSession();
   if (!customer) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { reviewId, body } = await request.json();
-  if (!reviewId || !body?.trim()) {
+  const parsed = await request.json().catch(() => null);
+  const { reviewId, body } = parsed ?? {};
+  if (!reviewId || typeof body !== "string" || !body.trim()) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 
@@ -76,7 +77,8 @@ export async function PATCH(request: NextRequest) {
   const { customer, subscriptions } = await getPortalSession();
   if (!customer) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { reviewId } = await request.json();
+  const parsed = await request.json().catch(() => null);
+  const { reviewId } = parsed ?? {};
   if (!reviewId) return NextResponse.json({ error: "Missing reviewId" }, { status: 400 });
 
   const review = await getReviewForOwner(reviewId, subscriptions.map((s) => s.subscription_id));

@@ -3,9 +3,10 @@ import { isPositiveRating } from "@/lib/review-rating";
 import { updateRating, getRedirectFourStarReviews } from "@/lib/db/reviews";
 
 export async function POST(request: NextRequest) {
-  const { scanId, rating } = await request.json();
+  const body = await request.json().catch(() => null);
+  const { scanId, rating } = body ?? {};
 
-  if (!scanId || typeof rating !== "number" || rating < 1 || rating > 5) {
+  if (!scanId || !Number.isInteger(rating) || rating < 1 || rating > 5) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 

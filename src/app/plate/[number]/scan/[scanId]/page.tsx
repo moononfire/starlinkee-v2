@@ -29,8 +29,7 @@ export default async function ScanPage({ params }: Props) {
   if (!plate || plate.plate_id !== review.plate_id) notFound();
 
   // Subscription lapsed after this scan session started (or was never active) —
-  // send the customer to the plate's permanent URL, which already shows the
-  // renewal screen with a payment link tied to this exact subscription.
+  // send the guest to the plate's permanent URL, which shows the "inactive" message.
   if (!plate.subscription_id) redirect(`/plate/${plate.plate_number}/${plate.secret_key}`);
   const subscription = await getSubscriptionById(plate.subscription_id);
   if (!subscription || subscription.status !== "active") {

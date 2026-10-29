@@ -42,6 +42,16 @@ beforeEach(() => {
 });
 
 describe("POST /api/review/feedback", () => {
+  it("returns 400 (not 500) for a body that is not valid JSON", async () => {
+    const res = await POST(new NextRequest("http://localhost/api/review/feedback", { method: "POST", body: "{nope" }));
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when the message or email is not a string", async () => {
+    const res = await POST(makeRequest({ scanId: "s", feedback_message: 5, contact_email: "a@b.c" }));
+    expect(res.status).toBe(400);
+  });
+
   it("returns 400 when scanId is missing", async () => {
     const res = await POST(makeRequest({ feedback_message: "great" }));
     expect(res.status).toBe(400);

@@ -36,29 +36,57 @@ describe("updateRating()", () => {
     await expect(updateRating("scan-1", 3)).rejects.toMatchObject({ existingRating: 5 });
   });
 
-  it("updates when rating is null", async () => {
-    const singleSelect = vi.fn().mockResolvedValue({ data: { rating: null } });
-    const eqUpdate = vi.fn().mockResolvedValue({ error: null });
+  // update(...).eq(...).is("rating", null).select(...) — the conditional write that closes the race.
+  function mockConditionalUpdate(
+    first: { rating: number | null; plates?: { plate_number: string } },
+    result: { data: unknown[] | null; error: { message: string } | null },
+    afterRace?: { rating: number }
+  ) {
+    const isFn = vi.fn(() => ({ select: vi.fn().mockResolvedValue(result) }));
+    const eqUpdate = vi.fn(() => ({ is: isFn, select: vi.fn().mockResolvedValue(result) }));
     const updateFn = vi.fn(() => ({ eq: eqUpdate }));
-
     supabaseMock.from
-      .mockReturnValueOnce({ select: vi.fn(() => ({ eq: vi.fn(() => ({ single: singleSelect })) })) })
+      .mockReturnValueOnce({ select: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: first }) })) })) })
       .mockReturnValueOnce({ update: updateFn });
+    if (afterRace) {
+      supabaseMock.from.mockReturnValueOnce({
+        select: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: afterRace }) })) })),
+      });
+    }
+    return { updateFn, isFn };
+  }
+
+  it("updates when rating is null, with a rating-is-null condition", async () => {
+    const { updateFn, isFn } = mockConditionalUpdate({ rating: null }, { data: [{ review_id: 1 }], error: null });
 
     await expect(updateRating("scan-1", 4)).resolves.toBeUndefined();
     expect(updateFn).toHaveBeenCalledWith(expect.objectContaining({ rating: 4 }));
+    expect(isFn).toHaveBeenCalledWith("rating", null);
   });
 
   it("throws when Supabase update returns error", async () => {
-    const singleSelect = vi.fn().mockResolvedValue({ data: { rating: null } });
-    const eqUpdate = vi.fn().mockResolvedValue({ error: { message: "DB error" } });
-    const updateFn = vi.fn(() => ({ eq: eqUpdate }));
-
-    supabaseMock.from
-      .mockReturnValueOnce({ select: vi.fn(() => ({ eq: vi.fn(() => ({ single: singleSelect })) })) })
-      .mockReturnValueOnce({ update: updateFn });
+    mockConditionalUpdate({ rating: null }, { data: null, error: { message: "DB error" } });
 
     await expect(updateRating("scan-1", 4)).rejects.toThrow("Failed to update rating");
+  });
+
+  it("loses a race: 0 rows updated -> already-submitted with the rating that won", async () => {
+    mockConditionalUpdate({ rating: null }, { data: [], error: null }, { rating: 1 });
+
+    await expect(updateRating("scan-1", 5)).rejects.toMatchObject({
+      message: "Rating already submitted",
+      existingRating: 1,
+    });
+  });
+
+  it("TJRUAO may be re-rated: no rating-is-null condition", async () => {
+    const { isFn } = mockConditionalUpdate(
+      { rating: 3, plates: { plate_number: "TJRUAO" } },
+      { data: [{ review_id: 1 }], error: null }
+    );
+
+    await expect(updateRating("scan-1", 5)).resolves.toBeUndefined();
+    expect(isFn).not.toHaveBeenCalled();
   });
 });
 

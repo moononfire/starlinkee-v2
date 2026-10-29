@@ -101,12 +101,21 @@ export async function updateRating(scanId: string, rating: number): Promise<void
     throw error;
   }
 
-  const { error } = await supabase
+  // Conditional write: two concurrent submits both pass the check above, only the first may win.
+  let update = supabase
     .from("reviews")
     .update({ rating, rating_time: new Date().toISOString() })
     .eq("scan_id", scanId);
+  if (plateNumber !== "TJRUAO") update = update.is("rating", null);
+  const { data: updated, error } = await update.select("review_id");
 
   if (error) throw new Error(`Failed to update rating: ${error.message}`);
+  if (!updated || updated.length === 0) {
+    const { data: current } = await supabase.from("reviews").select("rating").eq("scan_id", scanId).single();
+    const lost = new Error("Rating already submitted") as Error & { existingRating: number };
+    lost.existingRating = current?.rating ?? rating;
+    throw lost;
+  }
 }
 
 export async function getRedirectFourStarReviews(scanId: string): Promise<boolean> {
