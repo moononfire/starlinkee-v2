@@ -17,7 +17,7 @@ interface CustomerInsert {
   address_city?: string;
   address_postal_code?: string;
   country?: string;
-  preferred_language?: Language;
+  preferred_language?: Language | null;
   is_activated?: boolean;
 }
 
@@ -39,7 +39,8 @@ export async function upsertCustomerByEmail(input: CustomerInsert): Promise<numb
   const existing = pickByEmail(matches, data.email);
 
   if (existing) {
-    const { email: _email, preferred_language: _preferredLanguage, source: _source, ...candidates } = data;
+    // preferred_language is only filled while empty (the loop below), so a language the owner chose is never overwritten.
+    const { email: _email, source: _source, ...candidates } = data;
     const fill: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(candidates)) {
       if (value === undefined || value === null || value === "") continue;

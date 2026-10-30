@@ -1,4 +1,4 @@
-import { ownerLanguage, languageFromCountry } from "@/lib/languages";
+import { ownerLanguage, SUPPORTED_LANGUAGES, type Language } from "@/lib/languages";
 import Stripe from "stripe";
 import type { Subscription } from "../types";
 import { upsertCustomerByEmail } from "../db/customers";
@@ -165,6 +165,12 @@ function stripeSubscriptionIdOf(invoice: Stripe.Invoice): string | undefined {
   const sub = invoice.parent?.subscription_details?.subscription;
   if (!sub) return undefined;
   return typeof sub === "string" ? sub : sub.id;
+}
+
+/** A supported language from Stripe metadata `locale`, or undefined (anything else is ignored). */
+function localeFrom(metadata: Stripe.Metadata | null | undefined): Language | undefined {
+  const value = metadata?.locale?.trim().toLowerCase();
+  return SUPPORTED_LANGUAGES.find((l) => l === value);
 }
 
 /** End of the period this invoice paid for (latest line period end), if Stripe reports one. */
@@ -410,20 +416,22 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
     .filter(Boolean)
     .join(", ");
 
+  // The www checkout stores the visitor's language as `locale` metadata on the Checkout subscription (copied to the
+  // invoice) and on the Stripe customer. The billing country says nothing about the language, so it is not used.
+  let locale = localeFrom(invoice.parent?.subscription_details?.metadata);
   let companyName: string | undefined;
-  if (hasTaxId) {
+  if (hasTaxId || !locale) {
     const stripeCustomerId = typeof invoice.customer === "string"
       ? invoice.customer
       : invoice.customer?.id;
     if (stripeCustomerId) {
       const stripeCustomer = await getStripe().customers.retrieve(stripeCustomerId);
       if (!stripeCustomer.deleted) {
-        companyName = stripeCustomer.business_name ?? undefined;
+        if (hasTaxId) companyName = stripeCustomer.business_name ?? undefined;
+        locale ??= localeFrom(stripeCustomer.metadata);
       }
     }
   }
-
-  const countryLanguage = languageFromCountry(invoice.customer_address?.country);
 
   const customerId = await upsertCustomerByEmail({
     email,
@@ -435,7 +443,7 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
     billing_address: billingAddress || undefined,
     country: invoice.customer_address?.country ?? undefined,
     phone: invoice.customer_phone ?? undefined,
-    preferred_language: countryLanguage,
+    preferred_language: locale,
     is_activated: true,
   });
 
@@ -506,7 +514,7 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://starlinkee.com";
   const loginUrl = `${appUrl}/portal/login`;
   const customer = await getCustomerById(customerId);
-  const language = customer?.preferred_language ?? countryLanguage;
+  const language = customer?.preferred_language ? ownerLanguage(customer) : (locale ?? "en");
 
   const generatedPassword = generateRandomPassword();
   const accountResult = await createConfirmedPortalUser(email, generatedPassword);

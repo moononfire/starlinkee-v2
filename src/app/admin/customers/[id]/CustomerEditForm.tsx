@@ -21,7 +21,7 @@ export default function CustomerEditForm({ customer }: Props) {
   const [taxId, setTaxId] = useState(customer.tax_id ?? "");
   const [billingAddress, setBillingAddress] = useState(customer.billing_address ?? "");
   const [country, setCountry] = useState(customer.country ?? "");
-  const [preferredLanguage, setPreferredLanguage] = useState(customer.preferred_language);
+  const [preferredLanguage, setPreferredLanguage] = useState<Customer["preferred_language"]>(customer.preferred_language);
   const [isActivated, setIsActivated] = useState(customer.is_activated);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -175,10 +175,11 @@ export default function CustomerEditForm({ customer }: Props) {
         <div>
           <label className={labelClass}>Preferowany język</label>
           <select
-            value={preferredLanguage}
-            onChange={(e) => setPreferredLanguage(e.target.value as Customer["preferred_language"])}
+            value={preferredLanguage ?? ""}
+            onChange={(e) => setPreferredLanguage((e.target.value || null) as Customer["preferred_language"])}
             className={inputClass}
           >
+            <option value="">— (język tabliczki)</option>
             <option value="pl">Polski</option>
             <option value="en">English</option>
             <option value="de">Deutsch</option>

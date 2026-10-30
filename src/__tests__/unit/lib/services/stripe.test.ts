@@ -29,6 +29,7 @@ const {
   mockSendRenewalAdmin,
   mockSendDuplicateAdmin,
   mockStripeSubRetrieve,
+  mockCustomersRetrieve,
   mockSessionsList,
   mockSessionsExpire,
   mockSessionsCreate,
@@ -60,6 +61,7 @@ const {
   mockSendRenewalAdmin: vi.fn(),
   mockSendDuplicateAdmin: vi.fn(),
   mockStripeSubRetrieve: vi.fn(),
+  mockCustomersRetrieve: vi.fn(),
   mockSessionsList: vi.fn(),
   mockSessionsExpire: vi.fn(),
   mockSessionsCreate: vi.fn(),
@@ -69,7 +71,7 @@ vi.mock("stripe", () => ({
   default: class {
     subscriptions = { retrieve: mockStripeSubRetrieve };
     checkout = { sessions: { list: mockSessionsList, expire: mockSessionsExpire, create: mockSessionsCreate } };
-    customers = { retrieve: vi.fn() };
+    customers = { retrieve: mockCustomersRetrieve };
   },
 }));
 
@@ -157,6 +159,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   process.env.STRIPE_PRICE_ID_1_YEAR_SUB = TEST_PRICE_ID;
   mockUpsertCustomerByEmail.mockResolvedValue(1);
+  mockCustomersRetrieve.mockResolvedValue({ deleted: false, metadata: {} });
   mockGetCustomerById.mockResolvedValue({ customer_id: 1, preferred_language: "en" });
   mockCreateOrder.mockResolvedValue(100);
   mockCreateOrderItem.mockResolvedValue(undefined);
@@ -374,6 +377,61 @@ describe("www cart on the invoice (monthly/yearly subscription + extra plates)",
     await processInvoicePaymentSucceeded(cart([MONTHLY, 1]));
 
     expect(mockCreateSubscription).not.toHaveBeenCalled();
+  });
+});
+
+describe("language from www (metadata.locale), never from the billing country", () => {
+  const withLocale = (subscriptionLocale?: string, extra: Partial<Stripe.Invoice> = {}) =>
+    makeInvoice({
+      customer: "cus_1",
+      customer_address: { country: "IT" },
+      parent: { subscription_details: { subscription: "sub_1", metadata: subscriptionLocale ? { locale: subscriptionLocale } : {} } },
+      ...extra,
+    } as unknown as Partial<Stripe.Invoice>);
+  const savedLanguage = () => mockUpsertCustomerByEmail.mock.calls[0][0].preferred_language;
+  const mailLanguage = () => mockSendPortalCredentials.mock.calls[0][1];
+
+  // A new customer has no saved language yet (the default mock pretends the customer already speaks English).
+  beforeEach(() => {
+    mockGetCustomerById.mockResolvedValue({ customer_id: 1, preferred_language: null });
+  });
+
+  it("takes the locale from the subscription metadata without asking Stripe for the customer", async () => {
+    await processInvoicePaymentSucceeded(withLocale("de"));
+    expect(savedLanguage()).toBe("de");
+    expect(mockCustomersRetrieve).not.toHaveBeenCalled();
+    expect(mailLanguage()).toBe("de");
+  });
+
+  it("falls back to the locale on the Stripe customer", async () => {
+    mockCustomersRetrieve.mockResolvedValue({ deleted: false, metadata: { locale: "pl" } });
+    await processInvoicePaymentSucceeded(withLocale());
+    expect(savedLanguage()).toBe("pl");
+    expect(mailLanguage()).toBe("pl");
+  });
+
+  it("without any locale the language stays empty (the Italian billing country is ignored) and the mail is English", async () => {
+    await processInvoicePaymentSucceeded(withLocale());
+    expect(savedLanguage()).toBeUndefined();
+    expect(mailLanguage()).toBe("en");
+  });
+
+  it("a value outside en/de/pl/it is skipped", async () => {
+    mockCustomersRetrieve.mockResolvedValue({ deleted: false, metadata: { locale: "fr" } });
+    await processInvoicePaymentSucceeded(withLocale("zh"));
+    expect(savedLanguage()).toBeUndefined();
+  });
+
+  it("a deleted Stripe customer does not break the invoice", async () => {
+    mockCustomersRetrieve.mockResolvedValue({ deleted: true });
+    await processInvoicePaymentSucceeded(withLocale());
+    expect(mockCreateOrder).toHaveBeenCalledOnce();
+  });
+
+  it("an existing customer's saved language decides the mail, not the invoice locale", async () => {
+    mockGetCustomerById.mockResolvedValue({ customer_id: 1, preferred_language: "de" });
+    await processInvoicePaymentSucceeded(withLocale("it"));
+    expect(mailLanguage()).toBe("de");
   });
 });
 

@@ -70,7 +70,7 @@ export default async function CustomersPage({
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{c.phone ?? "—"}</td>
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{c.company_name ?? "—"}</td>
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{c.country ?? "—"}</td>
-                <td className="px-4 py-3 text-gray-600 dark:text-gray-300 uppercase">{c.preferred_language}</td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-300 uppercase">{c.preferred_language ?? "—"}</td>
                 <td className="px-4 py-3 text-gray-500">
                   {new Date(c.created_at).toLocaleDateString("pl-PL")}
                 </td>

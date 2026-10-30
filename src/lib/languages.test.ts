@@ -8,6 +8,7 @@ describe("ownerLanguage", () => {
   it("falls back to the plate language, then English", () => {
     expect(ownerLanguage(null, { plate_language: "pl" })).toBe("pl");
     expect(ownerLanguage({ preferred_language: null }, null)).toBe("en");
+    expect(ownerLanguage({ preferred_language: null }, { plate_language: "de" })).toBe("de");
   });
   it("returns Italian: portal and e-mails exist in it (no it -> en mapping)", () => {
     expect(ownerLanguage(null, { plate_language: "it" })).toBe("it");
