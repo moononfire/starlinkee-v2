@@ -428,6 +428,37 @@ export async function sendDuplicateStripeSubscriptionToAdmin(data: {
   );
 }
 
+// Admin alert: a paid www cart whose metadata cannot be trusted. Nothing was created, so this needs a manual follow-up.
+export async function sendInvalidCartMetadataToAdmin(data: {
+  invoiceId: string;
+  stripeCustomerId: string;
+  customerEmail: string;
+  amount: string;
+  errors: string[];
+}) {
+  const html = layout(
+    h1("Paid cart with invalid metadata") +
+      para(
+        "A paid invoice carries cart metadata that v2 cannot use, so no customer account, order, subscription or shipment was created. " +
+          "Create them by hand for this customer, or refund the payment."
+      ) +
+      dataTable(
+        ["Invoice", esc(data.invoiceId)],
+        ["Stripe customer", esc(data.stripeCustomerId)],
+        ["Customer email", esc(data.customerEmail)],
+        ["Amount", esc(data.amount)],
+        ["Invalid fields", esc(data.errors.join(", "))]
+      )
+  );
+  await sendMail(
+    process.env.EMAIL_ADMIN!,
+    `Paid cart with invalid metadata — ${data.invoiceId}`,
+    html,
+    `Invoice ${data.invoiceId} (${data.customerEmail}, Stripe customer ${data.stripeCustomerId}, ${data.amount}) has invalid cart metadata: ` +
+      `${data.errors.join(", ")}. Nothing was created: set the customer up by hand or refund.`
+  );
+}
+
 const feedbackStrings = {
   en: {
     title: (locationName: string) => `New feedback — ${locationName}`,

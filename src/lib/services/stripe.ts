@@ -25,6 +25,7 @@ import {
   sendRenewalConfirmation,
   sendRenewalConfirmationToAdmin,
   sendDuplicateStripeSubscriptionToAdmin,
+  sendInvalidCartMetadataToAdmin,
 } from "../email";
 import { getCustomerByEmail } from "../db/portal";
 import { getCustomerById } from "../db/customers";
@@ -165,6 +166,49 @@ function stripeSubscriptionIdOf(invoice: Stripe.Invoice): string | undefined {
   const sub = invoice.parent?.subscription_details?.subscription;
   if (!sub) return undefined;
   return typeof sub === "string" ? sub : sub.id;
+}
+
+type MetadataCart =
+  | { status: "none" }
+  | { status: "ok"; totalPlates: number; durationDays: number }
+  | { status: "invalid"; errors: string[] };
+
+/**
+ * The www checkout describes the cart in subscription metadata: `billing` (monthly | annual | trial), `total_plates`
+ * and, for a trial, `trial_days`. Without `billing` there is nothing to read (price ids decide, see countCartPlates).
+ * With it, anything unusable is reported instead of guessed: the metadata and the invoice would disagree.
+ * `kind`, `plates` and `plates_by_language` are deliberately ignored (a trial has kind=subscription_yearly).
+ */
+function cartFromMetadata(metadata: Stripe.Metadata | null | undefined): MetadataCart {
+  const billing = metadata?.billing?.trim().toLowerCase();
+  if (!billing) return { status: "none" };
+
+  const errors: string[] = [];
+  let durationDays = 0;
+  if (billing === "monthly") durationDays = RENEWAL_DURATION_DAYS.month;
+  else if (billing === "annual") durationDays = RENEWAL_DURATION_DAYS.year;
+  else if (billing === "trial") {
+    const trialDays = parseCount(metadata?.trial_days, 3650);
+    if (trialDays === null) errors.push("trial_days");
+    else durationDays = trialDays;
+  } else {
+    errors.push("billing");
+  }
+
+  const totalPlates = parseCount(metadata?.total_plates, MAX_CART_PLATES);
+  if (totalPlates === null) errors.push("total_plates");
+
+  if (errors.length > 0 || totalPlates === null) return { status: "invalid", errors };
+  return { status: "ok", totalPlates, durationDays };
+}
+
+const MAX_CART_PLATES = 50;
+
+/** A whole number from 1 to max written as plain digits, else null. */
+function parseCount(value: string | undefined, max: number): number | null {
+  if (!value || !/^\d+$/.test(value.trim())) return null;
+  const n = Number(value.trim());
+  return n >= 1 && n <= max ? n : null;
 }
 
 /** A supported language from Stripe metadata `locale`, or undefined (anything else is ignored). */
@@ -418,9 +462,11 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
 
   // The www checkout stores the visitor's language as `locale` metadata on the Checkout subscription (copied to the
   // invoice) and on the Stripe customer. The billing country says nothing about the language, so it is not used.
-  let locale = localeFrom(invoice.parent?.subscription_details?.metadata);
+  const subscriptionMetadata = invoice.parent?.subscription_details?.metadata;
+  let locale = localeFrom(subscriptionMetadata);
+  let customerMetadata: Stripe.Metadata | null | undefined;
   let companyName: string | undefined;
-  if (hasTaxId || !locale) {
+  if (hasTaxId || !locale || !subscriptionMetadata?.billing) {
     const stripeCustomerId = typeof invoice.customer === "string"
       ? invoice.customer
       : invoice.customer?.id;
@@ -428,9 +474,28 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
       const stripeCustomer = await getStripe().customers.retrieve(stripeCustomerId);
       if (!stripeCustomer.deleted) {
         if (hasTaxId) companyName = stripeCustomer.business_name ?? undefined;
+        customerMetadata = stripeCustomer.metadata;
         locale ??= localeFrom(stripeCustomer.metadata);
       }
     }
+  }
+
+  // The cart metadata (subscription first, else the Stripe customer) is checked before anything is written:
+  // a paid invoice we cannot read creates nothing and alerts the admin instead of selling the wrong thing.
+  const metadataCart = cartFromMetadata(subscriptionMetadata?.billing ? subscriptionMetadata : customerMetadata);
+  if (metadataCart.status === "invalid") {
+    const stripeCustomerId = typeof invoice.customer === "string" ? invoice.customer : (invoice.customer?.id ?? "unknown");
+    console.error(
+      `[stripe] invoice ${invoice.id} has invalid cart metadata (${metadataCart.errors.join(", ")}) — nothing created, admin alerted`
+    );
+    await sendInvalidCartMetadataToAdmin({
+      invoiceId: invoice.id ?? "unknown",
+      stripeCustomerId,
+      customerEmail: email,
+      amount: `${((invoice.amount_paid ?? 0) / 100).toFixed(2)} ${(invoice.currency ?? "").toUpperCase()}`.trim(),
+      errors: metadataCart.errors,
+    }).catch((err) => console.error("[stripe] invalid-cart admin email failed:", err));
+    return;
   }
 
   const customerId = await upsertCustomerByEmail({
@@ -471,8 +536,9 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
     }));
 
   // 3. Process line items → order_items + subscriptions
-  // The www cart is one subscription line (monthly or yearly) plus extra plates; every plate becomes its own row.
-  const { totalPlates, durationDays } = countCartPlates(invoice);
+  // Cart metadata decides when present; otherwise the www cart is one subscription line (monthly or yearly) plus
+  // extra plates. Every plate becomes its own row.
+  const { totalPlates, durationDays } = metadataCart.status === "ok" ? metadataCart : countCartPlates(invoice);
 
   if (totalPlates > 0 && !(await orderHasItems(orderId))) {
     await createOrderItem(orderId, SUBSCRIPTION_PRODUCT_ID, totalPlates);

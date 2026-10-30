@@ -28,6 +28,7 @@ const {
   mockSendRenewalConfirmation,
   mockSendRenewalAdmin,
   mockSendDuplicateAdmin,
+  mockSendInvalidCart,
   mockStripeSubRetrieve,
   mockCustomersRetrieve,
   mockSessionsList,
@@ -60,6 +61,7 @@ const {
   mockSendRenewalConfirmation: vi.fn(),
   mockSendRenewalAdmin: vi.fn(),
   mockSendDuplicateAdmin: vi.fn(),
+  mockSendInvalidCart: vi.fn(),
   mockStripeSubRetrieve: vi.fn(),
   mockCustomersRetrieve: vi.fn(),
   mockSessionsList: vi.fn(),
@@ -110,6 +112,7 @@ vi.mock("@/lib/email", () => ({
   sendRenewalConfirmation: mockSendRenewalConfirmation,
   sendRenewalConfirmationToAdmin: mockSendRenewalAdmin,
   sendDuplicateStripeSubscriptionToAdmin: mockSendDuplicateAdmin,
+  sendInvalidCartMetadataToAdmin: mockSendInvalidCart,
 }));
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
@@ -184,6 +187,7 @@ beforeEach(() => {
   mockSendRenewalConfirmation.mockResolvedValue(undefined);
   mockSendRenewalAdmin.mockResolvedValue(undefined);
   mockSendDuplicateAdmin.mockResolvedValue(undefined);
+  mockSendInvalidCart.mockResolvedValue(undefined);
   mockStripeSubRetrieve.mockResolvedValue({ status: "canceled" });
   mockSessionsList.mockResolvedValue({ data: [] });
   mockSessionsExpire.mockResolvedValue({});
@@ -396,8 +400,13 @@ describe("language from www (metadata.locale), never from the billing country", 
     mockGetCustomerById.mockResolvedValue({ customer_id: 1, preferred_language: null });
   });
 
-  it("takes the locale from the subscription metadata without asking Stripe for the customer", async () => {
-    await processInvoicePaymentSucceeded(withLocale("de"));
+  it("takes the locale from the subscription metadata without asking Stripe for the customer (cart metadata present too)", async () => {
+    await processInvoicePaymentSucceeded(
+      makeInvoice({
+        customer: "cus_1",
+        parent: { subscription_details: { subscription: "sub_1", metadata: { locale: "de", billing: "annual", total_plates: "1" } } },
+      } as unknown as Partial<Stripe.Invoice>)
+    );
     expect(savedLanguage()).toBe("de");
     expect(mockCustomersRetrieve).not.toHaveBeenCalled();
     expect(mailLanguage()).toBe("de");
@@ -432,6 +441,107 @@ describe("language from www (metadata.locale), never from the billing country", 
     mockGetCustomerById.mockResolvedValue({ customer_id: 1, preferred_language: "de" });
     await processInvoicePaymentSucceeded(withLocale("it"));
     expect(mailLanguage()).toBe("de");
+  });
+});
+
+describe("cart metadata from www (P27)", () => {
+  const metaInvoice = (metadata: Record<string, string> | undefined, extra: Partial<Stripe.Invoice> = {}) =>
+    makeInvoice({
+      id: "in_meta",
+      customer: "cus_meta",
+      amount_paid: 4900,
+      currency: "eur",
+      parent: { subscription_details: { subscription: "sub_1", metadata: metadata ?? {} } },
+      ...extra,
+    } as unknown as Partial<Stripe.Invoice>);
+  const durations = () => mockCreateSubscription.mock.calls.map((c) => c[0].duration_in_days);
+  const nothingCreated = () => {
+    expect(mockUpsertCustomerByEmail).not.toHaveBeenCalled();
+    expect(mockCreateOrder).not.toHaveBeenCalled();
+    expect(mockCreateSubscription).not.toHaveBeenCalled();
+    expect(mockCreateShipment).not.toHaveBeenCalled();
+    expect(mockCreateUser).not.toHaveBeenCalled();
+  };
+
+  beforeEach(() => {
+    process.env.STRIPE_PRICE_ID_SUBSCRIPTION = "price_www_month";
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    delete process.env.STRIPE_PRICE_ID_SUBSCRIPTION;
+    vi.restoreAllMocks();
+  });
+
+  it("monthly with total_plates=3 makes 3 rows of 30 days, whatever the invoice lines say", async () => {
+    await processInvoicePaymentSucceeded(metaInvoice({ billing: "monthly", total_plates: "3" }));
+    expect(durations()).toEqual([30, 30, 30]);
+    expect(mockCreateOrderItem).toHaveBeenCalledWith(100, 1, 3);
+  });
+
+  it("annual with total_plates=1 makes one row of 365 days", async () => {
+    await processInvoicePaymentSucceeded(metaInvoice({ billing: "annual", total_plates: "1" }));
+    expect(durations()).toEqual([365]);
+  });
+
+  it("trial uses trial_days, not the kind=subscription_yearly alias", async () => {
+    await processInvoicePaymentSucceeded(
+      metaInvoice({ billing: "trial", total_plates: "2", trial_days: "30", kind: "subscription_yearly", plates: "9" })
+    );
+    expect(durations()).toEqual([30, 30]);
+  });
+
+  it("reads the metadata from the Stripe customer when the subscription has none", async () => {
+    mockCustomersRetrieve.mockResolvedValue({ deleted: false, metadata: { billing: "annual", total_plates: "2" } });
+    await processInvoicePaymentSucceeded(metaInvoice(undefined));
+    expect(durations()).toEqual([365, 365]);
+  });
+
+  it("without any billing metadata the price-id logic of P20 decides", async () => {
+    await processInvoicePaymentSucceeded(
+      makeInvoice({
+        lines: { data: [{ pricing: { price_details: { price: "price_www_month" } }, quantity: 2 }] },
+      } as unknown as Partial<Stripe.Invoice>)
+    );
+    expect(durations()).toEqual([30, 30]);
+  });
+
+  it.each([
+    ["an unknown billing", { billing: "weekly", total_plates: "1" }, ["billing"]],
+    ["total_plates=0", { billing: "monthly", total_plates: "0" }, ["total_plates"]],
+    ["total_plates=abc", { billing: "annual", total_plates: "abc" }, ["total_plates"]],
+    ["total_plates=51", { billing: "annual", total_plates: "51" }, ["total_plates"]],
+    ["total_plates=1.5", { billing: "annual", total_plates: "1.5" }, ["total_plates"]],
+    ["a trial without trial_days", { billing: "trial", total_plates: "1" }, ["trial_days"]],
+    ["a missing total_plates", { billing: "monthly" }, ["total_plates"]],
+  ])("%s creates nothing and alerts the admin once", async (_name, metadata, errors) => {
+    await processInvoicePaymentSucceeded(metaInvoice(metadata));
+
+    nothingCreated();
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining("in_meta"));
+    expect(mockSendInvalidCart).toHaveBeenCalledOnce();
+    expect(mockSendInvalidCart).toHaveBeenCalledWith({
+      invoiceId: "in_meta",
+      stripeCustomerId: "cus_meta",
+      customerEmail: "test@example.com",
+      amount: "49.00 EUR",
+      errors,
+    });
+  });
+
+  it("a failing alert e-mail does not fail the webhook", async () => {
+    mockSendInvalidCart.mockRejectedValue(new Error("smtp down"));
+    await expect(processInvoicePaymentSucceeded(metaInvoice({ billing: "weekly", total_plates: "1" }))).resolves.toBeUndefined();
+    nothingCreated();
+  });
+
+  it("redelivery of an invoice with metadata creates no duplicates", async () => {
+    mockGetOrderId.mockResolvedValue(100);
+    mockOrderHasItems.mockResolvedValue(true);
+    mockListSubsByInvoice.mockResolvedValue([{}, {}, {}]);
+    await processInvoicePaymentSucceeded(metaInvoice({ billing: "monthly", total_plates: "3" }));
+    expect(mockCreateOrder).not.toHaveBeenCalled();
+    expect(mockCreateOrderItem).not.toHaveBeenCalled();
+    expect(mockCreateSubscription).not.toHaveBeenCalled();
   });
 });
 
