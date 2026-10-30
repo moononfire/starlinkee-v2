@@ -174,8 +174,8 @@ type MetadataCart =
   | { status: "invalid"; errors: string[] };
 
 /**
- * The www checkout describes the cart in subscription metadata: `billing` (monthly | annual | trial), `total_plates`
- * and, for a trial, `trial_days`. Without `billing` there is nothing to read (price ids decide, see countCartPlates).
+ * The www checkout describes the cart in the subscription's metadata (never the Stripe customer's): `billing`
+ * (monthly | annual | trial), `total_plates` and, for a trial, `trial_days`. Without `billing` there is nothing to read (price ids decide, see countCartPlates).
  * With it, anything unusable is reported instead of guessed: the metadata and the invoice would disagree.
  * `kind`, `plates` and `plates_by_language` are deliberately ignored (a trial has kind=subscription_yearly).
  */
@@ -553,9 +553,8 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
   // invoice) and on the Stripe customer. The billing country says nothing about the language, so it is not used.
   const subscriptionMetadata = invoice.parent?.subscription_details?.metadata;
   let locale = localeFrom(subscriptionMetadata);
-  let customerMetadata: Stripe.Metadata | null | undefined;
   let companyName: string | undefined;
-  if (hasTaxId || !locale || !subscriptionMetadata?.billing) {
+  if (hasTaxId || !locale) {
     const stripeCustomerId = typeof invoice.customer === "string"
       ? invoice.customer
       : invoice.customer?.id;
@@ -563,15 +562,15 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
       const stripeCustomer = await getStripe().customers.retrieve(stripeCustomerId);
       if (!stripeCustomer.deleted) {
         if (hasTaxId) companyName = stripeCustomer.business_name ?? undefined;
-        customerMetadata = stripeCustomer.metadata;
         locale ??= localeFrom(stripeCustomer.metadata);
       }
     }
   }
 
-  // The cart metadata (subscription first, else the Stripe customer) is checked before anything is written:
-  // a paid invoice we cannot read creates nothing and alerts the admin instead of selling the wrong thing.
-  const metadataCart = cartFromMetadata(subscriptionMetadata?.billing ? subscriptionMetadata : customerMetadata);
+  // The cart comes ONLY from the subscription's metadata (customer metadata is permanent and may be left over from an
+  // older order; it only ever supplies the locale). It is checked before anything is written: a paid invoice we
+  // cannot read creates nothing and alerts the admin instead of selling the wrong thing.
+  const metadataCart = cartFromMetadata(subscriptionMetadata);
   if (metadataCart.status === "invalid") {
     const stripeCustomerId = typeof invoice.customer === "string" ? invoice.customer : (invoice.customer?.id ?? "unknown");
     console.error(

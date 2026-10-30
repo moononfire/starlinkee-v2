@@ -493,10 +493,29 @@ describe("cart metadata from www (P27)", () => {
     expect(mockCreateOrderItem).toHaveBeenCalledWith(100, 1, 1);
   });
 
-  it("reads the metadata from the Stripe customer when the subscription has none", async () => {
-    mockCustomersRetrieve.mockResolvedValue({ deleted: false, metadata: { billing: "annual", total_plates: "2" } });
-    await processInvoicePaymentSucceeded(metaInvoice(undefined));
-    expect(durations()).toEqual([365, 365]);
+  it("never reads the cart from the Stripe customer: a returning customer's old billing/total_plates are ignored", async () => {
+    process.env.STRIPE_PRICE_ID_SUBSCRIPTION = "price_www_month";
+    mockCustomersRetrieve.mockResolvedValue({ deleted: false, metadata: { billing: "annual", total_plates: "5", locale: "pl" } });
+    await processInvoicePaymentSucceeded(
+      metaInvoice(undefined, {
+        lines: { data: [{ pricing: { price_details: { price: "price_www_month" } }, quantity: 1 }] },
+      } as unknown as Partial<Stripe.Invoice>)
+    );
+    expect(durations()).toEqual([30]); // by price id (P20), not the five annual plates of the old order
+    expect(mockCreateOrderItem).toHaveBeenCalledWith(100, 1, 1);
+  });
+
+  it("takes only the locale from the Stripe customer (its cart metadata is ignored)", async () => {
+    mockCustomersRetrieve.mockResolvedValue({ deleted: false, metadata: { locale: "it", billing: "annual", total_plates: "5" } });
+    await processInvoicePaymentSucceeded(metaInvoice({ billing: "monthly", total_plates: "1" }));
+    expect(mockUpsertCustomerByEmail.mock.calls[0][0].preferred_language).toBe("it");
+    expect(durations()).toEqual([30]);
+  });
+
+  it("does not fetch the Stripe customer for the language when the subscription carries a locale", async () => {
+    await processInvoicePaymentSucceeded(metaInvoice({ billing: "monthly", total_plates: "1", locale: "de" }));
+    expect(mockCustomersRetrieve).not.toHaveBeenCalled();
+    expect(mockUpsertCustomerByEmail.mock.calls[0][0].preferred_language).toBe("de");
   });
 
   it("without any billing metadata the price-id logic of P20 decides", async () => {
