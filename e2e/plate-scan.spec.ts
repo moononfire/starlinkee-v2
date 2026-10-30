@@ -452,6 +452,25 @@ test.describe('Portal language switcher', () => {
   });
 });
 
+// ── Flow 1l — Venue content falls back guest language -> en -> pl (P26) ─────
+
+test.describe('Venue content fallback', () => {
+  const appUrl = 'http://localhost:' + (process.env.E2E_PORT ?? '3100');
+
+  test('a German guest without a German banner text sees the English one, not the Polish original', async ({ page }) => {
+    await page.context().addCookies([{ name: 'lang_testrestaurant', value: 'de', url: appUrl }]);
+    await page.goto('/l/testrestaurant');
+    await expect(page.getByText('Get 10% off your first order!')).toBeVisible();
+    await expect(page.getByText('Odbierz 10% zniżki na pierwsze zamówienie!')).toHaveCount(0);
+  });
+
+  test('a Polish guest still sees the Polish original', async ({ page }) => {
+    await page.context().addCookies([{ name: 'lang_testrestaurant', value: 'pl', url: appUrl }]);
+    await page.goto('/l/testrestaurant');
+    await expect(page.getByText('Odbierz 10% zniżki na pierwsze zamówienie!')).toBeVisible();
+  });
+});
+
 // ── Flow 2 — Pending plate (setup form) ─────────────────────────────────────
 
 test.describe('Pending plate (setup)', () => {

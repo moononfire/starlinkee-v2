@@ -110,6 +110,7 @@ export async function seedTestData() {
       has_promo_enabled: true,
       has_loyalty_enabled: true,
       promo_banner_text: 'Odbierz 10% zniżki na pierwsze zamówienie!',
+      promo_banner_text_en: 'Get 10% off your first order!',
       promo_sms_text: 'Twoja zniżka: {link}',
       owner_email: 'owner@restauracjatestowa.pl',
     },

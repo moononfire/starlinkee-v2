@@ -76,6 +76,28 @@ async function adoptPlateLanguage(plateLanguage: unknown, subscriptionId: number
   if (error) console.error(`[plates] could not set the language of customer ${subscription.customer_id}:`, error.message);
 }
 
+/**
+ * The venue of this subscription (if it already exists) must be readable in the plate's language, so that
+ * language joins its active_languages, like createLocation does for the plates it finds. Best effort.
+ */
+async function addLanguageToLocation(plateLanguage: unknown, subscriptionId: number): Promise<void> {
+  if (!SUPPORTED_LANGUAGES.includes(plateLanguage as (typeof SUPPORTED_LANGUAGES)[number])) return;
+  const supabase = createAdminClient();
+  const { data: location } = await supabase
+    .from("customer_locations")
+    .select("location_id, active_languages")
+    .eq("subscription_id", subscriptionId)
+    .maybeSingle();
+  if (!location) return;
+  const active: string[] = location.active_languages ?? [];
+  if (active.includes(plateLanguage as string)) return;
+  const { error } = await supabase
+    .from("customer_locations")
+    .update({ active_languages: [...active, plateLanguage] })
+    .eq("location_id", location.location_id);
+  if (error) console.error(`[plates] could not add ${plateLanguage} to location ${location.location_id}:`, error.message);
+}
+
 export async function assignPlateToSubscription(
   plateId: number,
   subscriptionId: number
@@ -90,6 +112,7 @@ export async function assignPlateToSubscription(
   if (error) throw new Error(`Failed to assign plate: ${error.message}`);
   if (data && data.length > 0) {
     await adoptPlateLanguage(data[0].plate_language, subscriptionId);
+    await addLanguageToLocation(data[0].plate_language, subscriptionId);
     return true;
   }
 

@@ -138,11 +138,22 @@ describe("assignPlateToSubscription()", () => {
   // After a fresh assignment: subscriptions.select().eq().maybeSingle(), then customers.update().eq().is().
   const customersIs = vi.fn().mockResolvedValue({ error: null });
   const customersUpdate = vi.fn(() => ({ eq: vi.fn(() => ({ is: customersIs })) }));
+  const venueEq = vi.fn().mockResolvedValue({ error: null });
+  const venueUpdate = vi.fn(() => ({ eq: venueEq }));
+  let venue: { location_id: number; active_languages: string[] } | null = null;
+  beforeEach(() => {
+    venue = null;
+  });
   function mockAdopt(customer: { customer_id: number } | null) {
     supabaseMock.from.mockReturnValueOnce({
       select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle: vi.fn().mockResolvedValue({ data: customer }) })) })),
     });
     if (customer) supabaseMock.from.mockReturnValueOnce({ update: customersUpdate });
+    // then the venue of the subscription: customer_locations.select().eq().maybeSingle(), optional .update().eq()
+    supabaseMock.from.mockReturnValueOnce({
+      select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle: vi.fn().mockResolvedValue({ data: venue }) })) })),
+    });
+    if (venue && !venue.active_languages.includes("de")) supabaseMock.from.mockReturnValueOnce({ update: venueUpdate });
   }
 
   function mockAssign(
@@ -179,6 +190,28 @@ describe("assignPlateToSubscription()", () => {
 
     expect(customersUpdate).toHaveBeenCalledWith({ preferred_language: "de" });
     expect(customersIs).toHaveBeenCalledWith("preferred_language", null); // only while it is still empty
+  });
+
+  it("adds the plate's language to the venue's active languages when it is missing", async () => {
+    venue = { location_id: 11, active_languages: ["en", "pl"] };
+    mockAssign({ data: [{ plate_id: 7, plate_language: "de" }], error: null });
+
+    await assignPlateToSubscription(7, 50);
+
+    expect(venueUpdate).toHaveBeenCalledWith({ active_languages: ["en", "pl", "de"] });
+    expect(venueEq).toHaveBeenCalledWith("location_id", 11);
+  });
+
+  it("leaves the venue alone when the language is already active or there is no venue yet", async () => {
+    venue = { location_id: 11, active_languages: ["en", "de"] };
+    mockAssign({ data: [{ plate_id: 7, plate_language: "de" }], error: null });
+    await assignPlateToSubscription(7, 50);
+    expect(venueUpdate).not.toHaveBeenCalled();
+
+    venue = null;
+    mockAssign({ data: [{ plate_id: 7, plate_language: "de" }], error: null });
+    await assignPlateToSubscription(7, 50);
+    expect(venueUpdate).not.toHaveBeenCalled();
   });
 
   it("does not touch the customer for an unsupported plate language or an already assigned plate", async () => {
