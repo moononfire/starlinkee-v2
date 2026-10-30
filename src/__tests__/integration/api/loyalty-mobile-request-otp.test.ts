@@ -74,9 +74,41 @@ describe("POST /api/mobile/loyalty/request-otp", () => {
     expect(text).toBe(`${prefix}${code}`);
   });
 
-  it.each([[{}], [{ lang: "zh" }], [{ lang: 7 }]])("sends English without a supported language (%j)", async (extra) => {
+  it.each([
+    ["+48600000000", "Twój kod weryfikacyjny: "],
+    ["+4915112345678", "Dein Bestätigungscode: "],
+    ["+436641234567", "Dein Bestätigungscode: "],
+    ["+393331234567", "Il tuo codice di verifica: "],
+    ["+447911123456", "Your verification code: "],
+  ])("without lang the number's country prefix picks the language (%s)", async (phone, prefix) => {
+    await POST(makeRequest({ phone }));
+    const [, code] = mockUpsertOtp.mock.calls[0];
+    expect(mockSendSms.mock.calls[0][1]).toBe(`${prefix}${code}`);
+  });
+
+  it.each([[{ lang: "zh" }], [{ lang: 7 }]])("an unsupported lang (%j) is ignored: the number decides", async (extra) => {
     await POST(makeRequest({ phone: "+48600000000", ...extra }));
-    expect(mockSendSms.mock.calls[0][1]).toMatch(/^Your verification code: \d{4}$/);
+    expect(mockSendSms.mock.calls[0][1]).toMatch(/^Twój kod weryfikacyjny: \d{4}$/);
+  });
+
+  it("Accept-Language beats the number prefix (first supported tag)", async () => {
+    const req = new NextRequest("http://localhost/api/mobile/loyalty/request-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept-Language": "fr-FR,de-DE;q=0.8,en;q=0.5" },
+      body: JSON.stringify({ phone: "+48600000000" }),
+    });
+    await POST(req);
+    expect(mockSendSms.mock.calls[0][1]).toMatch(/^Dein Bestätigungscode: \d{4}$/);
+  });
+
+  it("lang from the body beats Accept-Language and the number", async () => {
+    const req = new NextRequest("http://localhost/api/mobile/loyalty/request-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept-Language": "de" },
+      body: JSON.stringify({ phone: "+48600000000", lang: "it" }),
+    });
+    await POST(req);
+    expect(mockSendSms.mock.calls[0][1]).toMatch(/^Il tuo codice di verifica: \d{4}$/);
   });
 
   it("returns 500 when SMS sending fails", async () => {

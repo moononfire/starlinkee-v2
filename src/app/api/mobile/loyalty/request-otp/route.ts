@@ -5,7 +5,7 @@ import { clientIp } from "@/lib/rate-limit";
 export async function POST(request: NextRequest) {
   const { phone, lang } = await request.json().catch(() => ({}));
 
-  const result = await requestLoyaltyOtp(phone, clientIp(request), lang);
+  const result = await requestLoyaltyOtp(phone, clientIp(request), lang, request.headers.get("accept-language"));
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
