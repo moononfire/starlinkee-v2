@@ -20,6 +20,8 @@ Uzupełnia P20 (liczenie po price ID zostaje jako fallback) i P24 (locale → `p
 
 Odczyt: `invoice.parent.subscription_details.metadata`, a jeśli nie ma tam `billing`, `metadata` klienta Stripe. Klienta pobiera się raz, ten sam obiekt służy już P24.
 
+> **Zmienione przez P29** (kernel 10-30 13:52Z, qitem-20261030135242-f65c209842fb2044): koszyk (`billing`, `total_plates`, `trial_days`) czytamy **wyłącznie** z `subscription.metadata`, nigdy z `customer.metadata`. Metadane klienta są trwałe i mogą pochodzić ze starego zamówienia. `customer.metadata` zostaje tylko źródłem `locale`, po `subscription.metadata.locale`. Klienta Stripe pobieramy tylko wtedy, gdy na subskrypcji brak `locale` (albo gdy potrzebne jest `business_name`, jak dotąd). Brak `billing` na subskrypcji → fallback P20 po price ID. www ustawia `billing`/`total_plates`/`locale` zawsze na subskrypcji, także w trialu.
+
 ## Zakres (`src/lib/services/stripe.ts`, `processInvoicePaymentSucceeded`)
 
 1. Jest `billing` → płytki = `total_plates` (bez liczenia linii), `duration_in_days` = 30 dla `monthly`, 365 dla `annual`, `trial_days` dla `trial`.
@@ -33,7 +35,9 @@ Odczyt: `invoice.parent.subscription_details.metadata`, a jeśli nie ma tam `bil
 - `monthly` z `total_plates=3` → 3 wiersze po 30 dni, także gdy linie faktury mówią coś innego.
 - `annual` z `total_plates=1` → 1 wiersz, 365 dni.
 - `trial` z `trial_days=30` → 30 dni, mimo `kind=subscription_yearly`.
-- Metadane tylko na kliencie Stripe → użyte.
+- ~~Metadane tylko na kliencie Stripe → użyte.~~ (P29: koszyk z klienta nie jest czytany, tylko `locale`)
+- P29: powracający klient ze starym `customer.metadata.billing`/`total_plates` + nowa subskrypcja bez metadanych → liczy po price ID (P20), nie stare płytki z klienta.
+- P29: `locale` tylko na kliencie Stripe → użyte; `locale` na subskrypcji → klient Stripe nie jest pobierany dla języka.
 - Brak metadanych → wynik jak w P20 (istniejące testy dalej zielone).
 - Niepoprawne: `billing=weekly`, `total_plates=0`/`abc`, `trial` bez `trial_days` → log błędu, nic nie utworzone, `sendInvalidCartMetadataToAdmin` wywołane raz z ID faktury i klienta Stripe. Gdy wysyłka alarmu rzuca wyjątek, webhook i tak się kończy.
 - Ponowne dostarczenie tej samej faktury z metadanymi → bez duplikatów.
