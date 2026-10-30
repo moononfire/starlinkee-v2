@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
         locationName: location.location_name,
         claimUrl,
         smsText: baseSmsText.includes("{link}") ? baseSmsText.replace("{link}", "") : baseSmsText,
-      }).catch(() => {});
+      }, currentLang).catch(() => {});
     }
   } catch {
     return NextResponse.json({ error: "Failed to process promo" }, { status: 500 });

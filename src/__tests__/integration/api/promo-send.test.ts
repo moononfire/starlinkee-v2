@@ -167,6 +167,17 @@ describe("POST /api/promo/send", () => {
     expect(mockSendPromoEmail.mock.calls[0][0]).toBe("guest@example.com");
   });
 
+  it("passes the guest's language to the promo email, English when it is unsupported", async () => {
+    await POST(makeRequest({ ...validBody, email: "guest@example.com", lang: "de" }));
+    expect(mockSendPromoEmail.mock.calls[0][2]).toBe("de");
+
+    mockSendPromoEmail.mockClear();
+    resetRateLimits();
+    mockConsumeScanToken.mockResolvedValue(true);
+    await POST(makeRequest({ ...validBody, email: "guest@example.com", lang: "zh" }));
+    expect(mockSendPromoEmail.mock.calls[0][2]).toBe("en");
+  });
+
   it("does not send promo email when email is not provided", async () => {
     await POST(makeRequest(validBody));
     await new Promise((r) => setTimeout(r, 0));

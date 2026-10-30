@@ -458,7 +458,8 @@
     "portal_cancel_confirm_button": "Cancel renewal now",
     "portal_cancel_back": "Keep my subscription",
     "portal_cancel_failed": "Could not cancel the renewal. Please try again or write to kontakt@starlinkee.pl.",
-    "portal_cancel_scheduled": "Renewal cancelled. Your subscription stays active until {date} and will not be renewed."
+    "portal_cancel_scheduled": "Renewal cancelled. Your subscription stays active until {date} and will not be renewed.",
+    "loyalty_otp_sms": "Your verification code: {code}"
   },
   "de": {
     "back_button": "Zurück",
@@ -920,7 +921,8 @@
     "portal_cancel_confirm_button": "Jetzt kündigen",
     "portal_cancel_back": "Abonnement behalten",
     "portal_cancel_failed": "Die Kündigung ist fehlgeschlagen. Bitte versuchen Sie es erneut oder schreiben Sie an kontakt@starlinkee.pl.",
-    "portal_cancel_scheduled": "Kündigung eingegangen. Ihr Abonnement bleibt bis zum {date} aktiv und wird nicht verlängert."
+    "portal_cancel_scheduled": "Kündigung eingegangen. Ihr Abonnement bleibt bis zum {date} aktiv und wird nicht verlängert.",
+    "loyalty_otp_sms": "Dein Bestätigungscode: {code}"
   },
   "pl": {
     "back_button": "Powrót",
@@ -1382,7 +1384,8 @@
     "portal_cancel_confirm_button": "Zrezygnuj teraz",
     "portal_cancel_back": "Zostaw subskrypcję",
     "portal_cancel_failed": "Nie udało się zrezygnować z odnowienia. Spróbuj ponownie lub napisz na kontakt@starlinkee.pl.",
-    "portal_cancel_scheduled": "Rezygnacja przyjęta. Subskrypcja działa do {date} i nie zostanie odnowiona."
+    "portal_cancel_scheduled": "Rezygnacja przyjęta. Subskrypcja działa do {date} i nie zostanie odnowiona.",
+    "loyalty_otp_sms": "Twój kod weryfikacyjny: {code}"
   },
   "it": {
     "appreciate_feedback": "Apprezziamo il tuo feedback.",
@@ -1843,7 +1846,8 @@
     "portal_loyalty_total_users": "Utenti fedeltà totali",
     "portal_loyalty_total_stamps": "Timbri raccolti in totale",
     "portal_password_current": "Password attuale",
-    "portal_password_wrong_current": "La password attuale non è corretta."
+    "portal_password_wrong_current": "La password attuale non è corretta.",
+    "loyalty_otp_sms": "Il tuo codice di verifica: {code}"
   },
   "zh": {
     "proxy_page_title": "您如何评价您的体验？",

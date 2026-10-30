@@ -62,6 +62,23 @@ describe("POST /api/mobile/loyalty/request-otp", () => {
     expect(diff).toBeLessThanOrEqual(3 * 60 * 1000 + 500);
   });
 
+  it.each([
+    ["de", "Dein Bestätigungscode: "],
+    ["pl", "Twój kod weryfikacyjny: "],
+    ["it", "Il tuo codice di verifica: "],
+    ["en", "Your verification code: "],
+  ])("sends the SMS in the guest's language (%s)", async (lang, prefix) => {
+    await POST(makeRequest({ phone: "+48600000000", lang }));
+    const [, text] = mockSendSms.mock.calls[0];
+    const [, code] = mockUpsertOtp.mock.calls[0];
+    expect(text).toBe(`${prefix}${code}`);
+  });
+
+  it.each([[{}], [{ lang: "zh" }], [{ lang: 7 }]])("sends English without a supported language (%j)", async (extra) => {
+    await POST(makeRequest({ phone: "+48600000000", ...extra }));
+    expect(mockSendSms.mock.calls[0][1]).toMatch(/^Your verification code: \d{4}$/);
+  });
+
   it("returns 500 when SMS sending fails", async () => {
     mockSendSms.mockRejectedValue(new Error("network error"));
     const res = await POST(makeRequest({ phone: "+48600000000" }));
