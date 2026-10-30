@@ -54,7 +54,7 @@ export default async function PortalLayout({
             <img src="/logo-white.webp" alt="Starlinkee" className="h-10 w-auto hidden dark:block" />
           </Link>
           <div className="flex items-center gap-4">
-            <LanguageSwitcher currentLang={lang} />
+            <LanguageSwitcher currentLang={lang} persist="profile" />
             <UserMenu
               name={customer.customer_name}
               email={customer.email}

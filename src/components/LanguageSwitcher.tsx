@@ -21,13 +21,24 @@ export function visibleSwitcherLanguages(availableLanguages?: readonly string[])
 interface Props {
   currentLang: string;
   scopeKey?: string;
+  // "profile" saves the choice on the signed-in owner's customer record instead of a cookie (portal only).
+  persist?: "cookie" | "profile";
   availableLanguages?: readonly string[];
 }
 
-export default function LanguageSwitcher({ currentLang, scopeKey, availableLanguages }: Props) {
+export default function LanguageSwitcher({ currentLang, scopeKey, persist = "cookie", availableLanguages }: Props) {
   const router = useRouter();
 
-  function switchLang(lang: string) {
+  async function switchLang(lang: string) {
+    if (persist === "profile") {
+      const res = await fetch("/api/portal/language", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lang }),
+      }).catch(() => null);
+      if (res?.ok) router.refresh();
+      return;
+    }
     const cookieName = scopeKey ? `lang_${scopeKey}` : "lang";
     document.cookie = `${cookieName}=${lang};path=/;max-age=${60 * 60 * 24 * 365};SameSite=None;Secure`;
     router.refresh();

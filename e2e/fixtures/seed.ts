@@ -531,3 +531,33 @@ export async function seedItalianOwner() {
   });
   if (!res.ok && res.status !== 422) throw new Error(`create auth user failed: ${await res.text()}`);
 }
+
+export const LANGUAGE_OWNER = { email: 'e2e-owner-lang@example.com', password: 'e2e-portal-pass-5', customerId: 9006 };
+
+/** Owner whose preferred_language is reset to en on every call, so the switcher test always starts from the same state. */
+export async function seedLanguageOwner() {
+  await upsert(
+    'customers',
+    { customer_id: LANGUAGE_OWNER.customerId, customer_type: 'individual', customer_name: 'E2E Language', email: LANGUAGE_OWNER.email, preferred_language: 'en', country: 'DE' },
+    'customer_id',
+  );
+  await upsert(
+    'subscriptions',
+    {
+      subscription_id: 9006,
+      customer_id: LANGUAGE_OWNER.customerId,
+      subscription_name: '1_YEAR_SUB',
+      duration_in_days: 365,
+      status: 'active',
+      activation_datetime: new Date(Date.now() - 30 * 86_400_000).toISOString(),
+      expiration_datetime: new Date(Date.now() + 200 * 86_400_000).toISOString(),
+    },
+    'subscription_id',
+  );
+  const res = await fetch(`${BASE_URL}/auth/v1/admin/users`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ email: LANGUAGE_OWNER.email, password: LANGUAGE_OWNER.password, email_confirm: true }),
+  });
+  if (!res.ok && res.status !== 422) throw new Error(`create auth user failed: ${await res.text()}`);
+}

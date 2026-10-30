@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { seedTestData, cleanupTestReviews, seedGermanPortalUser, portalSessionCookies, setLocationGoogleLink, seedMixedCaseExpiredOwner, PORTAL_MIXED_USER, seedPromoLead, deletePromoLead, seedLapsedVenue, LAPSED_VENUE,
-  seedReassignablePlate, movePlateTo, newestReviewSubscription, newestReviewGuestLanguage, MOVER, seedCancelOwner, CANCEL_OWNER, seedItalianOwner, ITALIAN_OWNER } from './fixtures/seed';
+  seedReassignablePlate, movePlateTo, newestReviewSubscription, newestReviewGuestLanguage, MOVER, seedCancelOwner, CANCEL_OWNER, seedItalianOwner, ITALIAN_OWNER, seedLanguageOwner, LANGUAGE_OWNER } from './fixtures/seed';
 
 test.beforeAll(async () => {
   await seedTestData();
@@ -410,6 +410,45 @@ test.describe('Portal in Italian', () => {
     await page.goto('/portal/9005');
     await page.getByRole('button', { name: 'Disdici il rinnovo' }).click();
     await expect(page.getByRole('alertdialog')).toContainText("L'abbonamento resta attivo fino al");
+  });
+});
+
+// ── Flow 1k — Portal language is saved on the customer (P23) ───────────────
+
+test.describe('Portal language switcher', () => {
+  const appUrl = 'http://localhost:' + (process.env.E2E_PORT ?? '3100');
+
+  test('a choice made in the portal follows the owner to another device', async ({ page, browser }) => {
+    await seedLanguageOwner();
+    await page.context().addCookies(await portalSessionCookies(appUrl, LANGUAGE_OWNER.email));
+    await page.goto('/portal/9006');
+    await expect(page.getByRole('button', { name: 'Switch to EN' })).toHaveClass(/ring-1/);
+
+    await page.getByRole('button', { name: 'Switch to DE' }).click();
+    await expect(page.getByRole('button', { name: 'Switch to DE' })).toHaveClass(/ring-1/);
+
+    // Second "device": fresh context, no language cookie at all.
+    const other = await browser.newContext();
+    await other.addCookies(await portalSessionCookies(appUrl, LANGUAGE_OWNER.email));
+    const otherPage = await other.newPage();
+    await otherPage.goto(appUrl + '/portal/9006');
+    await expect(otherPage.getByRole('button', { name: 'Switch to DE' })).toHaveClass(/ring-1/);
+    expect((await other.cookies()).some((c) => c.name === 'lang')).toBe(false);
+    await other.close();
+  });
+
+  test('the API rejects an unsupported language and keeps the saved one', async ({ page }) => {
+    await seedLanguageOwner();
+    await page.context().addCookies(await portalSessionCookies(appUrl, LANGUAGE_OWNER.email));
+    const bad = await page.request.post(appUrl + '/api/portal/language', { data: { lang: 'zh' } });
+    expect(bad.status()).toBe(400);
+    await page.goto('/portal/9006');
+    await expect(page.getByRole('button', { name: 'Switch to EN' })).toHaveClass(/ring-1/);
+  });
+
+  test('the API needs a portal session', async ({ request }) => {
+    const res = await request.post(appUrl + '/api/portal/language', { data: { lang: 'de' } });
+    expect(res.status()).toBe(401);
   });
 });
 
