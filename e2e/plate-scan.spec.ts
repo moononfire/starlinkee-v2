@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { seedTestData, cleanupTestReviews, seedGermanPortalUser, portalSessionCookies, setLocationGoogleLink, seedMixedCaseExpiredOwner, PORTAL_MIXED_USER, seedPromoLead, deletePromoLead, seedLapsedVenue, LAPSED_VENUE,
-  seedReassignablePlate, movePlateTo, newestReviewSubscription, newestReviewGuestLanguage, MOVER, seedCancelOwner, CANCEL_OWNER, seedItalianOwner, ITALIAN_OWNER, seedLanguageOwner, LANGUAGE_OWNER } from './fixtures/seed';
+  seedReassignablePlate, movePlateTo, newestReviewSubscription, newestReviewGuestLanguage, MOVER, seedCancelOwner, CANCEL_OWNER, seedItalianOwner, ITALIAN_OWNER, seedLanguageOwner, LANGUAGE_OWNER, seedAdminWithShipments, ADMIN_USER } from './fixtures/seed';
 
 test.beforeAll(async () => {
   await seedTestData();
@@ -468,6 +468,25 @@ test.describe('Venue content fallback', () => {
     await page.context().addCookies([{ name: 'lang_testrestaurant', value: 'pl', url: appUrl }]);
     await page.goto('/l/testrestaurant');
     await expect(page.getByText('Odbierz 10% zniżki na pierwsze zamówienie!')).toBeVisible();
+  });
+});
+
+// ── Flow 1m — Admin shipments show how many plates to pack (P30) ────────────
+
+test.describe('Admin shipments', () => {
+  const appUrl = 'http://localhost:' + (process.env.E2E_PORT ?? '3100');
+
+  test('the number of plates is shown per shipment, and an old record without it shows a dash', async ({ page }) => {
+    await seedAdminWithShipments();
+    await page.context().addCookies(await portalSessionCookies(appUrl, ADMIN_USER.email));
+    await page.goto('/admin/shipments');
+
+    const packed = page.getByRole('row').filter({ hasText: '#9101' });
+    await expect(packed.getByRole('cell', { name: '3', exact: true })).toBeVisible();
+
+    const old = page.getByRole('row').filter({ hasText: '#9102' });
+    await expect(old).toBeVisible();
+    await expect(old.getByRole('cell', { name: '—', exact: true }).first()).toBeVisible();
   });
 });
 

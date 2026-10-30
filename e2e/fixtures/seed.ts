@@ -562,3 +562,38 @@ export async function seedLanguageOwner() {
   });
   if (!res.ok && res.status !== 422) throw new Error(`create auth user failed: ${await res.text()}`);
 }
+
+export const ADMIN_USER = { email: 'e2e-admin@example.com', password: 'e2e-admin-pass-1' };
+export const SHIPMENT_CUSTOMER = { customerId: 9007, name: 'E2E Shipments Customer', email: 'e2e-shipments@example.com' };
+
+/** An admin (app_metadata.role=admin) plus two shipments: one with number_of_plates=3 and an old one without (NULL). */
+export async function seedAdminWithShipments() {
+  const res = await fetch(`${BASE_URL}/auth/v1/admin/users`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ email: ADMIN_USER.email, password: ADMIN_USER.password, email_confirm: true, app_metadata: { role: 'admin' } }),
+  });
+  if (!res.ok && res.status !== 422) throw new Error(`create admin failed: ${await res.text()}`);
+
+  await upsert(
+    'customers',
+    { customer_id: SHIPMENT_CUSTOMER.customerId, customer_type: 'individual', customer_name: SHIPMENT_CUSTOMER.name, email: SHIPMENT_CUSTOMER.email, preferred_language: 'en', country: 'PL' },
+    'customer_id',
+  );
+  await upsert(
+    'orders',
+    [
+      { order_id: 9101, customer_id: SHIPMENT_CUSTOMER.customerId, status: 'paid', payment_method: 'stripe' },
+      { order_id: 9102, customer_id: SHIPMENT_CUSTOMER.customerId, status: 'paid', payment_method: 'stripe' },
+    ],
+    'order_id',
+  );
+  await upsert(
+    'shipments',
+    [
+      { id: 9101, order_id: 9101, recipient_name: 'E2E Packed Three', city: 'Warszawa', number_of_plates: 3, shipping_status: 'pending' },
+      { id: 9102, order_id: 9102, recipient_name: 'E2E Old Record', city: 'Gdańsk', number_of_plates: null, shipping_status: 'pending' },
+    ],
+    'id',
+  );
+}

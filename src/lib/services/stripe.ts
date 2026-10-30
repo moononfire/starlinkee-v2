@@ -29,6 +29,7 @@ import {
 } from "../email";
 import { getCustomerByEmail } from "../db/portal";
 import { getCustomerById } from "../db/customers";
+import { getShipmentByOrderId, setShipmentPlateCount } from "../db/shipments";
 import { assignPlateToSubscription, getPlateById } from "../db/plates";
 import { issueActivationCode } from "./activation";
 import { createConfirmedPortalUser } from "./portal-account";
@@ -444,6 +445,46 @@ export async function processRenewalInvoicePaid(
   }
 }
 
+/**
+ * Admin packs by /admin/shipments, so the extra plates of a trial must show up there. If the start shipment has not
+ * gone out yet it simply covers all plates (the count is recomputed, never added, so redelivery cannot double it);
+ * once it is shipped (or cancelled) the extra plates get a shipment of their own to the same address.
+ */
+async function placeExtraPlatesInShipment(
+  pi: Stripe.PaymentIntent,
+  base: Subscription,
+  piOrderId: number,
+  targetRows: number,
+  extraPlates: number,
+  existingRows: number,
+  alert: (errors: string[]) => Promise<unknown>
+): Promise<void> {
+  const invoiceOrderId = base.stripe_invoice_id ? await getOrderIdByStripePaymentId(base.stripe_invoice_id) : null;
+  const start = invoiceOrderId ? await getShipmentByOrderId(invoiceOrderId) : null;
+
+  if (start && start.shipping_status === "pending") {
+    await setShipmentPlateCount(start.id, Math.max(existingRows, targetRows));
+    return;
+  }
+
+  if (await orderHasShipment(piOrderId)) return;
+  const shipping = pi.shipping;
+  await createShipment({
+    order_id: piOrderId,
+    recipient_name: start?.recipient_name ?? shipping?.name ?? undefined,
+    address_line1: start?.address_line1 ?? shipping?.address?.line1 ?? undefined,
+    address_line2: start?.address_line2 ?? shipping?.address?.line2 ?? undefined,
+    city: start?.city ?? shipping?.address?.city ?? undefined,
+    postal_code: start?.postal_code ?? shipping?.address?.postal_code ?? undefined,
+    country: start?.country ?? shipping?.address?.country ?? undefined,
+    number_of_plates: extraPlates,
+  });
+  if (!start) {
+    console.error(`[stripe] payment intent ${pi.id}: no start shipment found for subscription ${base.stripe_subscription_id} — shipment created from the PaymentIntent, admin alerted`);
+    await alert([`no start shipment for ${base.stripe_subscription_id}`]);
+  }
+}
+
 export const EXTRA_PLATES_PURPOSE = "extra_plates_and_shipping";
 const EXTRA_PLATES_RETRY_WINDOW_SECONDS = 24 * 3600;
 
@@ -521,6 +562,8 @@ export async function processExtraPlatesPaymentIntent(pi: Stripe.PaymentIntent):
   if (!(await orderHasItems(orderId))) {
     await createOrderItem(orderId, PLATE_PRODUCT_ID, extraPlates);
   }
+
+  await placeExtraPlatesInShipment(pi, base, orderId, 1 + extraPlates, extraPlates, existing.length, alert);
 
   const customer = await getCustomerById(base.customer_id);
   await sendOrderConfirmationToAdmin({
@@ -659,6 +702,7 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
       city: shipping?.address?.city ?? undefined,
       postal_code: shipping?.address?.postal_code ?? undefined,
       country: shipping?.address?.country ?? undefined,
+      number_of_plates: totalPlates > 0 ? totalPlates : undefined,
     });
   }
 

@@ -29,6 +29,8 @@ const {
   mockSendRenewalAdmin,
   mockSendDuplicateAdmin,
   mockSendInvalidCart,
+  mockGetShipmentByOrderId,
+  mockSetShipmentPlateCount,
   mockStripeSubRetrieve,
   mockCustomersRetrieve,
   mockSessionsList,
@@ -62,6 +64,8 @@ const {
   mockSendRenewalAdmin: vi.fn(),
   mockSendDuplicateAdmin: vi.fn(),
   mockSendInvalidCart: vi.fn(),
+  mockGetShipmentByOrderId: vi.fn(),
+  mockSetShipmentPlateCount: vi.fn(),
   mockStripeSubRetrieve: vi.fn(),
   mockCustomersRetrieve: vi.fn(),
   mockSessionsList: vi.fn(),
@@ -77,6 +81,10 @@ vi.mock("stripe", () => ({
   },
 }));
 
+vi.mock("@/lib/db/shipments", () => ({
+  getShipmentByOrderId: mockGetShipmentByOrderId,
+  setShipmentPlateCount: mockSetShipmentPlateCount,
+}));
 vi.mock("@/lib/db/customers", () => ({
   upsertCustomerByEmail: mockUpsertCustomerByEmail,
   getCustomerById: mockGetCustomerById,
@@ -190,6 +198,8 @@ beforeEach(() => {
   mockSendRenewalAdmin.mockResolvedValue(undefined);
   mockSendDuplicateAdmin.mockResolvedValue(undefined);
   mockSendInvalidCart.mockResolvedValue(undefined);
+  mockGetShipmentByOrderId.mockResolvedValue(null);
+  mockSetShipmentPlateCount.mockResolvedValue(undefined);
   mockStripeSubRetrieve.mockResolvedValue({ status: "canceled" });
   mockSessionsList.mockResolvedValue({ data: [] });
   mockSessionsExpire.mockResolvedValue({});
@@ -478,6 +488,7 @@ describe("cart metadata from www (P27)", () => {
     await processInvoicePaymentSucceeded(metaInvoice({ billing: "monthly", total_plates: "3" }));
     expect(durations()).toEqual([30, 30, 30]);
     expect(mockCreateOrderItem).toHaveBeenCalledWith(100, 1, 3);
+    expect(mockCreateShipment).toHaveBeenCalledWith(expect.objectContaining({ number_of_plates: 3 }));
   });
 
   it("annual with total_plates=1 makes one row of 365 days", async () => {
@@ -491,6 +502,7 @@ describe("cart metadata from www (P27)", () => {
     );
     expect(durations()).toEqual([30]); // the extra plate is created from its own PaymentIntent (P28)
     expect(mockCreateOrderItem).toHaveBeenCalledWith(100, 1, 1);
+    expect(mockCreateShipment).toHaveBeenCalledWith(expect.objectContaining({ number_of_plates: 1 }));
   });
 
   it("never reads the cart from the Stripe customer: a returning customer's old billing/total_plates are ignored", async () => {
@@ -569,14 +581,17 @@ describe("cart metadata from www (P27)", () => {
 
 describe("extra plates PaymentIntent of a trial (P28)", () => {
   type Row = { subscription_id: number; customer_id: number; duration_in_days: number; stripe_subscription_id?: string; stripe_invoice_id?: string };
+  type Ship = { id: number; order_id: number; shipping_status: string; number_of_plates?: number; recipient_name?: string; address_line1?: string; city?: string; postal_code?: string; country?: string };
   let rows: Row[];
   let orders: Map<string, number>;
+  let shipments: Ship[];
 
   const trialInvoice = () =>
     makeInvoice({
       id: "in_trial",
       customer: "cus_t",
       parent: { subscription_details: { subscription: "sub_trial", metadata: { billing: "trial", trial_days: "30", total_plates: "3" } } },
+      customer_shipping: { name: "Buyer", address: { line1: "Ul. Test 1", city: "Warszawa", postal_code: "00-001", country: "PL" } },
     } as unknown as Partial<Stripe.Invoice>);
   const pi = (metadata: Record<string, string> = {}, extra: Record<string, unknown> = {}) =>
     ({
@@ -593,6 +608,16 @@ describe("extra plates PaymentIntent of a trial (P28)", () => {
   beforeEach(() => {
     rows = [];
     orders = new Map();
+    shipments = [];
+    mockCreateShipment.mockImplementation(async (data: Omit<Ship, "id" | "shipping_status">) => {
+      shipments.push({ id: 500 + shipments.length, shipping_status: "pending", ...data });
+    });
+    mockOrderHasShipment.mockImplementation(async (orderId: number) => shipments.some((s) => s.order_id === orderId));
+    mockGetShipmentByOrderId.mockImplementation(async (orderId: number) => shipments.find((s) => s.order_id === orderId) ?? null);
+    mockSetShipmentPlateCount.mockImplementation(async (id: number, n: number) => {
+      const s = shipments.find((x) => x.id === id);
+      if (s) s.number_of_plates = n;
+    });
     vi.spyOn(console, "error").mockImplementation(() => {});
     mockCreateSubscription.mockImplementation(async (data: Omit<Row, "subscription_id">) => {
       const row = { subscription_id: 100 + rows.length, ...data };
@@ -632,6 +657,72 @@ describe("extra plates PaymentIntent of a trial (P28)", () => {
     expect(mockCreateOrderItem).toHaveBeenCalledWith(expect.any(Number), 2, 2); // PLATE x extra_plates
     expect(mockSendOrderConfirmationToAdmin).toHaveBeenLastCalledWith(expect.objectContaining({ plateCount: 2 }));
     expect(mockCreateShipment).toHaveBeenCalledOnce(); // only the invoice's order ships
+  });
+
+  describe("shipments (P30)", () => {
+    it("the trial invoice's shipment counts the base plate; an unshipped one then covers all plates (counted, not added)", async () => {
+      await processInvoicePaymentSucceeded(trialInvoice());
+      expect(shipments).toHaveLength(1);
+      expect(shipments[0].number_of_plates).toBe(1);
+
+      await processExtraPlatesPaymentIntent(pi());
+      expect(shipments).toHaveLength(1);
+      expect(shipments[0].number_of_plates).toBe(3);
+
+      // redelivery of the PI and of the invoice, in any order: still 3, still one shipment
+      await processExtraPlatesPaymentIntent(pi());
+      await processInvoicePaymentSucceeded(trialInvoice());
+      await processExtraPlatesPaymentIntent(pi());
+      expect(shipments).toHaveLength(1);
+      expect(shipments[0].number_of_plates).toBe(3);
+    });
+
+    it.each(["shipped", "delivered", "cancelled"])("a %s start shipment stays as it is; the extra plates get a new shipment to the same address", async (status) => {
+      await processInvoicePaymentSucceeded(trialInvoice());
+      shipments[0].shipping_status = status;
+
+      await processExtraPlatesPaymentIntent(pi());
+
+      expect(shipments).toHaveLength(2);
+      expect(shipments[0].number_of_plates).toBe(1);
+      expect(shipments[1]).toMatchObject({
+        order_id: orders.get("pi_1"),
+        shipping_status: "pending",
+        number_of_plates: 2,
+        recipient_name: "Buyer",
+        address_line1: "Ul. Test 1",
+        city: "Warszawa",
+        postal_code: "00-001",
+        country: "PL",
+      });
+      expect(mockSetShipmentPlateCount).not.toHaveBeenCalled();
+
+      await processExtraPlatesPaymentIntent(pi()); // redelivery: no third shipment
+      expect(shipments).toHaveLength(2);
+    });
+
+    it("a PaymentIntent before its invoice leaves the shipments alone; after the invoice the retry makes it 3", async () => {
+      await expect(processExtraPlatesPaymentIntent(pi())).rejects.toThrow();
+      expect(shipments).toHaveLength(0);
+      expect(mockSetShipmentPlateCount).not.toHaveBeenCalled();
+
+      await processInvoicePaymentSucceeded(trialInvoice());
+      await processExtraPlatesPaymentIntent(pi());
+      expect(shipments[0].number_of_plates).toBe(3);
+    });
+
+    it("no start shipment at all: a shipment is made from the PaymentIntent and the admin is alerted", async () => {
+      await processInvoicePaymentSucceeded(trialInvoice());
+      shipments.length = 0;
+
+      await processExtraPlatesPaymentIntent(
+        pi({}, { shipping: { name: "PI Name", address: { line1: "Pi 2", city: "Gdańsk", postal_code: "80-001", country: "PL" } } })
+      );
+
+      expect(shipments).toHaveLength(1);
+      expect(shipments[0]).toMatchObject({ number_of_plates: 2, recipient_name: "PI Name", city: "Gdańsk" });
+      expect(mockSendInvalidCart).toHaveBeenCalledOnce();
+    });
   });
 
   it("reversed order: a PaymentIntent before its invoice throws and writes nothing; after the invoice the retry makes 3 rows", async () => {
