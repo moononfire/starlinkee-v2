@@ -1,5 +1,6 @@
 import { createAdminClient } from "../supabase/admin";
 import { likePattern } from "./search";
+import { SUPPORTED_LANGUAGES } from "../languages";
 import type { Plate } from "../types";
 
 export async function getPlateByNumber(plateNumber: string): Promise<Plate | null> {
@@ -53,6 +54,28 @@ export async function getPlatesBySubscriptionId(subscriptionId: number): Promise
  * (including "already assigned to it", so retries are safe); false when it is missing or belongs to another one.
  * Throws on a database error.
  */
+/**
+ * A customer without a language yet (www checkout sent no locale) takes the language of the first plate they get,
+ * so portal and e-mails speak it from then on. A language that is already set is never touched. Best effort:
+ * the plate is assigned either way.
+ */
+async function adoptPlateLanguage(plateLanguage: unknown, subscriptionId: number): Promise<void> {
+  if (!SUPPORTED_LANGUAGES.includes(plateLanguage as (typeof SUPPORTED_LANGUAGES)[number])) return;
+  const supabase = createAdminClient();
+  const { data: subscription } = await supabase
+    .from("subscriptions")
+    .select("customer_id")
+    .eq("subscription_id", subscriptionId)
+    .maybeSingle();
+  if (!subscription) return;
+  const { error } = await supabase
+    .from("customers")
+    .update({ preferred_language: plateLanguage })
+    .eq("customer_id", subscription.customer_id)
+    .is("preferred_language", null);
+  if (error) console.error(`[plates] could not set the language of customer ${subscription.customer_id}:`, error.message);
+}
+
 export async function assignPlateToSubscription(
   plateId: number,
   subscriptionId: number
@@ -63,9 +86,12 @@ export async function assignPlateToSubscription(
     .update({ subscription_id: subscriptionId })
     .eq("plate_id", plateId)
     .is("subscription_id", null)
-    .select("plate_id");
+    .select("plate_id, plate_language");
   if (error) throw new Error(`Failed to assign plate: ${error.message}`);
-  if (data && data.length > 0) return true;
+  if (data && data.length > 0) {
+    await adoptPlateLanguage(data[0].plate_language, subscriptionId);
+    return true;
+  }
 
   const { data: plate, error: readError } = await supabase
     .from("plates")
