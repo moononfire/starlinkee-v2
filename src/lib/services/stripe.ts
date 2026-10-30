@@ -36,7 +36,6 @@ import { generateRandomPassword } from "../password";
 // Product IDs match the seeded products table
 const SUBSCRIPTION_PRODUCT_ID = 1; // 1_YEAR_SUB
 const PLATE_PRODUCT_ID = 2;        // PLATE
-const SUBSCRIPTION_DURATION_DAYS = 365;
 
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -55,6 +54,42 @@ const RENEWAL_DURATION_DAYS: Record<"month" | "year", number> = {
   month: 30,
   year: 365,
 };
+
+/**
+ * Plates on an invoice: subscription lines (monthly, yearly, or the older yearly price) plus extra-plate lines.
+ * The subscription line decides how long each row lasts; extra plates alone are not a valid cart, so they give 0.
+ * Price ids come from env (same names as www); an unset name matches nothing.
+ */
+function countCartPlates(invoice: Stripe.Invoice): { totalPlates: number; durationDays: number } {
+  const monthly = process.env.STRIPE_PRICE_ID_SUBSCRIPTION;
+  const yearlyIds = [process.env.STRIPE_PRICE_ID_SUBSCRIPTION_YEARLY, process.env.STRIPE_PRICE_ID_1_YEAR_SUB];
+  const extra = process.env.STRIPE_PRICE_ID_EXTRA_PLATE;
+
+  let subscriptionPlates = 0;
+  let extraPlates = 0;
+  let durationDays: number | undefined;
+  for (const line of invoice.lines.data) {
+    // In Stripe SDK v22, price is under line.pricing.price_details.price
+    const linePriceId = getPriceId(line.pricing?.price_details?.price);
+    if (!linePriceId) continue;
+    const quantity = line.quantity ?? 1;
+    if (linePriceId === monthly) {
+      subscriptionPlates += quantity;
+      durationDays ??= RENEWAL_DURATION_DAYS.month;
+    } else if (yearlyIds.includes(linePriceId)) {
+      subscriptionPlates += quantity;
+      durationDays ??= RENEWAL_DURATION_DAYS.year;
+    } else if (linePriceId === extra) {
+      extraPlates += quantity;
+    }
+  }
+
+  if (subscriptionPlates === 0) {
+    if (extraPlates > 0) console.error(`[stripe] invoice ${invoice.id} has extra plates but no subscription line, creating nothing`);
+    return { totalPlates: 0, durationDays: RENEWAL_DURATION_DAYS.year };
+  }
+  return { totalPlates: subscriptionPlates + extraPlates, durationDays: durationDays ?? RENEWAL_DURATION_DAYS.year };
+}
 
 /**
  * Expires this row's earlier open renewal Checkout sessions (e.g. the month tab while the year tab is opened),
@@ -185,8 +220,9 @@ async function extendSubscriptionsForCycle(invoice: Stripe.Invoice): Promise<voi
   const until = paidThrough(invoice);
   for (const sub of subs) {
     if (sub.status === "pending") continue; // never set up yet: the setup flow starts the period
-    const expiration = until ?? new Date(now.getTime() + sub.duration_in_days * 86_400_000);
-    await setSubscriptionActive(sub.subscription_id, now.toISOString(), expiration.toISOString());
+    // Like the renewal path: the next cycle's invoice only exists after the paid period ends, so keep a grace window.
+    const expiration = new Date((until ?? new Date(now.getTime() + sub.duration_in_days * DAY_MS)).getTime() + RENEWAL_GRACE_DAYS * DAY_MS);
+    await extendOnCycle(sub, expiration);
   }
 }
 
@@ -427,14 +463,8 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
     }));
 
   // 3. Process line items → order_items + subscriptions
-  const priceId1YearSub = process.env.STRIPE_PRICE_ID_1_YEAR_SUB;
-  let totalPlates = 0;
-  for (const line of invoice.lines.data) {
-    // In Stripe SDK v22, price is under line.pricing.price_details.price
-    const linePriceId = getPriceId(line.pricing?.price_details?.price);
-    if (linePriceId !== priceId1YearSub) continue;
-    totalPlates += line.quantity ?? 1;
-  }
+  // The www cart is one subscription line (monthly or yearly) plus extra plates; every plate becomes its own row.
+  const { totalPlates, durationDays } = countCartPlates(invoice);
 
   if (totalPlates > 0 && !(await orderHasItems(orderId))) {
     await createOrderItem(orderId, SUBSCRIPTION_PRODUCT_ID, totalPlates);
@@ -449,7 +479,7 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
     await createSubscription({
       customer_id: customerId,
       subscription_name: "Subskrypcja",
-      duration_in_days: SUBSCRIPTION_DURATION_DAYS,
+      duration_in_days: durationDays,
       is_free: false,
       stripe_subscription_id: stripeSubscriptionId,
       stripe_invoice_id: invoiceId || undefined,

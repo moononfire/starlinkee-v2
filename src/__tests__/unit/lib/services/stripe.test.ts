@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type Stripe from "stripe";
 
 const {
@@ -295,6 +295,88 @@ describe("processInvoicePaymentSucceeded()", () => {
 });
 
 
+describe("www cart on the invoice (monthly/yearly subscription + extra plates)", () => {
+  const MONTHLY = "price_www_month";
+  const YEARLY = "price_www_year";
+  const EXTRA = "price_www_extra";
+
+  const cart = (...lines: Array<[string, number]>) =>
+    makeInvoice({
+      lines: {
+        data: lines.map(([price, quantity]) => ({ pricing: { price_details: { price } }, quantity })),
+      },
+    } as unknown as Partial<Stripe.Invoice>);
+
+  const createdDurations = () => mockCreateSubscription.mock.calls.map((c) => c[0].duration_in_days);
+
+  beforeEach(() => {
+    process.env.STRIPE_PRICE_ID_SUBSCRIPTION = MONTHLY;
+    process.env.STRIPE_PRICE_ID_SUBSCRIPTION_YEARLY = YEARLY;
+    process.env.STRIPE_PRICE_ID_EXTRA_PLATE = EXTRA;
+  });
+
+  afterEach(() => {
+    delete process.env.STRIPE_PRICE_ID_SUBSCRIPTION;
+    delete process.env.STRIPE_PRICE_ID_SUBSCRIPTION_YEARLY;
+    delete process.env.STRIPE_PRICE_ID_EXTRA_PLATE;
+  });
+
+  it.each([
+    [0, 1],
+    [2, 3],
+    [3, 4],
+  ])("monthly with %i extra plates creates %i rows of 30 days", async (extra, rows) => {
+    await processInvoicePaymentSucceeded(cart([MONTHLY, 1], ...(extra ? ([[EXTRA, extra]] as Array<[string, number]>) : [])));
+
+    expect(createdDurations()).toEqual(Array(rows).fill(30));
+    expect(mockCreateOrderItem).toHaveBeenCalledWith(100, 1, rows);
+    expect(mockCreateOrderItem).toHaveBeenCalledWith(100, 2, rows);
+  });
+
+  it("yearly creates a 365-day row", async () => {
+    await processInvoicePaymentSucceeded(cart([YEARLY, 1]));
+
+    expect(createdDurations()).toEqual([365]);
+  });
+
+  it("legacy 1_YEAR_SUB price still gives 365 days", async () => {
+    await processInvoicePaymentSucceeded(cart([TEST_PRICE_ID, 2]));
+
+    expect(createdDurations()).toEqual([365, 365]);
+  });
+
+  it("redelivery of the same invoice creates no duplicates", async () => {
+    mockGetOrderId.mockResolvedValue(100);
+    mockOrderHasItems.mockResolvedValue(true);
+    mockListSubsByInvoice.mockResolvedValue([{}, {}, {}]);
+
+    await processInvoicePaymentSucceeded(cart([MONTHLY, 1], [EXTRA, 2]));
+
+    expect(mockCreateOrder).not.toHaveBeenCalled();
+    expect(mockCreateOrderItem).not.toHaveBeenCalled();
+    expect(mockCreateSubscription).not.toHaveBeenCalled();
+  });
+
+  it("extra plates without a subscription line create nothing", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await processInvoicePaymentSucceeded(cart([EXTRA, 2]));
+
+    expect(mockCreateSubscription).not.toHaveBeenCalled();
+    expect(mockCreateOrderItem).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it("an unset price env name matches nothing (no line is counted by accident)", async () => {
+    delete process.env.STRIPE_PRICE_ID_SUBSCRIPTION;
+    delete process.env.STRIPE_PRICE_ID_1_YEAR_SUB;
+
+    await processInvoicePaymentSucceeded(cart([MONTHLY, 1]));
+
+    expect(mockCreateSubscription).not.toHaveBeenCalled();
+  });
+});
+
 describe("idempotency and resume", () => {
   it("does not create a second order for an invoice that already has one, and only fills in what is missing", async () => {
     mockGetOrderId.mockResolvedValue(100);
@@ -350,7 +432,7 @@ describe("processStripeInvoice() routing by billing_reason", () => {
     expect(mockCreateOrder).toHaveBeenCalledOnce();
   });
 
-  it("does NOT create an order, subscriptions or shipment for subscription_cycle; extends the linked subscription to the paid-through date", async () => {
+  it("does NOT create an order, subscriptions or shipment for subscription_cycle; extends the linked subscription to the paid-through date plus grace", async () => {
     mockListSubsByStripeSub.mockResolvedValue([{ subscription_id: 50, status: "active", duration_in_days: 365 }]);
 
     await processStripeInvoice(cycleInvoice());
@@ -358,11 +440,21 @@ describe("processStripeInvoice() routing by billing_reason", () => {
     expect(mockCreateOrder).not.toHaveBeenCalled();
     expect(mockCreateSubscription).not.toHaveBeenCalled();
     expect(mockCreateShipment).not.toHaveBeenCalled();
-    expect(mockSetSubscriptionActive).toHaveBeenCalledWith(
+    expect(mockExtendSubscription).toHaveBeenCalledWith(
       50,
-      expect.any(String),
-      new Date(1_900_000_000 * 1000).toISOString()
+      new Date((1_900_000_000 + 2 * 86_400) * 1000).toISOString()
     );
+  });
+
+  it("a cycle never shortens time already granted", async () => {
+    const later = new Date((1_900_000_000 + 10 * 86_400) * 1000).toISOString();
+    mockListSubsByStripeSub.mockResolvedValue([
+      { subscription_id: 50, status: "active", duration_in_days: 30, expiration_datetime: later },
+    ]);
+
+    await processStripeInvoice(cycleInvoice());
+
+    expect(mockExtendSubscription).toHaveBeenCalledWith(50, later);
   });
 
   it("leaves pending (never set up) subscriptions alone on a cycle", async () => {
