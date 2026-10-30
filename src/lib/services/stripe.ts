@@ -199,7 +199,9 @@ function cartFromMetadata(metadata: Stripe.Metadata | null | undefined): Metadat
   if (totalPlates === null) errors.push("total_plates");
 
   if (errors.length > 0 || totalPlates === null) return { status: "invalid", errors };
-  return { status: "ok", totalPlates, durationDays };
+  // A trial's start invoice only carries the base plate; the extra plates are paid in their own PaymentIntent
+  // and created by processExtraPlatesPaymentIntent.
+  return { status: "ok", totalPlates: billing === "trial" ? 1 : totalPlates, durationDays };
 }
 
 const MAX_CART_PLATES = 50;
@@ -440,6 +442,93 @@ export async function processRenewalInvoicePaid(
       console.error("[stripe] renewal admin email failed:", err)
     );
   }
+}
+
+export const EXTRA_PLATES_PURPOSE = "extra_plates_and_shipping";
+const EXTRA_PLATES_RETRY_WINDOW_SECONDS = 24 * 3600;
+
+/** True for the PaymentIntents www creates for the extra plates and shipping of a trial; every other PI is not ours. */
+export function isExtraPlatesPaymentIntent(pi: Stripe.PaymentIntent): boolean {
+  return pi.metadata?.purpose === EXTRA_PLATES_PURPOSE;
+}
+
+/**
+ * Trial checkout: the start invoice creates the base plate, the surcharge for the extra plates (and shipping) is a
+ * separate PaymentIntent that names the Stripe subscription. Rows are topped up to 1 + extra_plates per Stripe
+ * subscription, so redelivery of the PI or of the invoice, in any order, never duplicates anything.
+ * A PI that arrives before its invoice throws (the webhook answers 500 and Stripe retries); after 24 hours
+ * without the subscription the admin is alerted and the retries stop.
+ */
+export async function processExtraPlatesPaymentIntent(pi: Stripe.PaymentIntent): Promise<void> {
+  const stripeSubscriptionId = pi.metadata?.subscription_id?.trim();
+  const extraPlates = parseCount(pi.metadata?.extra_plates, MAX_CART_PLATES - 1);
+  const stripeCustomerId = typeof pi.customer === "string" ? pi.customer : (pi.customer?.id ?? "unknown");
+  const amount = `${((pi.amount ?? 0) / 100).toFixed(2)} ${(pi.currency ?? "").toUpperCase()}`.trim();
+
+  const alert = (errors: string[]) =>
+    sendInvalidCartMetadataToAdmin({
+      source: "PaymentIntent",
+      invoiceId: pi.id,
+      stripeCustomerId,
+      customerEmail: pi.receipt_email ?? "unknown",
+      amount,
+      errors,
+    }).catch((err) => console.error("[stripe] invalid-cart admin email failed:", err));
+
+  const errors: string[] = [];
+  if (!stripeSubscriptionId) errors.push("subscription_id");
+  if (extraPlates === null) errors.push("extra_plates");
+  if (errors.length > 0 || !stripeSubscriptionId || extraPlates === null) {
+    console.error(`[stripe] payment intent ${pi.id} has invalid extra-plates metadata (${errors.join(", ")}) — nothing created, admin alerted`);
+    await alert(errors);
+    return;
+  }
+
+  const existing = await listSubscriptionsByStripeSubscription(stripeSubscriptionId);
+  if (existing.length === 0) {
+    const ageSeconds = Math.floor(Date.now() / 1000) - pi.created;
+    if (ageSeconds > EXTRA_PLATES_RETRY_WINDOW_SECONDS) {
+      console.error(`[stripe] payment intent ${pi.id}: Stripe subscription ${stripeSubscriptionId} still unknown after 24 h — admin alerted`);
+      await alert([`subscription_id (no subscription for ${stripeSubscriptionId} after 24 h)`]);
+      return;
+    }
+    // The start invoice has not been processed yet. Nothing is written, so a retry loses nothing.
+    throw new Error(`payment intent ${pi.id}: subscription ${stripeSubscriptionId} not created yet, retry later`);
+  }
+
+  const base = [...existing].sort((a, b) => a.subscription_id - b.subscription_id)[0];
+  for (let i = existing.length; i < 1 + extraPlates; i++) {
+    await createSubscription({
+      customer_id: base.customer_id,
+      subscription_name: "Subskrypcja",
+      duration_in_days: base.duration_in_days,
+      is_free: false,
+      stripe_subscription_id: stripeSubscriptionId,
+    });
+  }
+
+  const existingOrderId = await getOrderIdByStripePaymentId(pi.id);
+  const orderId =
+    existingOrderId ??
+    (await createOrder({
+      customer_id: base.customer_id,
+      status: "paid",
+      payment_method: "stripe",
+      stripe_payment_id: pi.id,
+      stripe_payment_intent_id: pi.id,
+      fulfilled_at: new Date().toISOString(),
+    }));
+  if (!(await orderHasItems(orderId))) {
+    await createOrderItem(orderId, PLATE_PRODUCT_ID, extraPlates);
+  }
+
+  const customer = await getCustomerById(base.customer_id);
+  await sendOrderConfirmationToAdmin({
+    orderId,
+    customerName: customer?.customer_name ?? pi.receipt_email ?? "unknown",
+    customerEmail: customer?.email ?? pi.receipt_email ?? "unknown",
+    plateCount: extraPlates,
+  }).catch((err) => console.error("[stripe] admin email failed:", err));
 }
 
 export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
