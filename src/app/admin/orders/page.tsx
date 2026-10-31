@@ -65,6 +65,8 @@ export default async function OrdersPage({
               <dd className="break-words">{o.items.length === 0 ? "—" : o.items.map((item) => `${item.quantity}× ${item.product_name}`).join(", ")}</dd>
               <dt className="text-gray-400">Płatność</dt>
               <dd>{o.payment_method ? paymentLabel[o.payment_method] ?? o.payment_method : "—"}</dd>
+              <dt className="text-gray-400">Ref.</dt>
+              <dd className="font-mono text-xs break-all">{o.stripe_payment_id ? o.stripe_payment_id.slice(0, 20) + "…" : o.internal_payment_reference ?? "—"}</dd>
               <dt className="text-gray-400">Wykonano</dt>
               <dd>{o.fulfilled_at ? new Date(o.fulfilled_at).toLocaleDateString("pl-PL") : "—"}</dd>
             </dl>

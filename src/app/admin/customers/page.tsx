@@ -18,7 +18,7 @@ export default async function CustomersPage({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Klienci</h1>
         <Link
           href="/admin/customers/new"
@@ -32,7 +32,42 @@ export default async function CustomersPage({
         <SearchInput placeholder="Szukaj po nazwie, email, firmie..." />
       </div>
 
-      <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg overflow-hidden">
+      {/* Below md: one card per customer */}
+      <ul className="md:hidden space-y-3" data-testid="customer-cards">
+        {customers.length === 0 && (
+          <li className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 text-center text-gray-400">Brak klientów</li>
+        )}
+        {customers.map((c) => (
+          <li key={c.customer_id} data-testid="customer-card" className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-4 space-y-2 text-sm">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="font-medium text-gray-900 dark:text-gray-100 break-words">{c.customer_name}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 break-all">{c.email}</div>
+              </div>
+              <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${typeClass[c.customer_type]}`}>
+                {typeLabel[c.customer_type]}
+              </span>
+            </div>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-gray-600 dark:text-gray-300">
+              <dt className="text-gray-400">Telefon</dt>
+              <dd>{c.phone ?? "—"}</dd>
+              <dt className="text-gray-400">Firma</dt>
+              <dd className="break-words">{c.company_name ?? "—"}</dd>
+              <dt className="text-gray-400">Kraj / język</dt>
+              <dd>{c.country ?? "—"} · <span className="uppercase">{c.preferred_language ?? "—"}</span></dd>
+              <dt className="text-gray-400">Data</dt>
+              <dd>{new Date(c.created_at).toLocaleDateString("pl-PL")}</dd>
+            </dl>
+            <Link
+              href={`/admin/customers/${c.customer_id}`}
+              className="inline-flex items-center min-h-[44px] text-blue-600 hover:text-blue-800 text-sm font-medium"
+            >
+              Edytuj
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden md:block bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">

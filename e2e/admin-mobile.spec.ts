@@ -129,11 +129,42 @@ test.describe('Admin on a phone (390x844)', () => {
     expect(await hasHorizontalScroll(page)).toBe(false);
   });
 
+  test('lists of customers, subscriptions, reviews and plates are cards on a phone', async ({ page }) => {
+    await loginAdmin(page);
+    for (const [path, cards] of [['customers', 'customer-cards'], ['subscriptions', 'subscription-cards'], ['reviews', 'review-cards'], ['plates', 'plate-cards']]) {
+      await page.goto(`/admin/${path}`);
+      await expect(page.getByTestId(cards)).toBeVisible();
+      await expect(page.locator('table')).toBeHidden();
+      expect(await hasHorizontalScroll(page), `/admin/${path}`).toBe(false);
+    }
+  });
+
+  test('customer card opens the edit form, which fits the screen', async ({ page }) => {
+    await loginAdmin(page);
+    await page.goto('/admin/customers');
+    const card = page.getByTestId('customer-card').filter({ hasText: 'E2E Shipments Customer' });
+    await expect(card).toBeVisible();
+    const edit = card.getByRole('link', { name: 'Edytuj' });
+    expect((await edit.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await edit.click();
+    await expect(page).toHaveURL(/\/admin\/customers\/9007/);
+    expect(await hasHorizontalScroll(page)).toBe(false);
+    const field = page.locator('main input').first();
+    const box = (await field.boundingBox())!;
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
+  });
+
+  test('order card shows the reference', async ({ page }) => {
+    await loginAdmin(page);
+    await page.goto('/admin/orders');
+    await expect(page.getByTestId('order-card').first().getByText('Ref.')).toBeVisible();
+  });
+
   test('audit: horizontal scroll per admin page', async ({ page }) => {
     await loginAdmin(page);
-    const pages = ['dashboard', 'plates', 'plates/quick-activate', 'orders', 'orders/new', 'customers', 'subscriptions', 'shipments', 'reviews', 'places', 'analytics'];
+    const pages = ['dashboard', 'plates', 'plates/quick-activate', 'plates/assign', 'plates/generate', 'plates/import', 'orders', 'orders/new', 'customers', 'customers/new', 'customers/9007', 'subscriptions', 'shipments', 'shipments/new', 'reviews', 'places', 'analytics'];
     const wide: string[] = [];
-    const mustBeClean = ['dashboard', 'plates', 'plates/quick-activate', 'shipments', 'orders', 'orders/new'];
+    const mustBeClean = pages; // P33: every admin page, document and <main>
     for (const p of pages) {
       await page.goto(`/admin/${p}`);
       await page.waitForLoadState('networkidle');
@@ -172,9 +203,9 @@ test.describe('Admin nav highlight', () => {
 test.describe('Admin lists on desktop keep their tables', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
-  test('shipments and orders show the table, not the cards', async ({ page }) => {
+  test('lists show the table, not the cards', async ({ page }) => {
     await loginAdmin(page);
-    for (const p of ['shipments', 'orders']) {
+    for (const p of ['shipments', 'orders', 'customers', 'subscriptions', 'reviews', 'plates']) {
       await page.goto(`/admin/${p}`);
       await expect(page.locator('table')).toBeVisible();
       await expect(page.locator('ul[data-testid$="-cards"]')).toBeHidden();

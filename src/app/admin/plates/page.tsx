@@ -41,7 +41,33 @@ export default async function PlatesPage({
         <SearchInput placeholder="Szukaj po numerze tabliczki..." />
       </div>
 
-      <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg overflow-hidden">
+      {/* Below md: one card per plate */}
+      <ul className="md:hidden space-y-3" data-testid="plate-cards">
+        {plates.length === 0 && (
+          <li className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 text-center text-gray-400">Brak tabliczek</li>
+        )}
+        {plates.map((p) => (
+          <li key={p.plate_id} data-testid="plate-card" className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-4 space-y-2 text-sm">
+            <div className="flex items-start justify-between gap-2">
+              <span className="font-mono font-medium text-gray-900 dark:text-gray-100">{p.plate_number}</span>
+              <span className="text-xs text-gray-400">#{p.plate_id} · <span className="uppercase">{p.plate_language}</span></span>
+            </div>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-gray-600 dark:text-gray-300">
+              <dt className="text-gray-400">Klient</dt>
+              <dd className="break-words">{p.customer_name ?? "—"}</dd>
+              <dt className="text-gray-400">Sub. ID</dt>
+              <dd>{p.subscription_id ?? "—"}</dd>
+              <dt className="text-gray-400">Wizyty</dt>
+              <dd>{plateScanCount(p)}</dd>
+              <dt className="text-gray-400">Klucz</dt>
+              <dd className="font-mono text-xs break-all">{p.secret_key}</dd>
+              <dt className="text-gray-400">Data</dt>
+              <dd>{new Date(p.created_at).toLocaleDateString("pl-PL")}</dd>
+            </dl>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden md:block bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
