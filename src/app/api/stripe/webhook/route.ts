@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { processStripeInvoice } from "@/lib/services/stripe";
+import { processStripeInvoice, processExtraPlatesPaymentIntent, isExtraPlatesPaymentIntent } from "@/lib/services/stripe";
 import { processStripeSubscriptionEvent } from "@/lib/services/stripe-cancel";
 import { claimStripeEvent, markStripeEventDone, markStripeEventFailed } from "@/lib/db/stripe-events";
 
@@ -35,7 +35,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true });
   }
 
-  if (event.type !== "invoice.payment_succeeded") {
+  const isPaymentIntent = event.type === "payment_intent.succeeded";
+  if (event.type !== "invoice.payment_succeeded" && !isPaymentIntent) {
+    return NextResponse.json({ received: true });
+  }
+  // Any other PaymentIntent of the account is none of our business: acknowledge without claiming or writing.
+  if (isPaymentIntent && !isExtraPlatesPaymentIntent(event.data.object as Stripe.PaymentIntent)) {
     return NextResponse.json({ received: true });
   }
 
@@ -52,7 +57,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await processStripeInvoice(event.data.object as Stripe.Invoice);
+    if (isPaymentIntent) await processExtraPlatesPaymentIntent(event.data.object as Stripe.PaymentIntent);
+    else await processStripeInvoice(event.data.object as Stripe.Invoice);
     await markStripeEventDone(event.id);
   } catch (err) {
     console.error("[stripe webhook] processing failed:", err);

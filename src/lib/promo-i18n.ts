@@ -6,22 +6,27 @@ export function getPromoText(location: CustomerLocation, lang: string, field: Pr
   return getModuleText(location, lang, field);
 }
 
+// Venue content a guest cannot read in their own language: English next, then Polish (the column without a
+// suffix, the original), then German. Italian is only shown to Italian guests, as before.
+const FALLBACK_ORDER = ["en", "pl", "de"] as const;
+const languageOrder = (lang: string): string[] => [...new Set([lang, ...FALLBACK_ORDER])];
+
 export function getModuleText(location: CustomerLocation, lang: string, field: string): string {
-  const pl = location[field as keyof CustomerLocation] as string | null ?? "";
-  const en = location[`${field}_en` as keyof CustomerLocation] as string | null ?? "";
-  const de = location[`${field}_de` as keyof CustomerLocation] as string | null ?? "";
-  const it = location[`${field}_it` as keyof CustomerLocation] as string | null ?? "";
-  if (lang === "it") return it || en || pl || de;
-  if (lang === "en") return en || pl || de;
-  if (lang === "de") return de || pl || en;
-  return pl || en || de;
+  const column = (l: string) =>
+    (location[(l === "pl" ? field : `${field}_${l}`) as keyof CustomerLocation] as string | null) ?? "";
+  for (const l of languageOrder(lang)) {
+    const text = column(l);
+    if (text) return text;
+  }
+  return "";
 }
 
-// Fallback order mirrors getModuleText: it -> en -> pl -> de; for en/de/pl the order is unchanged.
+// Same order as getModuleText, ending with the base title.
 export function getLinkTitle(link: CustomerLocationLink, lang: string): string {
-  if (lang === "it") return link.title_it || link.title_en || link.title_pl || link.title_de || link.title;
-  if (lang === "pl") return link.title_pl || link.title_en || link.title_de || link.title;
-  if (lang === "en") return link.title_en || link.title_pl || link.title_de || link.title;
-  if (lang === "de") return link.title_de || link.title_pl || link.title_en || link.title;
+  const titles = link as unknown as Record<string, string | null | undefined>;
+  for (const l of languageOrder(lang)) {
+    const title = titles[`title_${l}`];
+    if (title) return title;
+  }
   return link.title;
 }

@@ -135,10 +135,36 @@ describe("incrementPlateVisits()", () => {
 
 describe("assignPlateToSubscription()", () => {
   // update().eq().is().select() — the conditional write; then an optional re-read of the plate.
-  function mockAssign(update: { data: unknown[] | null; error: { message: string } | null }, plateRow?: { subscription_id: number | null } | null) {
+  // After a fresh assignment: subscriptions.select().eq().maybeSingle(), then customers.update().eq().is().
+  const customersIs = vi.fn().mockResolvedValue({ error: null });
+  const customersUpdate = vi.fn(() => ({ eq: vi.fn(() => ({ is: customersIs })) }));
+  const venueEq = vi.fn().mockResolvedValue({ error: null });
+  const venueUpdate = vi.fn(() => ({ eq: venueEq }));
+  let venue: { location_id: number; active_languages: string[] } | null = null;
+  beforeEach(() => {
+    venue = null;
+  });
+  function mockAdopt(customer: { customer_id: number } | null) {
+    supabaseMock.from.mockReturnValueOnce({
+      select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle: vi.fn().mockResolvedValue({ data: customer }) })) })),
+    });
+    if (customer) supabaseMock.from.mockReturnValueOnce({ update: customersUpdate });
+    // then the venue of the subscription: customer_locations.select().eq().maybeSingle(), optional .update().eq()
+    supabaseMock.from.mockReturnValueOnce({
+      select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle: vi.fn().mockResolvedValue({ data: venue }) })) })),
+    });
+    if (venue && !venue.active_languages.includes("de")) supabaseMock.from.mockReturnValueOnce({ update: venueUpdate });
+  }
+
+  function mockAssign(
+    update: { data: unknown[] | null; error: { message: string } | null },
+    plateRow?: { subscription_id: number | null } | null,
+    customer: { customer_id: number } | null = { customer_id: 3 }
+  ) {
     const isFn = vi.fn(() => ({ select: vi.fn().mockResolvedValue(update) }));
     const updateFn = vi.fn(() => ({ eq: vi.fn(() => ({ is: isFn })) }));
     supabaseMock.from.mockReturnValueOnce({ update: updateFn });
+    if (update.data && update.data.length > 0) mockAdopt(customer);
     if (plateRow !== undefined) {
       supabaseMock.from.mockReturnValueOnce({
         select: vi.fn(() => ({
@@ -150,11 +176,54 @@ describe("assignPlateToSubscription()", () => {
   }
 
   it("assigns a free plate, only where subscription_id is still null", async () => {
-    const { updateFn, isFn } = mockAssign({ data: [{ plate_id: 7 }], error: null });
+    const { updateFn, isFn } = mockAssign({ data: [{ plate_id: 7, plate_language: "de" }], error: null });
 
     await expect(assignPlateToSubscription(7, 50)).resolves.toBe(true);
     expect(updateFn).toHaveBeenCalledWith({ subscription_id: 50 });
     expect(isFn).toHaveBeenCalledWith("subscription_id", null);
+  });
+
+  it("gives a customer without a language the plate's language, never overwriting a language that is set", async () => {
+    mockAssign({ data: [{ plate_id: 7, plate_language: "de" }], error: null });
+
+    await assignPlateToSubscription(7, 50);
+
+    expect(customersUpdate).toHaveBeenCalledWith({ preferred_language: "de" });
+    expect(customersIs).toHaveBeenCalledWith("preferred_language", null); // only while it is still empty
+  });
+
+  it("adds the plate's language to the venue's active languages when it is missing", async () => {
+    venue = { location_id: 11, active_languages: ["en", "pl"] };
+    mockAssign({ data: [{ plate_id: 7, plate_language: "de" }], error: null });
+
+    await assignPlateToSubscription(7, 50);
+
+    expect(venueUpdate).toHaveBeenCalledWith({ active_languages: ["en", "pl", "de"] });
+    expect(venueEq).toHaveBeenCalledWith("location_id", 11);
+  });
+
+  it("leaves the venue alone when the language is already active or there is no venue yet", async () => {
+    venue = { location_id: 11, active_languages: ["en", "de"] };
+    mockAssign({ data: [{ plate_id: 7, plate_language: "de" }], error: null });
+    await assignPlateToSubscription(7, 50);
+    expect(venueUpdate).not.toHaveBeenCalled();
+
+    venue = null;
+    mockAssign({ data: [{ plate_id: 7, plate_language: "de" }], error: null });
+    await assignPlateToSubscription(7, 50);
+    expect(venueUpdate).not.toHaveBeenCalled();
+  });
+
+  it("does not touch the customer for an unsupported plate language or an already assigned plate", async () => {
+    supabaseMock.from.mockReturnValueOnce({
+      update: vi.fn(() => ({ eq: vi.fn(() => ({ is: vi.fn(() => ({ select: vi.fn().mockResolvedValue({ data: [{ plate_id: 7, plate_language: "zh" }], error: null }) })) })) })),
+    });
+    await assignPlateToSubscription(7, 50);
+    expect(customersUpdate).not.toHaveBeenCalled();
+
+    mockAssign({ data: [], error: null }, { subscription_id: 50 });
+    await assignPlateToSubscription(7, 50);
+    expect(customersUpdate).not.toHaveBeenCalled();
   });
 
   it("is idempotent: a plate already on this subscription counts as assigned", async () => {

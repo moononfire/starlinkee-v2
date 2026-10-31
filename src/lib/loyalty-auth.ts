@@ -4,6 +4,8 @@ import { upsertOtp, getOtp, deleteOtp, registerOtpAttempt } from "./db/loyalty";
 import { sendSms } from "./sms";
 import { rateLimitPersistent } from "./rate-limit-persistent";
 import { normalizePhone } from "./phone";
+import { guestLanguage, SUPPORTED_LANGUAGES, type Language } from "./languages";
+import { t } from "./translations";
 
 const MAX_OTP_ATTEMPTS = 5;
 const PHONE_PATTERN = /^\+?[0-9 ()-]{6,20}$/;
@@ -13,7 +15,34 @@ export type LoyaltyAuthResult<T> = { ok: true; data: T } | { ok: false; status: 
 // Phone verification is app-wide, not tied to any one location — it's the
 // single login for the mobile app (after Google Sign-In), and the resulting
 // session then works across every location's loyalty card.
-export async function requestLoyaltyOtp(rawPhone: unknown, ip: string): Promise<LoyaltyAuthResult<{ phone: string }>> {
+const PHONE_PREFIX_LANGUAGES: Array<[string, Language]> = [
+  ["+48", "pl"],
+  ["+49", "de"],
+  ["+43", "de"],
+  ["+41", "de"],
+  ["+39", "it"],
+];
+
+/**
+ * The SMS goes to a guest, so it speaks the guest's language. The app's own `lang` wins; the app does not send it
+ * yet, so otherwise the first supported Accept-Language tag, then the country prefix of the number, then English.
+ */
+function otpLanguage(lang: unknown, acceptLanguage: string | null | undefined, phone: string): Language {
+  if (typeof lang === "string" && SUPPORTED_LANGUAGES.includes(lang as Language)) return lang as Language;
+  for (const part of (acceptLanguage ?? "").split(",")) {
+    const code = part.split(";")[0].trim().toLowerCase().split("-")[0];
+    if (SUPPORTED_LANGUAGES.includes(code as Language)) return code as Language;
+  }
+  const byPrefix = PHONE_PREFIX_LANGUAGES.find(([prefix]) => phone.startsWith(prefix));
+  return guestLanguage(byPrefix?.[1]);
+}
+
+export async function requestLoyaltyOtp(
+  rawPhone: unknown,
+  ip: string,
+  lang?: unknown,
+  acceptLanguage?: string | null
+): Promise<LoyaltyAuthResult<{ phone: string }>> {
   if (!rawPhone) {
     return { ok: false, status: 400, error: "Missing phone" };
   }
@@ -36,7 +65,7 @@ export async function requestLoyaltyOtp(rawPhone: unknown, ip: string): Promise<
 
   try {
     await upsertOtp(phone, code, expiresAt);
-    await sendSms(phone, `Twój kod weryfikacyjny: ${code}`);
+    await sendSms(phone, t("loyalty_otp_sms", otpLanguage(lang, acceptLanguage, phone)).replace("{code}", code));
   } catch (err) {
     console.error("Failed to send OTP", err);
     return { ok: false, status: 500, error: "Failed to send OTP" };

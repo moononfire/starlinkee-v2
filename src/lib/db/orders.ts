@@ -62,6 +62,7 @@ export async function createShipment(data: {
   city?: string;
   postal_code?: string;
   country?: string;
+  number_of_plates?: number;
 }): Promise<void> {
   const supabase = createAdminClient();
   const { error } = await supabase.from("shipments").insert(data);

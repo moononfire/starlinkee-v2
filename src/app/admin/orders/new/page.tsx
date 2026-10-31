@@ -97,7 +97,7 @@ export default async function NewOrderPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Nowe zamówienie</h1>
-      <form action={createOrderAction} className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-6 max-w-2xl space-y-5">
+      <form action={createOrderAction} className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-4 sm:p-6 max-w-2xl space-y-5">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Klient *</label>
           <select
@@ -140,7 +140,7 @@ export default async function NewOrderPage() {
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Metoda płatności *</label>
             <select
@@ -165,16 +165,16 @@ export default async function NewOrderPage() {
 
         <ShipmentSection />
 
-        <div className="flex gap-3 pt-2">
+        <div className="flex flex-wrap gap-3 pt-2">
           <button
             type="submit"
-            className="bg-blue-600 text-white px-5 py-2 rounded text-sm font-medium hover:bg-blue-700 transition-colors"
+            className="min-h-[44px] md:min-h-0 bg-blue-600 text-white px-5 py-2 rounded text-sm font-medium hover:bg-blue-700 transition-colors"
           >
             Utwórz zamówienie
           </button>
           <a
             href="/admin/orders"
-            className="px-5 py-2 rounded text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="min-h-[44px] md:min-h-0 inline-flex items-center px-5 py-2 rounded text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
             Anuluj
           </a>

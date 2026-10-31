@@ -110,6 +110,7 @@ export async function seedTestData() {
       has_promo_enabled: true,
       has_loyalty_enabled: true,
       promo_banner_text: 'Odbierz 10% zniżki na pierwsze zamówienie!',
+      promo_banner_text_en: 'Get 10% off your first order!',
       promo_sms_text: 'Twoja zniżka: {link}',
       owner_email: 'owner@restauracjatestowa.pl',
     },
@@ -530,4 +531,69 @@ export async function seedItalianOwner() {
     body: JSON.stringify({ email: ITALIAN_OWNER.email, password: ITALIAN_OWNER.password, email_confirm: true }),
   });
   if (!res.ok && res.status !== 422) throw new Error(`create auth user failed: ${await res.text()}`);
+}
+
+export const LANGUAGE_OWNER = { email: 'e2e-owner-lang@example.com', password: 'e2e-portal-pass-5', customerId: 9006 };
+
+/** Owner whose preferred_language is reset to en on every call, so the switcher test always starts from the same state. */
+export async function seedLanguageOwner() {
+  await upsert(
+    'customers',
+    { customer_id: LANGUAGE_OWNER.customerId, customer_type: 'individual', customer_name: 'E2E Language', email: LANGUAGE_OWNER.email, preferred_language: 'en', country: 'DE' },
+    'customer_id',
+  );
+  await upsert(
+    'subscriptions',
+    {
+      subscription_id: 9006,
+      customer_id: LANGUAGE_OWNER.customerId,
+      subscription_name: '1_YEAR_SUB',
+      duration_in_days: 365,
+      status: 'active',
+      activation_datetime: new Date(Date.now() - 30 * 86_400_000).toISOString(),
+      expiration_datetime: new Date(Date.now() + 200 * 86_400_000).toISOString(),
+    },
+    'subscription_id',
+  );
+  const res = await fetch(`${BASE_URL}/auth/v1/admin/users`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ email: LANGUAGE_OWNER.email, password: LANGUAGE_OWNER.password, email_confirm: true }),
+  });
+  if (!res.ok && res.status !== 422) throw new Error(`create auth user failed: ${await res.text()}`);
+}
+
+export const ADMIN_USER = { email: 'e2e-admin@example.com', password: 'e2e-admin-pass-1' };
+export const SHIPMENT_CUSTOMER = { customerId: 9007, name: 'E2E Shipments Customer', email: 'e2e-shipments@example.com' };
+
+/** An admin (app_metadata.role=admin) plus two shipments: one with number_of_plates=3 and an old one without (NULL). */
+export async function seedAdminWithShipments() {
+  const res = await fetch(`${BASE_URL}/auth/v1/admin/users`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ email: ADMIN_USER.email, password: ADMIN_USER.password, email_confirm: true, app_metadata: { role: 'admin' } }),
+  });
+  if (!res.ok && res.status !== 422) throw new Error(`create admin failed: ${await res.text()}`);
+
+  await upsert(
+    'customers',
+    { customer_id: SHIPMENT_CUSTOMER.customerId, customer_type: 'individual', customer_name: SHIPMENT_CUSTOMER.name, email: SHIPMENT_CUSTOMER.email, preferred_language: 'en', country: 'PL' },
+    'customer_id',
+  );
+  await upsert(
+    'orders',
+    [
+      { order_id: 9101, customer_id: SHIPMENT_CUSTOMER.customerId, status: 'paid', payment_method: 'stripe' },
+      { order_id: 9102, customer_id: SHIPMENT_CUSTOMER.customerId, status: 'paid', payment_method: 'stripe' },
+    ],
+    'order_id',
+  );
+  await upsert(
+    'shipments',
+    [
+      { id: 9101, order_id: 9101, recipient_name: 'E2E Packed Three', city: 'Warszawa', number_of_plates: 3, shipping_status: 'pending' },
+      { id: 9102, order_id: 9102, recipient_name: 'E2E Old Record', city: 'Gdańsk', number_of_plates: null, shipping_status: 'pending' },
+    ],
+    'id',
+  );
 }

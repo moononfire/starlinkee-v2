@@ -24,7 +24,38 @@ export default async function ReviewsPage({
         <SearchInput placeholder="Szukaj po wiadomości, email, telefonie..." />
       </div>
 
-      <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg overflow-hidden">
+      {/* Below md: one card per review */}
+      <ul className="md:hidden space-y-3" data-testid="review-cards">
+        {reviews.length === 0 && (
+          <li className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 text-center text-gray-400">Brak recenzji</li>
+        )}
+        {reviews.map((r) => (
+          <li key={r.review_id} data-testid="review-card" className={`bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-4 space-y-2 text-sm ${r.rating === null ? "opacity-50" : ""}`}>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="font-medium text-gray-900 dark:text-gray-100 break-words">{r.location_name ?? "—"}</div>
+                <div className="text-xs text-gray-400">#{r.review_id} · {new Date(r.scan_time).toLocaleDateString("pl-PL")}</div>
+              </div>
+              <span className="shrink-0 font-medium text-gray-700 dark:text-gray-300">{r.rating ?? "—"}</span>
+            </div>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-gray-600 dark:text-gray-300">
+              <dt className="text-gray-400">Tabliczka</dt>
+              <dd className="font-mono">{r.plate_number}</dd>
+              <dt className="text-gray-400">Wiadomość</dt>
+              <dd className="break-words">{r.feedback_message ?? "—"}</dd>
+              <dt className="text-gray-400">Kontakt</dt>
+              <dd className="break-all">
+                {r.contact_email && r.contact_email !== "anonymous@anonymous.com"
+                  ? r.contact_email
+                  : r.contact_phone && r.contact_phone !== "anonymous"
+                  ? r.contact_phone
+                  : "—"}
+              </dd>
+            </dl>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden md:block bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">

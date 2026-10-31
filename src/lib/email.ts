@@ -428,6 +428,38 @@ export async function sendDuplicateStripeSubscriptionToAdmin(data: {
   );
 }
 
+// Admin alert: a paid www cart whose metadata cannot be trusted. Nothing was created, so this needs a manual follow-up.
+export async function sendInvalidCartMetadataToAdmin(data: {
+  source?: "Invoice" | "PaymentIntent";
+  invoiceId: string;
+  stripeCustomerId: string;
+  customerEmail: string;
+  amount: string;
+  errors: string[];
+}) {
+  const html = layout(
+    h1("Paid cart with invalid metadata") +
+      para(
+        "A paid invoice carries cart metadata that v2 cannot use, so no customer account, order, subscription or shipment was created. " +
+          "Create them by hand for this customer, or refund the payment."
+      ) +
+      dataTable(
+        [data.source ?? "Invoice", esc(data.invoiceId)],
+        ["Stripe customer", esc(data.stripeCustomerId)],
+        ["Customer email", esc(data.customerEmail)],
+        ["Amount", esc(data.amount)],
+        ["Invalid fields", esc(data.errors.join(", "))]
+      )
+  );
+  await sendMail(
+    process.env.EMAIL_ADMIN!,
+    `Paid cart with invalid metadata — ${data.invoiceId}`,
+    html,
+    `${data.source ?? "Invoice"} ${data.invoiceId} (${data.customerEmail}, Stripe customer ${data.stripeCustomerId}, ${data.amount}) has invalid cart metadata: ` +
+      `${data.errors.join(", ")}. Nothing was created: set the customer up by hand or refund.`
+  );
+}
+
 const feedbackStrings = {
   en: {
     title: (locationName: string) => `New feedback — ${locationName}`,
@@ -626,22 +658,48 @@ export async function sendReplyNotification(
   await sendMail(to, s.subject(data.locationName), html, text);
 }
 
+const promoStrings = {
+  en: {
+    subject: (name: string) => `Your promo from ${name}`,
+    heading: (name: string) => `Your promo from ${name}`,
+    intro: "Click the button below to claim your promotion:",
+    btn: "Claim Promo",
+    plain: "Claim your promo here:",
+  },
+  de: {
+    subject: (name: string) => `Dein Angebot von ${name}`,
+    heading: (name: string) => `Dein Angebot von ${name}`,
+    intro: "Klicke auf den Button, um dein Angebot einzulösen:",
+    btn: "Angebot einlösen",
+    plain: "Löse dein Angebot hier ein:",
+  },
+  pl: {
+    subject: (name: string) => `Twoja promocja od ${name}`,
+    heading: (name: string) => `Twoja promocja od ${name}`,
+    intro: "Kliknij przycisk poniżej, aby odebrać promocję:",
+    btn: "Odbierz promocję",
+    plain: "Odbierz promocję tutaj:",
+  },
+  it: {
+    subject: (name: string) => `La tua promozione da ${name}`,
+    heading: (name: string) => `La tua promozione da ${name}`,
+    intro: "Clicca sul pulsante qui sotto per ritirare la tua promozione:",
+    btn: "Ritira la promozione",
+    plain: "Ritira qui la tua promozione:",
+  },
+} satisfies Record<Lang, object>;
+
+// Goes to a guest: the caller passes the guest's language (English when it is missing or unknown).
 export async function sendPromoEmail(
   to: string,
-  data: { locationName: string; claimUrl: string; smsText: string }
+  data: { locationName: string; claimUrl: string; smsText: string },
+  lang: string = "en"
 ) {
+  const s = promoStrings[toLang(lang)];
   const html = layout(
-    h1(`Your promo from ${esc(data.locationName)}`) +
-      para(esc(data.smsText)) +
-      para("Click the button below to claim your promotion:") +
-      btn(data.claimUrl, "Claim Promo")
+    h1(esc(s.heading(data.locationName))) + para(esc(data.smsText)) + para(s.intro) + btn(data.claimUrl, s.btn)
   );
-  await sendMail(
-    to,
-    `Your promo from ${data.locationName}`,
-    html,
-    `${data.smsText}\n\nClaim your promo here: ${data.claimUrl}`
-  );
+  await sendMail(to, s.subject(data.locationName), html, `${data.smsText}\n\n${s.plain} ${data.claimUrl}`);
 }
 
 const portalCredentialsStrings = {

@@ -346,7 +346,7 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
 
   if (success) {
     return (
-      <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-6 max-w-lg">
+      <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-4 sm:p-6 max-w-lg">
         <p className="text-sm font-medium text-green-700 dark:text-green-400 mb-2">
           Tabliczka {success.plateNumber} aktywowana.
         </p>
@@ -358,16 +358,16 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
           </a>
           .
         </p>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <button
             onClick={() => router.push("/admin/plates")}
-            className="bg-blue-600 text-white px-5 py-2 rounded text-sm font-medium hover:bg-blue-700 transition-colors"
+            className="min-h-[44px] md:min-h-0 bg-blue-600 text-white px-5 py-2 rounded text-sm font-medium hover:bg-blue-700 transition-colors"
           >
             Wróć do tabliczek
           </button>
           <button
             onClick={() => router.refresh()}
-            className="px-5 py-2 rounded text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="min-h-[44px] md:min-h-0 inline-flex items-center px-5 py-2 rounded text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
             Aktywuj kolejną
           </button>
@@ -377,7 +377,7 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-6 max-w-lg">
+    <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-4 sm:p-6 max-w-lg">
       {plates.length === 0 && (
         <p className="text-sm text-gray-400 mb-4">Brak dostępnych tabliczek (wszystkie przypisane)</p>
       )}
@@ -440,7 +440,7 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
                     type="button"
                     disabled={scrapeTimeLeft > 0 || isScraping}
                     onClick={handleScrape}
-                    className="ml-auto bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded text-xs font-medium disabled:opacity-50 transition-colors shrink-0"
+                    className="min-h-[44px] md:min-h-0 ml-auto bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded text-xs font-medium disabled:opacity-50 transition-colors shrink-0"
                   >
                     {isScraping ? "Pobieranie..." : scrapeTimeLeft > 0 ? `Pobierz informację (${scrapeTimeLeft}s)` : "Pobierz informację"}
                   </button>
@@ -514,18 +514,18 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
                 </>
               )}
 
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={handleConfirmCrop}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                  className="min-h-[44px] md:min-h-0 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
                 >
                   Zatwierdź kadrowanie
                 </button>
                 <button
                   type="button"
                   onClick={handleCancelCrop}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  className="min-h-[44px] md:min-h-0 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                 >
                   Anuluj
                 </button>
@@ -557,7 +557,7 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                className="min-h-[44px] md:min-h-0 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
               >
                 {logoPreview ? "Zmień logo" : "Dodaj logo"}
               </button>
@@ -565,7 +565,7 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
                 <button
                   type="button"
                   onClick={handleRemoveLogo}
-                  className="px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
+                  className="min-h-[44px] md:min-h-0 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
                 >
                   Usuń
                 </button>
@@ -642,17 +642,17 @@ export default function QuickActivateForm({ plates }: { plates: Plate[] }) {
 
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-        <div className="flex gap-3 pt-1">
+        <div className="flex flex-wrap gap-3 pt-1">
           <button
             type="submit"
             disabled={plates.length === 0 || loading}
-            className="bg-blue-600 text-white px-5 py-2 rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="min-h-[44px] md:min-h-0 bg-blue-600 text-white px-5 py-2 rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
             {loading ? "Aktywowanie..." : `Aktywuj tabliczkę (${duration} dni)`}
           </button>
           <a
             href="/admin/plates"
-            className="px-5 py-2 rounded text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="min-h-[44px] md:min-h-0 inline-flex items-center px-5 py-2 rounded text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
             Anuluj
           </a>

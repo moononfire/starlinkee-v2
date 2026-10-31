@@ -28,6 +28,25 @@ export async function listShipments(search?: string): Promise<ShipmentWithCustom
   }));
 }
 
+/** The first shipment of an order (the one the order was created with), or null. */
+export async function getShipmentByOrderId(orderId: number): Promise<Shipment | null> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("shipments")
+    .select("*")
+    .eq("order_id", orderId)
+    .order("id", { ascending: true })
+    .limit(1);
+  if (error) throw new Error(`Failed to read shipment: ${error.message}`);
+  return data?.[0] ?? null;
+}
+
+export async function setShipmentPlateCount(id: number, numberOfPlates: number): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("shipments").update({ number_of_plates: numberOfPlates }).eq("id", id);
+  if (error) throw new Error(`Failed to update shipment: ${error.message}`);
+}
+
 export async function createShipmentFull(data: {
   order_id: number;
   tracking_number?: string;

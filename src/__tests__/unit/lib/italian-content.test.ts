@@ -19,6 +19,12 @@ describe("getModuleText", () => {
     expect(getModuleText(loc({ promo_banner_text_de: "DE" }), "it", "promo_banner_text")).toBe("DE");
     expect(getModuleText(loc({}), "it", "promo_banner_text")).toBe("");
   });
+  it("a German guest without a German text gets English before Polish (P26)", () => {
+    expect(getModuleText(loc({ promo_banner_text: "PL", promo_banner_text_en: "EN" }), "de", "promo_banner_text")).toBe("EN");
+    expect(getModuleText(loc({ promo_banner_text: "PL" }), "de", "promo_banner_text")).toBe("PL");
+    expect(getModuleText(loc({ promo_banner_text_de: "DE" }), "de", "promo_banner_text")).toBe("DE");
+    expect(getModuleText(loc({ promo_banner_text_it: "IT" }), "de", "promo_banner_text")).toBe("");
+  });
   it("keeps the order for en/de/pl (regression)", () => {
     const noIt = loc({ promo_banner_text: "PL", promo_banner_text_en: "EN", promo_banner_text_de: "DE" });
     expect(getModuleText(noIt, "en", "promo_banner_text")).toBe("EN");
@@ -46,6 +52,12 @@ describe("getLinkTitle", () => {
     expect(getLinkTitle(l, "en")).toBe("EN");
     expect(getLinkTitle(l, "de")).toBe("DE");
     expect(getLinkTitle(link({ title_it: "IT" }), "en")).toBe("base");
+  });
+
+  it("a German guest without a German title gets English before Polish (P26)", () => {
+    expect(getLinkTitle(link({ title_en: "EN", title_pl: "PL" }), "de")).toBe("EN");
+    expect(getLinkTitle(link({ title_pl: "PL" }), "de")).toBe("PL");
+    expect(getLinkTitle(link({}), "de")).toBe("base");
   });
 });
 

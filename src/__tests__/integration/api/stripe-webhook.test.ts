@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const { mockSubEvent, mockProcessStripeInvoice, mockConstructEvent, mockClaim, mockDone, mockFailed } = vi.hoisted(() => ({
+const { mockSubEvent, mockProcessPi, mockProcessStripeInvoice, mockConstructEvent, mockClaim, mockDone, mockFailed } = vi.hoisted(() => ({
   mockSubEvent: vi.fn(),
+  mockProcessPi: vi.fn(),
   mockProcessStripeInvoice: vi.fn(),
   mockConstructEvent: vi.fn(),
   mockClaim: vi.fn(),
@@ -12,6 +13,8 @@ const { mockSubEvent, mockProcessStripeInvoice, mockConstructEvent, mockClaim, m
 
 vi.mock("@/lib/services/stripe", () => ({
   processStripeInvoice: mockProcessStripeInvoice,
+  processExtraPlatesPaymentIntent: mockProcessPi,
+  isExtraPlatesPaymentIntent: (pi: { metadata?: { purpose?: string } }) => pi.metadata?.purpose === "extra_plates_and_shipping",
 }));
 vi.mock("@/lib/services/stripe-cancel", () => ({ processStripeSubscriptionEvent: mockSubEvent }));
 vi.mock("@/lib/db/stripe-events", () => ({
@@ -43,6 +46,7 @@ beforeEach(() => {
   process.env.STRIPE_SECRET_KEY = "sk_test_key";
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test_secret";
   mockProcessStripeInvoice.mockResolvedValue(undefined);
+  mockProcessPi.mockResolvedValue(undefined);
   mockClaim.mockResolvedValue("claimed");
   mockDone.mockResolvedValue(undefined);
   mockFailed.mockResolvedValue(undefined);
@@ -133,5 +137,52 @@ describe("POST /api/stripe/webhook", () => {
     mockSubEvent.mockRejectedValue(new Error("db down"));
     const res = await POST(makeRequest("{}", "sig"));
     expect(res.status).toBe(500);
+  });
+});
+
+describe("payment_intent.succeeded (P28)", () => {
+  const piEvent = (metadata: Record<string, string>) => {
+    const pi = { id: "pi_1", metadata };
+    mockConstructEvent.mockReturnValue({ id: "evt_pi", type: "payment_intent.succeeded", data: { object: pi } });
+    return pi;
+  };
+
+  it("processes a PaymentIntent with the extra-plates purpose under a claim and marks the event done", async () => {
+    const pi = piEvent({ purpose: "extra_plates_and_shipping", subscription_id: "sub_1", extra_plates: "2" });
+    const res = await POST(makeRequest("{}", "sig"));
+    expect(res.status).toBe(200);
+    expect(mockClaim).toHaveBeenCalledWith("evt_pi");
+    expect(mockProcessPi).toHaveBeenCalledWith(pi);
+    expect(mockProcessStripeInvoice).not.toHaveBeenCalled();
+    expect(mockDone).toHaveBeenCalledWith("evt_pi");
+  });
+
+  it.each([[{}], [{ purpose: "other" }], [{ subscription_id: "sub_1", extra_plates: "2" }]])(
+    "answers 200 and writes nothing for a PaymentIntent without our purpose (%j)",
+    async (metadata) => {
+      piEvent(metadata);
+      const res = await POST(makeRequest("{}", "sig"));
+      expect(res.status).toBe(200);
+      expect(mockClaim).not.toHaveBeenCalled();
+      expect(mockProcessPi).not.toHaveBeenCalled();
+    }
+  );
+
+  it("answers 500 and marks the event failed when the subscription is not there yet, so Stripe retries", async () => {
+    piEvent({ purpose: "extra_plates_and_shipping", subscription_id: "sub_1", extra_plates: "2" });
+    mockProcessPi.mockRejectedValue(new Error("not created yet"));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await POST(makeRequest("{}", "sig"));
+    expect(res.status).toBe(500);
+    expect(mockFailed).toHaveBeenCalledWith("evt_pi", "not created yet");
+    expect(mockDone).not.toHaveBeenCalled();
+  });
+
+  it("acknowledges a redelivered, already processed PaymentIntent event", async () => {
+    piEvent({ purpose: "extra_plates_and_shipping", subscription_id: "sub_1", extra_plates: "2" });
+    mockClaim.mockResolvedValue("done");
+    const res = await POST(makeRequest("{}", "sig"));
+    expect(res.status).toBe(200);
+    expect(mockProcessPi).not.toHaveBeenCalled();
   });
 });

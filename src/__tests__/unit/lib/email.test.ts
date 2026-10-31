@@ -195,6 +195,21 @@ describe("sendPromoEmail()", () => {
     expect(call.to).toBe("customer@example.com");
     expect(call.text).toContain("https://app.test/l/my-bistro/promo/claim/abc123");
   });
+
+  const promo = { locationName: "My Bistro", claimUrl: "https://app.test/c/1", smsText: "-10%" };
+
+  it("speaks the guest's language", async () => {
+    await sendPromoEmail("g@x.test", promo, "de");
+    const call = mockSendMail.mock.calls[0][0];
+    expect(call.subject).toBe("Dein Angebot von My Bistro");
+    expect(call.html).toContain("Angebot einlösen");
+    expect(call.text).toContain("Löse dein Angebot hier ein: https://app.test/c/1");
+  });
+
+  it.each([[undefined], ["zh"], ["xx"]])("falls back to English for %s", async (lang) => {
+    await sendPromoEmail("g@x.test", promo, lang);
+    expect(mockSendMail.mock.calls[0][0].subject).toBe("Your promo from My Bistro");
+  });
 });
 
 describe("sendPlateImportLinks()", () => {

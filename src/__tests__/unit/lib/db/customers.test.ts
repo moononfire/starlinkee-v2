@@ -75,6 +75,30 @@ describe("upsertCustomerByEmail()", () => {
     });
   });
 
+  describe("preferred_language of an existing customer", () => {
+    const run = async (existingLanguage: string | null) => {
+      const update = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }));
+      supabaseMock.from.mockReturnValue({
+        select: vi.fn(() => ({
+          ilike: vi.fn(() => ({
+            ...matching([{ customer_id: 42, email: "acme@example.com", customer_name: "A", customer_type: "business", preferred_language: existingLanguage }]),
+          })),
+        })),
+        update,
+      });
+      await upsertCustomerByEmail({ ...customerData, preferred_language: "it" });
+      return update;
+    };
+
+    it("a language the customer already has is never overwritten", async () => {
+      expect(await run("de")).not.toHaveBeenCalled();
+    });
+
+    it("an empty language is filled from the invoice", async () => {
+      expect(await run(null)).toHaveBeenCalledWith({ preferred_language: "it" });
+    });
+  });
+
   it("does not write at all when nothing is missing", async () => {
     const update = vi.fn();
     supabaseMock.from.mockReturnValue({

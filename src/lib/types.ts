@@ -184,7 +184,7 @@ export interface Customer {
   address_line1: string | null;
   address_city: string | null;
   address_postal_code: string | null;
-  preferred_language: PlateLanguage;
+  preferred_language: PlateLanguage | null;
   country: string | null;
   is_activated: boolean;
   sms_credits_used: number;

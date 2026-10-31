@@ -1,4 +1,4 @@
-import { ownerLanguage, languageFromCountry } from "@/lib/languages";
+import { ownerLanguage, SUPPORTED_LANGUAGES, type Language } from "@/lib/languages";
 import Stripe from "stripe";
 import type { Subscription } from "../types";
 import { upsertCustomerByEmail } from "../db/customers";
@@ -25,9 +25,11 @@ import {
   sendRenewalConfirmation,
   sendRenewalConfirmationToAdmin,
   sendDuplicateStripeSubscriptionToAdmin,
+  sendInvalidCartMetadataToAdmin,
 } from "../email";
 import { getCustomerByEmail } from "../db/portal";
 import { getCustomerById } from "../db/customers";
+import { getShipmentByOrderId, setShipmentPlateCount } from "../db/shipments";
 import { assignPlateToSubscription, getPlateById } from "../db/plates";
 import { issueActivationCode } from "./activation";
 import { createConfirmedPortalUser } from "./portal-account";
@@ -165,6 +167,57 @@ function stripeSubscriptionIdOf(invoice: Stripe.Invoice): string | undefined {
   const sub = invoice.parent?.subscription_details?.subscription;
   if (!sub) return undefined;
   return typeof sub === "string" ? sub : sub.id;
+}
+
+type MetadataCart =
+  | { status: "none" }
+  | { status: "ok"; totalPlates: number; durationDays: number }
+  | { status: "invalid"; errors: string[] };
+
+/**
+ * The www checkout describes the cart in the subscription's metadata (never the Stripe customer's): `billing`
+ * (monthly | annual | trial), `total_plates` and, for a trial, `trial_days`. Without `billing` there is nothing to read (price ids decide, see countCartPlates).
+ * With it, anything unusable is reported instead of guessed: the metadata and the invoice would disagree.
+ * `kind`, `plates` and `plates_by_language` are deliberately ignored (a trial has kind=subscription_yearly).
+ */
+function cartFromMetadata(metadata: Stripe.Metadata | null | undefined): MetadataCart {
+  const billing = metadata?.billing?.trim().toLowerCase();
+  if (!billing) return { status: "none" };
+
+  const errors: string[] = [];
+  let durationDays = 0;
+  if (billing === "monthly") durationDays = RENEWAL_DURATION_DAYS.month;
+  else if (billing === "annual") durationDays = RENEWAL_DURATION_DAYS.year;
+  else if (billing === "trial") {
+    const trialDays = parseCount(metadata?.trial_days, 3650);
+    if (trialDays === null) errors.push("trial_days");
+    else durationDays = trialDays;
+  } else {
+    errors.push("billing");
+  }
+
+  const totalPlates = parseCount(metadata?.total_plates, MAX_CART_PLATES);
+  if (totalPlates === null) errors.push("total_plates");
+
+  if (errors.length > 0 || totalPlates === null) return { status: "invalid", errors };
+  // A trial's start invoice only carries the base plate; the extra plates are paid in their own PaymentIntent
+  // and created by processExtraPlatesPaymentIntent.
+  return { status: "ok", totalPlates: billing === "trial" ? 1 : totalPlates, durationDays };
+}
+
+const MAX_CART_PLATES = 50;
+
+/** A whole number from 1 to max written as plain digits, else null. */
+function parseCount(value: string | undefined, max: number): number | null {
+  if (!value || !/^\d+$/.test(value.trim())) return null;
+  const n = Number(value.trim());
+  return n >= 1 && n <= max ? n : null;
+}
+
+/** A supported language from Stripe metadata `locale`, or undefined (anything else is ignored). */
+function localeFrom(metadata: Stripe.Metadata | null | undefined): Language | undefined {
+  const value = metadata?.locale?.trim().toLowerCase();
+  return SUPPORTED_LANGUAGES.find((l) => l === value);
 }
 
 /** End of the period this invoice paid for (latest line period end), if Stripe reports one. */
@@ -392,6 +445,135 @@ export async function processRenewalInvoicePaid(
   }
 }
 
+/**
+ * Admin packs by /admin/shipments, so the extra plates of a trial must show up there. If the start shipment has not
+ * gone out yet it simply covers all plates (the count is recomputed, never added, so redelivery cannot double it);
+ * once it is shipped (or cancelled) the extra plates get a shipment of their own to the same address.
+ */
+async function placeExtraPlatesInShipment(
+  pi: Stripe.PaymentIntent,
+  base: Subscription,
+  piOrderId: number,
+  targetRows: number,
+  extraPlates: number,
+  existingRows: number,
+  alert: (errors: string[]) => Promise<unknown>
+): Promise<void> {
+  const invoiceOrderId = base.stripe_invoice_id ? await getOrderIdByStripePaymentId(base.stripe_invoice_id) : null;
+  const start = invoiceOrderId ? await getShipmentByOrderId(invoiceOrderId) : null;
+
+  if (start && start.shipping_status === "pending") {
+    await setShipmentPlateCount(start.id, Math.max(existingRows, targetRows));
+    return;
+  }
+
+  if (await orderHasShipment(piOrderId)) return;
+  const shipping = pi.shipping;
+  await createShipment({
+    order_id: piOrderId,
+    recipient_name: start?.recipient_name ?? shipping?.name ?? undefined,
+    address_line1: start?.address_line1 ?? shipping?.address?.line1 ?? undefined,
+    address_line2: start?.address_line2 ?? shipping?.address?.line2 ?? undefined,
+    city: start?.city ?? shipping?.address?.city ?? undefined,
+    postal_code: start?.postal_code ?? shipping?.address?.postal_code ?? undefined,
+    country: start?.country ?? shipping?.address?.country ?? undefined,
+    number_of_plates: extraPlates,
+  });
+  if (!start) {
+    console.error(`[stripe] payment intent ${pi.id}: no start shipment found for subscription ${base.stripe_subscription_id} — shipment created from the PaymentIntent, admin alerted`);
+    await alert([`no start shipment for ${base.stripe_subscription_id}`]);
+  }
+}
+
+export const EXTRA_PLATES_PURPOSE = "extra_plates_and_shipping";
+const EXTRA_PLATES_RETRY_WINDOW_SECONDS = 24 * 3600;
+
+/** True for the PaymentIntents www creates for the extra plates and shipping of a trial; every other PI is not ours. */
+export function isExtraPlatesPaymentIntent(pi: Stripe.PaymentIntent): boolean {
+  return pi.metadata?.purpose === EXTRA_PLATES_PURPOSE;
+}
+
+/**
+ * Trial checkout: the start invoice creates the base plate, the surcharge for the extra plates (and shipping) is a
+ * separate PaymentIntent that names the Stripe subscription. Rows are topped up to 1 + extra_plates per Stripe
+ * subscription, so redelivery of the PI or of the invoice, in any order, never duplicates anything.
+ * A PI that arrives before its invoice throws (the webhook answers 500 and Stripe retries); after 24 hours
+ * without the subscription the admin is alerted and the retries stop.
+ */
+export async function processExtraPlatesPaymentIntent(pi: Stripe.PaymentIntent): Promise<void> {
+  const stripeSubscriptionId = pi.metadata?.subscription_id?.trim();
+  const extraPlates = parseCount(pi.metadata?.extra_plates, MAX_CART_PLATES - 1);
+  const stripeCustomerId = typeof pi.customer === "string" ? pi.customer : (pi.customer?.id ?? "unknown");
+  const amount = `${((pi.amount ?? 0) / 100).toFixed(2)} ${(pi.currency ?? "").toUpperCase()}`.trim();
+
+  const alert = (errors: string[]) =>
+    sendInvalidCartMetadataToAdmin({
+      source: "PaymentIntent",
+      invoiceId: pi.id,
+      stripeCustomerId,
+      customerEmail: pi.receipt_email ?? "unknown",
+      amount,
+      errors,
+    }).catch((err) => console.error("[stripe] invalid-cart admin email failed:", err));
+
+  const errors: string[] = [];
+  if (!stripeSubscriptionId) errors.push("subscription_id");
+  if (extraPlates === null) errors.push("extra_plates");
+  if (errors.length > 0 || !stripeSubscriptionId || extraPlates === null) {
+    console.error(`[stripe] payment intent ${pi.id} has invalid extra-plates metadata (${errors.join(", ")}) — nothing created, admin alerted`);
+    await alert(errors);
+    return;
+  }
+
+  const existing = await listSubscriptionsByStripeSubscription(stripeSubscriptionId);
+  if (existing.length === 0) {
+    const ageSeconds = Math.floor(Date.now() / 1000) - pi.created;
+    if (ageSeconds > EXTRA_PLATES_RETRY_WINDOW_SECONDS) {
+      console.error(`[stripe] payment intent ${pi.id}: Stripe subscription ${stripeSubscriptionId} still unknown after 24 h — admin alerted`);
+      await alert([`subscription_id (no subscription for ${stripeSubscriptionId} after 24 h)`]);
+      return;
+    }
+    // The start invoice has not been processed yet. Nothing is written, so a retry loses nothing.
+    throw new Error(`payment intent ${pi.id}: subscription ${stripeSubscriptionId} not created yet, retry later`);
+  }
+
+  const base = [...existing].sort((a, b) => a.subscription_id - b.subscription_id)[0];
+  for (let i = existing.length; i < 1 + extraPlates; i++) {
+    await createSubscription({
+      customer_id: base.customer_id,
+      subscription_name: "Subskrypcja",
+      duration_in_days: base.duration_in_days,
+      is_free: false,
+      stripe_subscription_id: stripeSubscriptionId,
+    });
+  }
+
+  const existingOrderId = await getOrderIdByStripePaymentId(pi.id);
+  const orderId =
+    existingOrderId ??
+    (await createOrder({
+      customer_id: base.customer_id,
+      status: "paid",
+      payment_method: "stripe",
+      stripe_payment_id: pi.id,
+      stripe_payment_intent_id: pi.id,
+      fulfilled_at: new Date().toISOString(),
+    }));
+  if (!(await orderHasItems(orderId))) {
+    await createOrderItem(orderId, PLATE_PRODUCT_ID, extraPlates);
+  }
+
+  await placeExtraPlatesInShipment(pi, base, orderId, 1 + extraPlates, extraPlates, existing.length, alert);
+
+  const customer = await getCustomerById(base.customer_id);
+  await sendOrderConfirmationToAdmin({
+    orderId,
+    customerName: customer?.customer_name ?? pi.receipt_email ?? "unknown",
+    customerEmail: customer?.email ?? pi.receipt_email ?? "unknown",
+    plateCount: extraPlates,
+  }).catch((err) => console.error("[stripe] admin email failed:", err));
+}
+
 export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
   const email = invoice.customer_email;
   if (!email) {
@@ -410,20 +592,42 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
     .filter(Boolean)
     .join(", ");
 
+  // The www checkout stores the visitor's language as `locale` metadata on the Checkout subscription (copied to the
+  // invoice) and on the Stripe customer. The billing country says nothing about the language, so it is not used.
+  const subscriptionMetadata = invoice.parent?.subscription_details?.metadata;
+  let locale = localeFrom(subscriptionMetadata);
   let companyName: string | undefined;
-  if (hasTaxId) {
+  if (hasTaxId || !locale) {
     const stripeCustomerId = typeof invoice.customer === "string"
       ? invoice.customer
       : invoice.customer?.id;
     if (stripeCustomerId) {
       const stripeCustomer = await getStripe().customers.retrieve(stripeCustomerId);
       if (!stripeCustomer.deleted) {
-        companyName = stripeCustomer.business_name ?? undefined;
+        if (hasTaxId) companyName = stripeCustomer.business_name ?? undefined;
+        locale ??= localeFrom(stripeCustomer.metadata);
       }
     }
   }
 
-  const countryLanguage = languageFromCountry(invoice.customer_address?.country);
+  // The cart comes ONLY from the subscription's metadata (customer metadata is permanent and may be left over from an
+  // older order; it only ever supplies the locale). It is checked before anything is written: a paid invoice we
+  // cannot read creates nothing and alerts the admin instead of selling the wrong thing.
+  const metadataCart = cartFromMetadata(subscriptionMetadata);
+  if (metadataCart.status === "invalid") {
+    const stripeCustomerId = typeof invoice.customer === "string" ? invoice.customer : (invoice.customer?.id ?? "unknown");
+    console.error(
+      `[stripe] invoice ${invoice.id} has invalid cart metadata (${metadataCart.errors.join(", ")}) — nothing created, admin alerted`
+    );
+    await sendInvalidCartMetadataToAdmin({
+      invoiceId: invoice.id ?? "unknown",
+      stripeCustomerId,
+      customerEmail: email,
+      amount: `${((invoice.amount_paid ?? 0) / 100).toFixed(2)} ${(invoice.currency ?? "").toUpperCase()}`.trim(),
+      errors: metadataCart.errors,
+    }).catch((err) => console.error("[stripe] invalid-cart admin email failed:", err));
+    return;
+  }
 
   const customerId = await upsertCustomerByEmail({
     email,
@@ -435,7 +639,7 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
     billing_address: billingAddress || undefined,
     country: invoice.customer_address?.country ?? undefined,
     phone: invoice.customer_phone ?? undefined,
-    preferred_language: countryLanguage,
+    preferred_language: locale,
     is_activated: true,
   });
 
@@ -463,8 +667,9 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
     }));
 
   // 3. Process line items → order_items + subscriptions
-  // The www cart is one subscription line (monthly or yearly) plus extra plates; every plate becomes its own row.
-  const { totalPlates, durationDays } = countCartPlates(invoice);
+  // Cart metadata decides when present; otherwise the www cart is one subscription line (monthly or yearly) plus
+  // extra plates. Every plate becomes its own row.
+  const { totalPlates, durationDays } = metadataCart.status === "ok" ? metadataCart : countCartPlates(invoice);
 
   if (totalPlates > 0 && !(await orderHasItems(orderId))) {
     await createOrderItem(orderId, SUBSCRIPTION_PRODUCT_ID, totalPlates);
@@ -497,6 +702,7 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
       city: shipping?.address?.city ?? undefined,
       postal_code: shipping?.address?.postal_code ?? undefined,
       country: shipping?.address?.country ?? undefined,
+      number_of_plates: totalPlates > 0 ? totalPlates : undefined,
     });
   }
 
@@ -506,7 +712,7 @@ export async function processInvoicePaymentSucceeded(invoice: Stripe.Invoice): P
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://starlinkee.com";
   const loginUrl = `${appUrl}/portal/login`;
   const customer = await getCustomerById(customerId);
-  const language = customer?.preferred_language ?? countryLanguage;
+  const language = customer?.preferred_language ? ownerLanguage(customer) : (locale ?? "en");
 
   const generatedPassword = generateRandomPassword();
   const accountResult = await createConfirmedPortalUser(email, generatedPassword);

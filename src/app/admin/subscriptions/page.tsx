@@ -30,7 +30,7 @@ export default async function SubscriptionsPage({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Subskrypcje</h1>
       </div>
 
@@ -49,7 +49,58 @@ export default async function SubscriptionsPage({
         <SearchInput placeholder="Szukaj po kliencie, email, nazwie planu, tabliczce..." />
       </div>
 
-      <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg overflow-hidden">
+      {/* Below md: one card per subscription */}
+      <ul className="md:hidden space-y-3" data-testid="subscription-cards">
+        {subscriptions.length === 0 && (
+          <li className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 text-center text-gray-400">Brak subskrypcji</li>
+        )}
+        {subscriptions.map((s) => (
+          <li key={s.subscription_id} data-testid="subscription-card" className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-4 space-y-2 text-sm">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="font-medium text-gray-900 dark:text-gray-100 break-words">{s.customer_name}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 break-all">{s.customer_email}</div>
+                <div className="text-xs text-gray-400">#{s.subscription_id}</div>
+              </div>
+              <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${statusClass[s.status]}`}>
+                {statusLabel[s.status]}
+              </span>
+            </div>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-gray-600 dark:text-gray-300">
+              <dt className="text-gray-400">Tabliczka</dt>
+              <dd>
+                {s.plate_numbers.length > 0 ? (
+                  <span className="flex flex-wrap gap-1">
+                    {s.plate_numbers.map((p) => (
+                      <span key={p} className="font-mono font-medium text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">{p}</span>
+                    ))}
+                  </span>
+                ) : (
+                  "Nieprzypisana"
+                )}
+              </dd>
+              <dt className="text-gray-400">Dni</dt>
+              <dd>{s.duration_in_days}</dd>
+              <dt className="text-gray-400">Aktywacja</dt>
+              <dd>{s.activation_datetime ? new Date(s.activation_datetime).toLocaleDateString("pl-PL") : "—"}</dd>
+              <dt className="text-gray-400">Wygaśnięcie</dt>
+              <dd>{s.expiration_datetime ? new Date(s.expiration_datetime).toLocaleDateString("pl-PL") : "—"}</dd>
+            </dl>
+            {s.status === "pending" && s.plate_numbers.length > 0 && (
+              <form action={sendActivationCodeAction}>
+                <input type="hidden" name="subscription_id" value={s.subscription_id} />
+                <button
+                  type="submit"
+                  className="min-h-[44px] px-3 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  {s.activation_code_hash ? "Wyślij nowy kod" : "Wyślij kod"}
+                </button>
+              </form>
+            )}
+          </li>
+        ))}
+      </ul>
+      <div className="hidden md:block bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
