@@ -1,6 +1,6 @@
 # P31 — Audyt panelu admina przy 390 px
 
-Metoda: przegląd kodu (`grep` po `<table`, `overflow-x`, `fixed inset`) + test `e2e/admin-mobile.spec.ts` ("audit: horizontal scroll per admin page") drukujący `scrollWidth` vs `innerWidth` dla każdej strony. **Pomiar w przeglądarce nie został wykonany w tej sesji** (Docker Desktop nie działa w WSL, lokalny Supabase nie startuje) — kolumna „poziomy scroll” do uzupełnienia po uruchomieniu testu.
+Metoda: przegląd kodu (`grep` po `<table`, `overflow-x`, `fixed inset`) + test `e2e/admin-mobile.spec.ts` ("audit: horizontal scroll per admin page") drukujący `scrollWidth` vs `innerWidth` dla każdej strony. **Pomiar (390×844, po zmianie nawigacji): żadna z 11 stron nie ma poziomego scrolla strony** (`scrollWidth=390`). Tabele przewijają się w swoich kontenerach `overflow-x-auto`, ale na telefonie są niewygodne — stąd karty w P32/P33.
 
 | Strona | Co się łamie (z kodu) | Wzorzec |
 |---|---|---|
