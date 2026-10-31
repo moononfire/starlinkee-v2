@@ -12,9 +12,11 @@ e2e: `flock /tmp/starlinkee-e2e.lock npm run test:e2e:local -- --workers=1`. Now
 
 ## P32 — Najczęściej używane: szybka aktywacja, przesyłki, zamówienia (po PASS P31)
 - Quick-activate (`src/app/admin/plates/...quick-activate` według audytu): pola pełnej szerokości, przyciski ≥ 44 px, wynik/dane dostępowe czytelne bez scrolla w bok.
-- Przesyłki (`src/app/admin/shipments/page.tsx`, `ShipmentSection.tsx`): poniżej `md` karty (ID, zamówienie, odbiorca, **liczba płytek**, status, akcje), od `md` dotychczasowa tabela. Zmiana statusu działa z karty.
-- Zamówienia (`src/app/admin/orders/*`, także „nowe zamówienie”): lista jako karty poniżej `md`, formularz nowego zamówienia w jednej kolumnie.
-- e2e (390×844): szybka aktywacja tabliczki przechodzi do końca; lista przesyłek pokazuje kartę z liczbą płytek i zmienia status; lista zamówień otwiera szczegóły. Na każdej z trzech stron brak poziomego scrolla. Istniejące e2e desktopowe zielone.
+- Przesyłki (`src/app/admin/shipments/page.tsx`, `ShipmentSection.tsx`): poniżej `md` karty (ID, zamówienie, odbiorca, **liczba płytek**, status, istniejące akcje), od `md` dotychczasowa tabela. (Admin nie ma UI zmiany statusu przesyłki: poza zakresem, nie dodawać.)
+- Zamówienia (`src/app/admin/orders/*`, także „nowe zamówienie”): lista jako karty poniżej `md` (bez strony szczegółów: nie istnieje, poza zakresem), formularz nowego zamówienia w jednej kolumnie.
+- e2e (390×844): szybka aktywacja tabliczki przechodzi do końca; lista przesyłek pokazuje kartę z liczbą płytek; lista zamówień pokazuje karty; formularz nowego zamówienia w jednej kolumnie. Na każdej z trzech stron brak poziomego scrolla. Istniejące e2e desktopowe zielone.
+
+- Luka (do decyzji VB, osobny pakiet): zmiana statusu przesyłki w UI (`updateShipmentStatus` w `src/lib/db/shipments.ts` bez użycia) i strona szczegółów zamówienia.
 
 ## P33 — Pozostałe strony (po PASS P32)
 - customers, subscriptions, reviews, places, analytics, plates (lista), dashboard: wzorzec z audytu. Tabele z wieloma kolumnami jako karty albo `overflow-x-auto` w kontenerze tabeli (nie strony), z kluczowymi kolumnami na początku. Modale: `max-w-[calc(100vw-2rem)]`, przewijana treść.
