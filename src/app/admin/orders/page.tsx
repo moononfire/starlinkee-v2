@@ -29,7 +29,7 @@ export default async function OrdersPage({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Zamówienia</h1>
         <Link
           href="/admin/orders/new"
@@ -43,7 +43,36 @@ export default async function OrdersPage({
         <SearchInput placeholder="Szukaj po kliencie, email, referencji..." />
       </div>
 
-      <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg overflow-hidden">
+      {/* Below md: one card per order */}
+      <ul className="md:hidden space-y-3" data-testid="order-cards">
+        {orders.length === 0 && (
+          <li className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 text-center text-gray-400">Brak zamówień</li>
+        )}
+        {orders.map((o) => (
+          <li key={o.order_id} data-testid="order-card" className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg p-4 space-y-2 text-sm">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="font-medium text-gray-900 dark:text-gray-100 break-words">{o.customer_name}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 break-all">{o.customer_email}</div>
+                <div className="text-xs text-gray-400">#{o.order_id} · {new Date(o.created_at).toLocaleDateString("pl-PL")}</div>
+              </div>
+              <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${statusClass[o.status]}`}>
+                {statusLabel[o.status]}
+              </span>
+            </div>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-gray-600 dark:text-gray-300">
+              <dt className="text-gray-400">Produkty</dt>
+              <dd className="break-words">{o.items.length === 0 ? "—" : o.items.map((item) => `${item.quantity}× ${item.product_name}`).join(", ")}</dd>
+              <dt className="text-gray-400">Płatność</dt>
+              <dd>{o.payment_method ? paymentLabel[o.payment_method] ?? o.payment_method : "—"}</dd>
+              <dt className="text-gray-400">Wykonano</dt>
+              <dd>{o.fulfilled_at ? new Date(o.fulfilled_at).toLocaleDateString("pl-PL") : "—"}</dd>
+            </dl>
+          </li>
+        ))}
+      </ul>
+
+      <div className="hidden md:block bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
