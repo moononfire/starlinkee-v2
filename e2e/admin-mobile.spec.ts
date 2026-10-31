@@ -8,9 +8,18 @@ async function loginAdmin(page: Page) {
   await page.context().addCookies(await portalSessionCookies(appUrl, ADMIN_USER.email));
 }
 
-/** True when the page itself scrolls sideways. */
+/** Widths of the document and of <main> (which has overflow-auto, so wide content scrolls there, not in the document). */
+async function widths(page: Page) {
+  return page.evaluate(() => {
+    const main = document.querySelector('main')!;
+    return { doc: document.documentElement.scrollWidth, win: window.innerWidth, mainScroll: main.scrollWidth, mainClient: main.clientWidth };
+  });
+}
+
+/** True when the document OR <main> scrolls sideways. */
 async function hasHorizontalScroll(page: Page) {
-  return page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+  const w = await widths(page);
+  return w.doc > w.win || w.mainScroll > w.mainClient;
 }
 
 test.describe('Admin on a phone (390x844)', () => {
@@ -53,14 +62,16 @@ test.describe('Admin on a phone (390x844)', () => {
     await loginAdmin(page);
     const pages = ['dashboard', 'plates', 'plates/quick-activate', 'orders', 'orders/new', 'customers', 'subscriptions', 'shipments', 'reviews', 'places', 'analytics'];
     const wide: string[] = [];
+    const mustBeClean = ['dashboard', 'plates'];
     for (const p of pages) {
       await page.goto(`/admin/${p}`);
       await page.waitForLoadState('networkidle');
-      const w = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
-      console.log(`AUDIT /admin/${p}: scrollWidth=${w[0]} innerWidth=${w[1]}`);
-      if (w[0] > w[1]) wide.push(p);
+      const w = await widths(page);
+      console.log(`AUDIT /admin/${p}: doc=${w.doc}/${w.win} main=${w.mainScroll}/${w.mainClient}`);
+      if (await hasHorizontalScroll(page)) wide.push(p);
     }
     console.log('AUDIT wide pages:', wide.join(', ') || 'none');
+    for (const p of mustBeClean) expect(wide, `/admin/${p} scrolls sideways`).not.toContain(p);
   });
 });
 
@@ -72,5 +83,17 @@ test.describe('Admin on desktop (1280x800)', () => {
     await page.goto('/admin/dashboard');
     await expect(page.locator('aside').getByRole('link', { name: 'Wysyłki' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Menu' })).toBeHidden();
+  });
+});
+
+test.describe('Admin nav highlight', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('on quick-activate only "Szybka aktywacja" is active', async ({ page }) => {
+    await loginAdmin(page);
+    await page.goto('/admin/plates/quick-activate');
+    const nav = page.locator('aside nav');
+    await expect(nav.getByRole('link', { name: 'Szybka aktywacja' })).toHaveClass(/bg-blue-600/);
+    await expect(nav.getByRole('link', { name: 'Tabliczki', exact: true })).not.toHaveClass(/bg-blue-600/);
   });
 });

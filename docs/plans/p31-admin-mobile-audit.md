@@ -1,11 +1,11 @@
 # P31 — Audyt panelu admina przy 390 px
 
-Metoda: przegląd kodu (`grep` po `<table`, `overflow-x`, `fixed inset`) + test `e2e/admin-mobile.spec.ts` ("audit: horizontal scroll per admin page") drukujący `scrollWidth` vs `innerWidth` dla każdej strony. **Pomiar (390×844, po zmianie nawigacji): żadna z 11 stron nie ma poziomego scrolla strony** (`scrollWidth=390`). Tabele przewijają się w swoich kontenerach `overflow-x-auto`, ale na telefonie są niewygodne — stąd karty w P32/P33.
+Metoda: przegląd kodu (`grep` po `<table`, `overflow-x`, `fixed inset`) + test `e2e/admin-mobile.spec.ts` ("audit: horizontal scroll per admin page") drukujący `scrollWidth` vs `innerWidth` dla każdej strony. **Pomiar (390×844) mierzy dokument ORAZ `<main>`** (`main` ma `overflow-auto`, więc za szeroka treść przewija się w nim, a nie w dokumencie — pierwszy pomiar tylko dokumentu był nieskuteczny; wykazał to review). Przed poprawką `/admin/plates` miało `main.scrollWidth=412` przy 390: nagłówek (tytuł + „Import TXT” + „Generuj kody”) w jednym wierszu bez zawijania. Poprawione w P31 (`flex-wrap`); po poprawce wszystkie 11 stron: doc=390/390, main=390/390. Tabele przewijają się w swoich kontenerach `overflow-x-auto` — na telefonie niewygodne, stąd karty w P32/P33.
 
 | Strona | Co się łamie (z kodu) | Wzorzec |
 |---|---|---|
 | (wszystkie) | stały `w-56` aside + `p-8` zjadały ~290 px z 390 | **P31 zrobione**: hamburger poniżej `md`, `p-4` na telefonie, `min-w-0` na `main` |
-| dashboard | do sprawdzenia pomiarem | bez zmian, jeśli brak scrolla |
+| dashboard | pomiar: doc=390, main=390/390, brak scrolla | bez zmian |
 | plates, quick-activate | tabela w `overflow-x-auto`; quick-activate: pola/przyciski | P32 (quick-activate), P33 (lista) |
 | orders, orders/new | tabela w `overflow-x-auto`; formularz | P32: karty + jedna kolumna |
 | shipments | tabela w `overflow-x-auto` | P32: karty z liczbą płytek i zmianą statusu |

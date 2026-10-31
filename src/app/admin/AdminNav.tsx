@@ -30,6 +30,9 @@ const groups = [
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  // Only the most specific matching link is active (/admin/plates/quick-activate must not light up "Tabliczki" too).
+  const hrefs = groups.flatMap((g) => g.links.map((l) => l.href));
+  const activeHref = hrefs.filter((h) => pathname.startsWith(h)).sort((a, b) => b.length - a.length)[0];
   return (
     <nav className="flex-1 p-2 space-y-4 overflow-y-auto">
       {groups.map(({ label, links }) => (
@@ -37,7 +40,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
           <p className="px-3 mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">{label}</p>
           <div className="space-y-1">
             {links.map(({ href, label: linkLabel }) => {
-              const active = pathname.startsWith(href);
+              const active = href === activeHref;
               return (
                 <Link
                   key={href}
