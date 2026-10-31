@@ -44,9 +44,9 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen flex bg-gray-100 dark:bg-gray-900">
+    <div className="min-h-screen flex flex-col md:flex-row bg-gray-100 dark:bg-gray-900">
       <AdminNav userEmail={user.email ?? ""} />
-      <main className="flex-1 p-8 overflow-auto">{children}</main>
+      <main className="flex-1 min-w-0 p-4 md:p-8 overflow-auto">{children}</main>
       <ThemeToggle />
     </div>
   );
