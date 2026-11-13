@@ -15,10 +15,10 @@ export default async function PortalIndexPage() {
           {t("portal_no_subscriptions", lang)}
         </p>
         <a
-          href="mailto:kontakt@starlinkee.pl"
+          href="mailto:viktor@starlinkee.com"
           className="inline-block mt-3 text-sm text-blue-600 dark:text-blue-400 hover:underline"
         >
-          kontakt@starlinkee.pl
+          viktor@starlinkee.com
         </a>
       </div>
     );

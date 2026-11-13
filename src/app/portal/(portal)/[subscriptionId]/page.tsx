@@ -103,10 +103,10 @@ export default async function SubscriptionPage({ params, searchParams }: Props) 
               <p className="text-sm text-red-700 dark:text-red-400 mt-2">
                 {t("portal_contact_to_renew", lang)}{" "}
                 <a
-                  href="mailto:kontakt@starlinkee.pl"
+                  href="mailto:viktor@starlinkee.com"
                   className="underline font-medium hover:text-red-900 dark:hover:text-red-200 transition-colors"
                 >
-                  kontakt@starlinkee.pl
+                  viktor@starlinkee.com
                 </a>
               </p>
             </div>
