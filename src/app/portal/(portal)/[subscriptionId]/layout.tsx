@@ -4,6 +4,7 @@ import { getPortalSession } from "@/lib/portal-session";
 import { getUnreadThreadCountBySubscriptionId } from "@/lib/db/review-messages";
 import { getPortalLanguage } from "@/lib/portal-language";
 import { t } from "@/lib/translations";
+import { LOYALTY_ENABLED } from "@/lib/features";
 import SubTabs from "./SubTabs";
 import SidebarLogoPlaceholder from "./SidebarLogoPlaceholder";
 import LocationSwitcherDropdown from "./LocationSwitcherDropdown";
@@ -100,7 +101,7 @@ export default async function SubscriptionLayout({
             <SubTabs
               subscriptionId={subscriptionId}
               hasPromo={sub.status === "active"}
-              hasLoyalty={sub.status === "active"}
+              hasLoyalty={LOYALTY_ENABLED && sub.status === "active"}
               hasLinktree={sub.status === "active" && !!sub.location?.has_linktree_access}
               unreadMessageCount={unreadMessageCount}
               lang={lang}

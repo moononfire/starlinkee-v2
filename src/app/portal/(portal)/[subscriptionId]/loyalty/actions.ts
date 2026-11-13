@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCustomerByEmail, getCustomerSubscriptions } from "@/lib/db/portal";
 import { updateLocation } from "@/lib/db/locations";
+import { LOYALTY_ENABLED } from "@/lib/features";
 import type { ActionResult } from "../../action-result";
 
 function makeSupabase(cookieStore: Awaited<ReturnType<typeof cookies>>) {
@@ -59,6 +60,9 @@ export async function updateLoyaltyEnabled(formData: FormData): Promise<ActionRe
   const ok = await verifyOwnership(customer.customer_id, subscriptionId, locationId);
   if (!ok) return { ok: false, error: "failed" };
 
+  // Turning the card off stays allowed; turning it on is blocked by the feature flag.
+  if (!LOYALTY_ENABLED && enabled) return { ok: false, error: "failed" };
+
   await updateLocation(locationId, { has_loyalty_enabled: enabled });
 
   revalidatePath(`/portal/${subscriptionId}`, "layout");
@@ -92,6 +96,8 @@ export async function updateLoyaltySettings(formData: FormData): Promise<ActionR
 
   const ok = await verifyOwnership(customer.customer_id, subscriptionId, locationId);
   if (!ok) return { ok: false, error: "failed" };
+
+  if (!LOYALTY_ENABLED) return { ok: false, error: "failed" };
 
   // _it is written only when the form carries it, so a form without Italian inputs cannot wipe it.
   const italian = (name: string) =>

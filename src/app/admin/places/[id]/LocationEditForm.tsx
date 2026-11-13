@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CustomerLocation, CustomerLocationLink } from "@/lib/types";
+import { LOYALTY_ENABLED } from "@/lib/features";
 
 interface Props {
   location: CustomerLocation;
@@ -174,10 +175,14 @@ export default function LocationEditForm({ location, initialLinks }: Props) {
           <input
             type="checkbox"
             checked={hasLoyalty}
+            disabled={!LOYALTY_ENABLED}
             onChange={(e) => setHasLoyalty(e.target.checked)}
             className="h-4 w-4"
           />
           <span className="text-sm text-gray-700 dark:text-gray-300">Karta lojalnościowa</span>
+          {!LOYALTY_ENABLED && (
+            <span className="text-xs text-gray-500">Wyłączone w kodzie: LOYALTY_ENABLED</span>
+          )}
         </div>
       </section>
 

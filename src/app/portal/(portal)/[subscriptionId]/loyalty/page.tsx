@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getPortalSession } from "@/lib/portal-session";
 import { getPortalLanguage } from "@/lib/portal-language";
 import { t } from "@/lib/translations";
+import { LOYALTY_ENABLED } from "@/lib/features";
 import SubmitButton from "../../SubmitButton";
 import SavableForm from "../../SavableForm";
 import { getLoyaltyStatsForLocation } from "@/lib/db/loyalty";
@@ -20,6 +21,8 @@ export default async function LoyaltyPortalPage({ params }: Props) {
   const { subscriptionId: rawId } = await params;
   const subscriptionId = Number(rawId);
   if (!subscriptionId) notFound();
+
+  if (!LOYALTY_ENABLED) redirect(`/portal/${subscriptionId}`);
 
   const { user, customer, subscriptions } = await getPortalSession();
   if (!user || !customer) redirect("/portal/login");

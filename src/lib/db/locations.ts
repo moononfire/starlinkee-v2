@@ -2,6 +2,7 @@ import { createAdminClient } from "../supabase/admin";
 import { ilikeValue } from "./search";
 import { plateScanCount } from "../plate-scans";
 import { isSafeGoogleReviewUrl } from "../urls";
+import { LOYALTY_ENABLED } from "../features";
 import { PLATE_LANGUAGES, type PlateLanguage } from "../languages";
 import type { CustomerLocation, CustomerLocationLink } from "../types";
 
@@ -140,7 +141,7 @@ export async function createLocation(data: {
         ...data,
         has_linktree_access: true,
         has_promo_enabled: true,
-        has_loyalty_enabled: true,
+        has_loyalty_enabled: LOYALTY_ENABLED,
         active_languages: activeLanguages,
       },
       { onConflict: "subscription_id" }

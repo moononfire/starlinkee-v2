@@ -8,6 +8,7 @@ import SubmitButton from "../../SubmitButton";
 import SavableForm from "../../SavableForm";
 import { AutoSaveRadio, AutoSavePendingHint } from "../../settings/AutoSaveControls";
 import { t } from "@/lib/translations";
+import { LOYALTY_ENABLED } from "@/lib/features";
 
 export default function LinktreeSettings({
   subscriptionId,
@@ -98,7 +99,7 @@ export default function LinktreeSettings({
           logoUrl={location.logo_link}
           hasPromo={location.has_promo_enabled}
           promoBannerText={location.promo_banner_text}
-          hasLoyalty={location.has_loyalty_enabled}
+          hasLoyalty={LOYALTY_ENABLED && location.has_loyalty_enabled}
           hasWifi={location.has_wifi_enabled}
           hasMenu={location.has_menu_enabled}
           initialModuleOrder={location.module_order}

@@ -597,3 +597,60 @@ export async function seedAdminWithShipments() {
     'id',
   );
 }
+
+export const LOYALTY_OWNER = { email: 'e2e-owner-loyalty@example.com', customerId: 9008, subscriptionId: 9008, slug: 'e2e-loyalty-off' };
+
+/**
+ * German owner with an active subscription and a location that still has has_loyalty_enabled=true:
+ * the worst case, i.e. the state before the data step that switches the card off everywhere.
+ */
+export async function seedLoyaltyOwner() {
+  await upsert(
+    'customers',
+    { customer_id: LOYALTY_OWNER.customerId, customer_type: 'individual', customer_name: 'E2E Loyalty', email: LOYALTY_OWNER.email, preferred_language: 'de', country: 'DE' },
+    'customer_id',
+  );
+  await upsert(
+    'subscriptions',
+    {
+      subscription_id: LOYALTY_OWNER.subscriptionId,
+      customer_id: LOYALTY_OWNER.customerId,
+      subscription_name: '1_YEAR_SUB',
+      duration_in_days: 365,
+      status: 'active',
+      activation_datetime: new Date(Date.now() - 30 * 86_400_000).toISOString(),
+      expiration_datetime: new Date(Date.now() + 200 * 86_400_000).toISOString(),
+    },
+    'subscription_id',
+  );
+  await upsert(
+    'customer_locations',
+    {
+      subscription_id: LOYALTY_OWNER.subscriptionId,
+      location_name: 'E2E Loyalty Cafe',
+      google_review_link: 'https://g.page/r/e2e-loyalty',
+      linktree_slug: LOYALTY_OWNER.slug,
+      has_linktree_access: true,
+      has_promo_enabled: true,
+      has_loyalty_enabled: true,
+      owner_email: LOYALTY_OWNER.email,
+    },
+    'subscription_id',
+  );
+  const res = await fetch(`${BASE_URL}/auth/v1/admin/users`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ email: LOYALTY_OWNER.email, email_confirm: true }),
+  });
+  if (!res.ok && res.status !== 422) throw new Error(`create auth user failed: ${await res.text()}`);
+}
+
+/** Reads location_id and has_loyalty_enabled of the loyalty owner's location (service role). */
+export async function loyaltyOwnerLocation(): Promise<{ location_id: number; has_loyalty_enabled: boolean }> {
+  const res = await fetch(
+    `${BASE_URL}/rest/v1/customer_locations?subscription_id=eq.${LOYALTY_OWNER.subscriptionId}&select=location_id,has_loyalty_enabled`,
+    { headers: headers() },
+  );
+  const rows = await res.json();
+  return rows[0];
+}

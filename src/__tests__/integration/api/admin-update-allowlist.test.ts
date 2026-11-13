@@ -29,6 +29,16 @@ describe("PUT /api/admin/locations", () => {
     expect(res.status).toBe(200);
   });
 
+  it("rejects enabling the loyalty card while it is switched off, but allows disabling it", async () => {
+    const on = await putLocation(req({ location_id: 1, has_loyalty_enabled: true }));
+    expect(on.status).toBe(400);
+    expect(mockUpdateLocation).not.toHaveBeenCalled();
+
+    const off = await putLocation(req({ location_id: 1, has_loyalty_enabled: false }));
+    expect(off.status).toBe(200);
+    expect(mockUpdateLocation).toHaveBeenCalledWith(1, { has_loyalty_enabled: false });
+  });
+
   it("rejects non-editable columns such as subscription_id", async () => {
     const res = await putLocation(req({ location_id: 1, subscription_id: 99 }));
     expect(res.status).toBe(400);

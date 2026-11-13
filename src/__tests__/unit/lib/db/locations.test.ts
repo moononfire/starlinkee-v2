@@ -105,6 +105,16 @@ describe("createLocation()", () => {
     );
   });
 
+  it("stores has_loyalty_enabled=false while the loyalty card is switched off", async () => {
+    const upsertMock = mockTables({ data: {}, error: null });
+
+    await createLocation({ subscription_id: 10, location_name: "Restaurant" });
+    expect(upsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ has_loyalty_enabled: false }),
+      { onConflict: "subscription_id" }
+    );
+  });
+
   it("adds the language of the subscription's plates to active_languages", async () => {
     const upsertMock = mockTables({ data: {}, error: null }, ["it", "de"]);
 

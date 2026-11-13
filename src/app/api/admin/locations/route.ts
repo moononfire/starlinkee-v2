@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateLocation, upsertLocationLinks } from "@/lib/db/locations";
 import { requireAdmin } from "@/lib/api-auth";
+import { LOYALTY_ENABLED } from "@/lib/features";
 import { isSafeHttpUrl, isSafeGoogleReviewUrl } from "@/lib/urls";
 
 // Only the fields the admin form edits; anything else (subscription_id, ids, ...) is rejected.
@@ -32,6 +33,9 @@ export async function PUT(req: NextRequest) {
   const unknown = Object.keys(updates).filter((k) => !EDITABLE_FIELDS.includes(k));
   if (unknown.length > 0) {
     return NextResponse.json({ error: `Unknown field(s): ${unknown.join(", ")}` }, { status: 400 });
+  }
+  if (!LOYALTY_ENABLED && updates.has_loyalty_enabled === true) {
+    return NextResponse.json({ error: "Loyalty card is disabled" }, { status: 400 });
   }
   if (updates.google_review_link && !isSafeGoogleReviewUrl(updates.google_review_link)) {
     return NextResponse.json({ error: "Invalid Google review link" }, { status: 400 });
